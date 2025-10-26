@@ -207,8 +207,9 @@ Copyright (c) 2025 Vidar Brevik
 ## 📞 **Support**
 
 - **Documentation**: `/docs` folder
-- **Issues**: [GitHub Issues]
-- **Email**: dev@janus-system.com
+- **Repository**: https://github.com/vbrevik/janus-2.0
+- **Issues**: https://github.com/vbrevik/janus-2.0/issues
+- **Discussions**: https://github.com/vbrevik/janus-2.0/discussions
 
 ---
 
