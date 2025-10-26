@@ -25,58 +25,43 @@ test.describe('Access Control', () => {
   test('should open computer access grant dialog', async ({ page }) => {
     await page.goto('/access')
     
-    // Enter personnel ID if present
-    const personnelInput = page.locator('input[type="number"]').first()
-    if (await personnelInput.isVisible()) {
-      await personnelInput.fill('1')
-    }
+    // Find text "Grant Computer Access" and click its parent button
+    const grantButton = page.locator('button:has-text("Grant Computer Access")')
+    await expect(grantButton).toBeVisible()
+    await grantButton.click()
     
-    // Click grant computer access button
-    const computerCardButtons = page.locator('text=Computer Access').locator('..').locator('button')
-    await computerCardButtons.click()
-    
-    // Dialog should open (check for any dialog content)
-    await page.waitForTimeout(1000)
-    const dialogVisible = await page.locator('[role="dialog"]').isVisible()
-    expect(dialogVisible).toBeTruthy()
+    // Wait for dialog to appear
+    await page.waitForTimeout(2000)
+    const dialogTitle = page.locator('h2:has-text("Grant Computer Access")')
+    await expect(dialogTitle).toBeVisible({ timeout: 5000 })
   })
 
   test('should open data access grant dialog', async ({ page }) => {
     await page.goto('/access')
     
-    // Enter personnel ID if present
-    const personnelInput = page.locator('input[type="number"]').first()
-    if (await personnelInput.isVisible()) {
-      await personnelInput.fill('1')
-    }
+    // Find and click the Grant Data Access button
+    const grantButton = page.locator('button:has-text("Grant Data Access")')
+    await expect(grantButton).toBeVisible()
+    await grantButton.click()
     
-    // Click grant data access button
-    const dataCardButtons = page.locator('text=Data Access').locator('..').locator('button')
-    await dataCardButtons.click()
-    
-    // Dialog should open
-    await page.waitForTimeout(1000)
-    const dialogVisible = await page.locator('[role="dialog"]').isVisible()
-    expect(dialogVisible).toBeTruthy()
+    // Wait for dialog to appear
+    await page.waitForTimeout(2000)
+    const dialogTitle = page.locator('h2:has-text("Grant Data Access")')
+    await expect(dialogTitle).toBeVisible({ timeout: 5000 })
   })
 
   test('should open physical access grant dialog', async ({ page }) => {
     await page.goto('/access')
     
-    // Enter personnel ID if present
-    const personnelInput = page.locator('input[type="number"]').first()
-    if (await personnelInput.isVisible()) {
-      await personnelInput.fill('1')
-    }
+    // Find and click the Grant Physical Access button
+    const grantButton = page.locator('button:has-text("Grant Physical Access")')
+    await expect(grantButton).toBeVisible()
+    await grantButton.click()
     
-    // Click grant physical access button
-    const physicalCardButtons = page.locator('text=Physical Access').locator('..').locator('button')
-    await physicalCardButtons.click()
-    
-    // Dialog should open
-    await page.waitForTimeout(1000)
-    const dialogVisible = await page.locator('[role="dialog"]').isVisible()
-    expect(dialogVisible).toBeTruthy()
+    // Wait for dialog to appear
+    await page.waitForTimeout(2000)
+    const dialogTitle = page.locator('h2:has-text("Grant Physical Access")')
+    await expect(dialogTitle).toBeVisible({ timeout: 5000 })
   })
 
   test('should navigate to access control from main navigation', async ({ page }) => {
