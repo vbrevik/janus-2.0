@@ -1,0 +1,33 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+
+# Environment files
+.env
+.env.local
+.env.*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+README.md
+
+# Tests
+tests/
+
+# SQLx cache (regenerate in Docker)
+.sqlx/
+

@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: janus2-postgres
+    environment:
+      POSTGRES_DB: janus2
+      POSTGRES_USER: janus
+      POSTGRES_PASSWORD: janus_dev_password
+    ports:
+      - "15530:5432"  # Host:Container - PostgreSQL on 15530
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U janus -d janus2"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - janus2-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: janus2-backend
+    environment:
+      DATABASE_URL: postgresql://janus:janus_dev_password@postgres:5432/janus2
+      JWT_SECRET: development-secret-change-in-production-min-32-characters
+      ROCKET_PORT: 8000
+      ROCKET_ADDRESS: 0.0.0.0
+      RUST_LOG: info
+    ports:
+      - "15520:8000"  # Host:Container - Backend API on 15520
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - janus2-network
+    profiles:
+      - full
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: janus2-frontend
+    environment:
+      VITE_API_URL: http://localhost:15520/api
+    ports:
+      - "15510:3000"  # Host:Container - Frontend on 15510
+    depends_on:
+      - backend
+    networks:
+      - janus2-network
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
+    name: janus2-postgres-data
+
+networks:
+  janus2-network:
+    name: janus2-network
+    driver: bridge

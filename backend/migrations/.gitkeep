@@ -1,0 +1,3 @@
+# Migrations directory
+# Database migrations will be created here using sqlx-cli
+
