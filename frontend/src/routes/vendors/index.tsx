@@ -21,7 +21,7 @@ import {
   useUpdateVendor,
   useDeleteVendor,
 } from '@/hooks/use-vendors'
-import { usePersonnelList } from /hooks/use-personnel'
+import { usePersonnelList } from '@/hooks/use-personnel'
 import { Link } from '@tanstack/react-router'
 import type { Vendor, ClearanceLevel, CreateVendorRequest } from '@/types/vendor'
 import type { Personnel } from '@/types/personnel'
