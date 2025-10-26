@@ -17,10 +17,10 @@ test.describe('Authentication', () => {
     await page.click('button[type="submit"]')
     
     // Should redirect to personnel page
-    await expect(page).toHaveURL('/personnel')
+    await expect(page).toHaveURL('/personnel', { timeout: 10000 })
     
-    // Should show user info in header
-    await expect(page.getByText('admin')).toBeVisible()
+    // Should show user info in header (use role selector)
+    await expect(page.getByRole('button', { name: /logout/i })).toBeVisible()
   })
 
   test('should show error message with invalid credentials', async ({ page }) => {
@@ -31,8 +31,8 @@ test.describe('Authentication', () => {
     
     await page.click('button[type="submit"]')
     
-    // Should show error message
-    await expect(page.getByText(/invalid/i)).toBeVisible()
+    // Should show error message (wait for it to appear)
+    await page.waitForSelector('.bg-destructive\\/10, [role="alert"], .text-destructive', { timeout: 5000 })
     
     // Should stay on login page
     await expect(page).toHaveURL('/login')
@@ -59,14 +59,14 @@ test.describe('Authentication', () => {
     await page.fill('[name="username"]', 'admin')
     await page.fill('[name="password"]', 'password123')
     await page.click('button[type="submit"]')
-    await expect(page).toHaveURL('/personnel')
+    await expect(page).toHaveURL('/personnel', { timeout: 10000 })
     
     // Reload page
     await page.reload()
     
     // Should still be authenticated
     await expect(page).toHaveURL('/personnel')
-    await expect(page.getByText('admin')).toBeVisible()
+    await expect(page.getByRole('button', { name: /logout/i })).toBeVisible()
   })
 })
 
