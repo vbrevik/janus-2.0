@@ -23,6 +23,15 @@ export interface CreateVendorRelationRequest {
   valid_until?: string; // YYYY-MM-DD format
 }
 
+export interface UpdateVendorRelationRequest {
+  relation_type?: RelationType;
+  related_vendor_id?: number;
+  related_personnel_id?: number;
+  notes?: string;
+  valid_from?: string;
+  valid_until?: string;
+}
+
 export interface VendorHierarchy {
   vendor_id: number;
   vendor_name: string;
