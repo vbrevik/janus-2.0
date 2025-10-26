@@ -60,7 +60,7 @@ function AccessControl() {
             </CardHeader>
             <CardContent>
               <Label htmlFor="personnel">Personnel</Label>
-              <Select value={selectedPersonnelId ? String(selectedPersonnelId) : undefined} onValueChange={(v) => setSelectedPersonnelId(parseInt(v))}>
+              <Select value={selectedPersonnelId > 0 ? String(selectedPersonnelId) : ''} onValueChange={(v) => setSelectedPersonnelId(parseInt(v))}>
                 <SelectTrigger id="personnel">
                   <SelectValue placeholder="Choose personnel" />
                 </SelectTrigger>

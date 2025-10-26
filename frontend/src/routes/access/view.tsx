@@ -40,7 +40,7 @@ function AccessView() {
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="personnel-select">Personnel</Label>
                   <Select 
-                    value={selectedPersonnelId ? String(selectedPersonnelId) : undefined} 
+                    value={selectedPersonnelId > 0 ? String(selectedPersonnelId) : ''} 
                     onValueChange={(v) => setSelectedPersonnelId(parseInt(v))}
                   >
                     <SelectTrigger id="personnel-select">
