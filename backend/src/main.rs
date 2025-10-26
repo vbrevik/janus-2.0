@@ -3,6 +3,7 @@
 mod auth;
 mod personnel;
 mod vendors;
+mod vendor_relations;
 mod access;
 mod audit;
 mod shared;
@@ -98,6 +99,10 @@ async fn rocket() -> _ {
             vendors::handlers::create_vendor,
             vendors::handlers::update_vendor,
             vendors::handlers::delete_vendor,
+            vendor_relations::handlers::list_vendor_relations,
+            vendor_relations::handlers::create_vendor_relation,
+            vendor_relations::handlers::get_vendor_hierarchy,
+            vendor_relations::handlers::delete_vendor_relation,
             audit::handlers::list_audit_logs,
             access::handlers::grant_computer_access,
             access::handlers::grant_data_access,
