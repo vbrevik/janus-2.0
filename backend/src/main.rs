@@ -98,5 +98,10 @@ async fn rocket() -> _ {
             vendors::handlers::update_vendor,
             vendors::handlers::delete_vendor,
             audit::handlers::list_audit_logs,
+            access::handlers::grant_computer_access,
+            access::handlers::grant_data_access,
+            access::handlers::grant_physical_access,
+            access::handlers::list_personnel_access,
+            access::handlers::revoke_access,
         ])
 }
