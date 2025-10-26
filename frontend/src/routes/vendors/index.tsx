@@ -156,7 +156,7 @@ function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
     r.relation_type === 'sub_vendor' && r.related_vendor_id
   ).map(r => r.related_vendor_id!) || []
   
-  const hasSubVendors = subVendorIds.length违法违规
+  const hasSubVendors = subVendorIds.length> 0
 
   const [form, setForm] = useState({
     company_name: vendor.company_name,
