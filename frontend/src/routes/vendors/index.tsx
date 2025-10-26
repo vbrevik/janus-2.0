@@ -4,8 +4,7 @@ import { ProtectedRoute } from '@/components/protected-route'
 import { Layout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import {
   Table,
@@ -15,16 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   useVendorList,
   useCreateVendor,
@@ -39,6 +29,7 @@ export const Route = createFileRoute('/vendors/')({
 
 function VendorList() {
   const [page, setPage] = useState(1)
+  const [showCreate, setShowCreate] = useState(false)
   const perPage = 10
 
   const { data, isLoading, error } = useVendorList(page, perPage)
@@ -49,13 +40,16 @@ function VendorList() {
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-3">
               <h1 className="text-3xl font-bold">Vendor Management</h1>
               <p className="text-muted-foreground mt-1">
                 Manage vendors and their security clearances
               </p>
             </div>
-            <CreateVendorDialog />
+            <Button onClick={() => setShowCreate((v) => !v)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {showCreate ? 'Hide New Row' : 'Add Vendor'}
+            </Button>
           </div>
 
           {/* Table */}
@@ -86,6 +80,7 @@ function VendorList() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {showCreate && <CreateVendorRow onDone={() => setShowCreate(false)} />}
                     {data.items.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
@@ -142,22 +137,101 @@ function VendorList() {
 }
 
 function VendorRow({ vendor }: { vendor: Vendor }) {
+  const [editing, setEditing] = useState(false)
+  const updateMutation = useUpdateVendor(vendor.id)
+  const deleteMutation = useDeleteVendor()
+
+  const [form, setForm] = useState({
+    company_name: vendor.company_name,
+    contact_name: vendor.contact_name,
+    contact_email: vendor.contact_email,
+    contact_phone: vendor.contact_phone || '',
+    contract_number: vendor.contract_number,
+    clearance_level: vendor.clearance_level as ClearanceLevel,
+  })
+
+  const onSave = async () => {
+    await updateMutation.mutateAsync({
+      company_name: form.company_name,
+      contact_name: form.contact_name,
+      contact_email: form.contact_email,
+      contact_phone: form.contact_phone || undefined,
+      contract_number: form.contract_number,
+      clearance_level: form.clearance_level,
+    })
+    setEditing(false)
+  }
+
+  const onDelete = async () => {
+    await deleteMutation.mutateAsync(vendor.id)
+  }
+
   return (
     <TableRow>
-      <TableCell className="font-medium">{vendor.company_name}</TableCell>
-      <TableCell>{vendor.contact_name}</TableCell>
-      <TableCell>{vendor.contact_email}</TableCell>
-      <TableCell>{vendor.contract_number}</TableCell>
+      <TableCell className="font-medium">
+        {editing ? (
+          <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+        ) : (
+          vendor.company_name
+        )}
+      </TableCell>
       <TableCell>
-        <ClearanceBadge level={vendor.clearance_level} />
+        {editing ? (
+          <Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
+        ) : (
+          vendor.contact_name
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
+          <Input type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
+        ) : (
+          vendor.contact_email
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
+          <Input value={form.contract_number} onChange={(e) => setForm({ ...form, contract_number: e.target.value })} />
+        ) : (
+          vendor.contract_number
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
+          <Select value={form.clearance_level} onValueChange={(v) => setForm({ ...form, clearance_level: v as ClearanceLevel })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NONE">None</SelectItem>
+              <SelectItem value="CONFIDENTIAL">Confidential</SelectItem>
+              <SelectItem value="SECRET">Secret</SelectItem>
+              <SelectItem value="TOP_SECRET">Top Secret</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <ClearanceBadge level={vendor.clearance_level} />
+        )}
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
-          <EditVendorDialog vendor={vendor} />
-          <DeleteVendorButton
-            id={vendor.id}
-            name={vendor.company_name}
-          />
+          {editing ? (
+            <>
+              <Button size="sm" onClick={onSave} disabled={updateMutation.isPending}>
+                <Check className="h-4 w-4 mr-1" /> Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                <X className="h-4 w-4 mr-1" /> Cancel
+              </Button>
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={onDelete} disabled={deleteMutation.isPending}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
         </div>
       </TableCell>
     </TableRow>
@@ -175,221 +249,68 @@ function ClearanceBadge({ level }: { level: ClearanceLevel }) {
   return <Badge variant={variants[level]}>{level}</Badge>
 }
 
-function CreateVendorDialog() {
-  const [open, setOpen] = useState(false)
+function CreateVendorRow({ onDone }: { onDone: () => void }) {
   const createMutation = useCreateVendor()
+  const [form, setForm] = useState<CreateVendorRequest>({
+    company_name: '',
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    contract_number: '',
+    clearance_level: 'NONE' as ClearanceLevel,
+  })
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-
-    const data: CreateVendorRequest = {
-      company_name: formData.get('company_name') as string,
-      contact_name: formData.get('contact_name') as string,
-      contact_email: formData.get('contact_email') as string,
-      contact_phone: (formData.get('contact_phone') as string) || undefined,
-      contract_number: formData.get('contract_number') as string,
-      clearance_level: formData.get('clearance_level') as ClearanceLevel,
-    }
-
-    await createMutation.mutateAsync(data)
-    setOpen(false)
+  const onCreate = async () => {
+    await createMutation.mutateAsync({
+      ...form,
+      contact_phone: form.contact_phone || undefined,
+    })
+    onDone()
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Vendor
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add New Vendor</DialogTitle>
-            <DialogDescription>
-              Enter the details for the new vendor
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <VendorForm />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? 'Creating...' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function EditVendorDialog({ vendor }: { vendor: Vendor }) {
-  const [open, setOpen] = useState(false)
-  const updateMutation = useUpdateVendor(vendor.id)
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-
-    const data: CreateVendorRequest = {
-      company_name: formData.get('company_name') as string,
-      contact_name: formData.get('contact_name') as string,
-      contact_email: formData.get('contact_email') as string,
-      contact_phone: (formData.get('contact_phone') as string) || undefined,
-      contract_number: formData.get('contract_number') as string,
-      clearance_level: formData.get('clearance_level') as ClearanceLevel,
-    }
-
-    await updateMutation.mutateAsync(data)
-    setOpen(false)
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <Pencil className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Edit Vendor</DialogTitle>
-            <DialogDescription>
-              Update the vendor's information
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <VendorForm defaultValues={vendor} />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={updateMutation.isPending}>
-              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function DeleteVendorButton({ id, name }: { id: number; name: string }) {
-  const [open, setOpen] = useState(false)
-  const deleteMutation = useDeleteVendor()
-
-  const handleDelete = async () => {
-    await deleteMutation.mutateAsync(id)
-    setOpen(false)
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Delete Vendor</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to delete <strong>{name}</strong>? This action
-            cannot be undone.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
-            Cancel
+    <TableRow className="bg-accent/30">
+      <TableCell className="font-medium">
+        <Input placeholder="Company name" value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+      </TableCell>
+      <TableCell>
+        <Input placeholder="Contact name" value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
+      </TableCell>
+      <TableCell>
+        <Input type="email" placeholder="Contact email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
+      </TableCell>
+      <TableCell>
+        <Input placeholder="Contract #" value={form.contract_number} onChange={(e) => setForm({ ...form, contract_number: e.target.value })} />
+      </TableCell>
+      <TableCell>
+        <Select value={form.clearance_level} onValueChange={(v) => setForm({ ...form, clearance_level: v as ClearanceLevel })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Level" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="NONE">None</SelectItem>
+            <SelectItem value="CONFIDENTIAL">Confidential</SelectItem>
+            <SelectItem value="SECRET">Secret</SelectItem>
+            <SelectItem value="TOP_SECRET">Top Secret</SelectItem>
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          <Button size="sm" onClick={onCreate} disabled={createMutation.isPending}>
+            <Check className="h-4 w-4 mr-1" /> Add
           </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={deleteMutation.isPending}
-          >
-            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+          <Button size="sm" variant="outline" onClick={onDone}>
+            <X className="h-4 w-4 mr-1" /> Cancel
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </TableCell>
+    </TableRow>
   )
 }
 
-function VendorForm({ defaultValues }: { defaultValues?: Partial<Vendor> }) {
-  return (
-    <>
-      <div className="space-y-2">
-        <Label htmlFor="company_name">Company Name *</Label>
-        <Input
-          id="company_name"
-          name="company_name"
-          defaultValue={defaultValues?.company_name}
-          required
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="contact_name">Contact Name *</Label>
-          <Input
-            id="contact_name"
-            name="contact_name"
-            defaultValue={defaultValues?.contact_name}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="contact_phone">Contact Phone</Label>
-          <Input
-            id="contact_phone"
-            name="contact_phone"
-            type="tel"
-            defaultValue={defaultValues?.contact_phone || ''}
-          />
-        </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="contact_email">Contact Email *</Label>
-        <Input
-          id="contact_email"
-          name="contact_email"
-          type="email"
-          defaultValue={defaultValues?.contact_email}
-          required
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="contract_number">Contract Number *</Label>
-          <Input
-            id="contract_number"
-            name="contract_number"
-            defaultValue={defaultValues?.contract_number}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="clearance_level">Clearance Level *</Label>
-          <Select
-            id="clearance_level"
-            name="clearance_level"
-            defaultValue={defaultValues?.clearance_level || 'NONE'}
-            required
-          >
-            <option value="NONE">None</option>
-            <option value="CONFIDENTIAL">Confidential</option>
-            <option value="SECRET">Secret</option>
-            <option value="TOP_SECRET">Top Secret</option>
-          </Select>
-        </div>
-      </div>
-    </>
-  )
-}
+// Inline editing replaces EditVendorDialog
+
+// Delete handled inline in VendorRow
+
+// Removed old modal form; inline fields are used instead

@@ -19,12 +19,15 @@ interface DashboardStats {
 }
 
 function Dashboard() {
-  const { data: stats, isLoading } = useQuery({
+  const { data: response, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      return apiFetch<DashboardStats>('/api/stats')
+      // Backend returns ApiResponse<DashboardStats>
+      return apiFetch<{ success: boolean; data: DashboardStats }>('/stats')
     },
   })
+
+  const stats = response?.data
 
   return (
     <ProtectedRoute>

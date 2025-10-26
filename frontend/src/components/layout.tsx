@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown, LayoutDashboard } from 'lucide-react'
@@ -13,6 +13,7 @@ import {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,11 +59,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); navigate({ to: '/profile' }) }}>
                     <User className="mr-2 h-4 w-4" />
                     Profile Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); navigate({ to: '/profile', search: { change: '1' } as any }) }}>
                     <Shield className="mr-2 h-4 w-4" />
                     Change Password
                   </DropdownMenuItem>
