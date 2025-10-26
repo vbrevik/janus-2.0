@@ -9,10 +9,11 @@ use crate::auth::middleware::AuthGuard;
 use crate::shared::response::PaginatedResponse;
 use crate::shared::pagination::PaginationParams;
 
-#[get("/api/vendors?<page>&<per_page>")]
+#[get("/api/vendors?<page>&<per_page>&<top_level_only>")]
 pub async fn list_vendors(
     page: Option<i32>,
     per_page: Option<i32>,
+    top_level_only: Option<bool>,
     db: &State<PgPool>,
     _auth: AuthGuard,
 ) -> Result<Json<PaginatedResponse<Vendor>>, Status> {
@@ -21,32 +22,35 @@ pub async fn list_vendors(
         per_page: per_page.unwrap_or(20).clamp(1, 100),
     };
 
-    // Get total count (exclude soft deleted)
-    let total: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM vendors WHERE deleted_at IS NULL"
-    )
-    .fetch_one(db.inner())
-    .await
-    .map_err(|_| Status::InternalServerError)?
-    .unwrap_or(0);
+    // Determine if filtering for top-level vendors only
+    let filter_top_level = top_level_only.unwrap_or(false);
+    
+    // Conditional SQL based on filter
+    let (total_sql, vendors_sql) = if filter_top_level {
+        (
+            "SELECT COUNT(*) FROM vendors WHERE deleted_at IS NULL AND id NOT IN (SELECT DISTINCT related_vendor_id FROM vendor_relations WHERE related_vendor_id IS NOT NULL)",
+            "SELECT id, company_name, contact_name, contact_email, contact_phone, clearance_level, contract_number, deleted_at, created_at, updated_at FROM vendors WHERE deleted_at IS NULL AND id NOT IN (SELECT DISTINCT related_vendor_id FROM vendor_relations WHERE related_vendor_id IS NOT NULL) ORDER BY company_name LIMIT $1 OFFSET $2"
+        )
+    } else {
+        (
+            "SELECT COUNT(*) FROM vendors WHERE deleted_at IS NULL",
+            "SELECT id, company_name, contact_name, contact_email, contact_phone, clearance_level, contract_number, deleted_at, created_at, updated_at FROM vendors WHERE deleted_at IS NULL ORDER BY company_name LIMIT $1 OFFSET $2"
+        )
+    };
+
+    // Get total count
+    let total: i64 = sqlx::query_scalar::<sqlx::Postgres, i64>(total_sql)
+        .fetch_one(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?;
 
     // Get vendors with pagination
-    let vendors = sqlx::query_as!(
-        Vendor,
-        r#"
-        SELECT id, company_name, contact_name, contact_email, contact_phone,
-               clearance_level, contract_number, deleted_at, created_at, updated_at
-        FROM vendors
-        WHERE deleted_at IS NULL
-        ORDER BY company_name
-        LIMIT $1 OFFSET $2
-        "#,
-        pagination.limit(),
-        pagination.offset()
-    )
-    .fetch_all(db.inner())
-    .await
-    .map_err(|_| Status::InternalServerError)?;
+    let vendors: Vec<Vendor> = sqlx::query_as::<sqlx::Postgres, Vendor>(vendors_sql)
+        .bind(pagination.limit())
+        .bind(pagination.offset())
+        .fetch_all(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?;
 
     Ok(Json(PaginatedResponse {
         items: vendors,
