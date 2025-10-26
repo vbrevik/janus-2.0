@@ -21,7 +21,9 @@ import {
   useUpdateVendor,
   useDeleteVendor,
 } from '@/hooks/use-vendors'
+import { usePersonnelList } from '@/hooks/use-personnel'
 import type { Vendor, ClearanceLevel, CreateVendorRequest } from '@/types/vendor'
+import type { Personnel } from '@/types/personnel'
 
 export const Route = createFileRoute('/vendors/')({
   component: VendorList,
@@ -259,6 +261,8 @@ function ClearanceBadge({ level }: { level: ClearanceLevel }) {
 
 function CreateVendorRow({ onDone }: { onDone: () => void }) {
   const createMutation = useCreateVendor()
+  const { data: personnelPage } = usePersonnelList(1, 100)
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState<string>('')
   const [form, setForm] = useState<CreateVendorRequest>({
     company_name: '',
     contact_name: '',
@@ -267,6 +271,19 @@ function CreateVendorRow({ onDone }: { onDone: () => void }) {
     contract_number: '',
     clearance_level: 'NONE' as ClearanceLevel,
   })
+
+  const handlePersonnelChange = (personnelId: string) => {
+    setSelectedPersonnelId(personnelId)
+    const personnel = personnelPage?.items.find(p => p.id === parseInt(personnelId))
+    if (personnel) {
+      setForm({
+        ...form,
+        contact_name: `${personnel.first_name} ${personnel.last_name}`,
+        contact_email: personnel.email,
+        contact_phone: personnel.phone || '',
+      })
+    }
+  }
 
   const onCreate = async () => {
     await createMutation.mutateAsync({
@@ -282,13 +299,24 @@ function CreateVendorRow({ onDone }: { onDone: () => void }) {
         <Input placeholder="Company name" value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
       </TableCell>
       <TableCell>
-        <Input placeholder="Contact name" value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
+        <Select value={selectedPersonnelId} onValueChange={handlePersonnelChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select contact..." />
+          </SelectTrigger>
+          <SelectContent>
+            {personnelPage?.items.map((person: Personnel) => (
+              <SelectItem key={person.id} value={person.id.toString()}>
+                {person.first_name} {person.last_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </TableCell>
       <TableCell>
-        <Input type="email" placeholder="Contact email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
+        <Input type="email" value={form.contact_email} readOnly className="bg-muted" />
       </TableCell>
       <TableCell>
-        <Input type="tel" placeholder="Phone (optional)" value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} />
+        <Input type="tel" value={form.contact_phone} readOnly className="bg-muted" />
       </TableCell>
       <TableCell>
         <Input placeholder="Contract #" value={form.contract_number} onChange={(e) => setForm({ ...form, contract_number: e.target.value })} />
