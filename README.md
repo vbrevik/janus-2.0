@@ -200,7 +200,9 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## 📝 **License**
 
-[Your License Here]
+MIT License - see [LICENSE](LICENSE) file for details
+
+Copyright (c) 2025 Vidar Brevik
 
 ## 📞 **Support**
 
