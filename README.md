@@ -179,9 +179,9 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## 📈 **Development Status**
 
-- **Current Phase**: MVP 1 - Week 1, Day 3 ✅ **COMPLETED**
-- **Next Phase**: MVP 1 - Week 1, Day 4 (Access Control)
-- **Timeline**: 4-5 weeks remaining to production
+- **Current Phase**: MVP 1 - Week 1, Day 4 ✅ **COMPLETED**
+- **Next Phase**: MVP 1 - Week 1, Day 5 (Audit Logging or Integration Tests)
+- **Timeline**: 3-4 weeks remaining to production
 
 ### Phase 0 Completed (October 26, 2025)
 - ✅ Backend directory structure with feature modules
@@ -191,16 +191,16 @@ docker-compose -f docker-compose.prod.yml up -d
 - ✅ Both backend and frontend build successfully
 - ✅ Health check endpoint working
 
-### MVP 1 - Week 1 Progress
+### MVP 1 - Week 1 Progress (57% Complete)
 - ✅ **Day 1**: Database Schema + Authentication (JWT)
 - ✅ **Day 2**: Personnel GET APIs (List + Get by ID)
 - ✅ **Day 3**: Personnel CRUD Complete (POST/PUT/DELETE)
-- ⏳ **Day 4**: Access Control CRUD - **NEXT**
-- ⏳ **Day 5**: Vendors CRUD
-- ⏳ **Day 6**: Audit Logging
-- ⏳ **Day 7**: Integration Tests
+- ✅ **Day 4**: Vendors CRUD Complete (All 5 endpoints)
+- ⏳ **Day 5**: Audit Logging or Integration Tests - **NEXT**
+- ⏳ **Day 6**: Integration Tests
+- ⏳ **Day 7**: Week 1 wrap-up
 
-### API Endpoints (8 total)
+### API Endpoints (13 total)
 - `GET /` - Welcome message
 - `GET /api/health` - Health check with database status
 - `POST /api/auth/login` - User authentication (returns JWT)
@@ -209,6 +209,11 @@ docker-compose -f docker-compose.prod.yml up -d
 - `POST /api/personnel` - Create new personnel (requires auth)
 - `PUT /api/personnel/:id` - Update personnel (partial, requires auth)
 - `DELETE /api/personnel/:id` - Soft delete personnel (requires auth)
+- `GET /api/vendors` - List all vendors (paginated, requires auth)
+- `GET /api/vendors/:id` - Get vendor by ID (requires auth)
+- `POST /api/vendors` - Create new vendor (requires auth)
+- `PUT /api/vendors/:id` - Update vendor (partial, requires auth)
+- `DELETE /api/vendors/:id` - Soft delete vendor (requires auth)
 
 **Next Steps**: Day 4 - Access Control CRUD
 
