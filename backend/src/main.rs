@@ -6,6 +6,7 @@ mod vendors;
 mod access;
 mod audit;
 mod shared;
+mod info_systems;
 
 use rocket::serde::json::Json;
 use rocket::http::Method;
@@ -103,5 +104,10 @@ async fn rocket() -> _ {
             access::handlers::grant_physical_access,
             access::handlers::list_personnel_access,
             access::handlers::revoke_access,
+            info_systems::handlers::list_info_systems,
+            info_systems::handlers::get_info_system,
+            info_systems::handlers::create_info_system,
+            info_systems::handlers::update_info_system,
+            info_systems::handlers::delete_info_system,
         ])
 }
