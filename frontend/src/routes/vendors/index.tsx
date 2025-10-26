@@ -14,14 +14,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, ExternalLink, ChevronDown } from 'lucide-react'
 import {
   useVendorList,
+  useVendor,
   useCreateVendor,
   useUpdateVendor,
   useDeleteVendor,
 } from '@/hooks/use-vendors'
 import { usePersonnelList } from '@/hooks/use-personnel'
+import { useVendorRelations } from '@/hooks/use-vendor-relations'
 import { Link } from '@tanstack/react-router'
 import type { Vendor, ClearanceLevel, CreateVendorRequest } from '@/types/vendor'
 import type { Personnel } from '@/types/personnel'
@@ -74,6 +76,7 @@ function VendorList() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12"></TableHead>
                       <TableHead>Company</TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Email</TableHead>
@@ -87,7 +90,7 @@ function VendorList() {
                     {showCreate && <CreateVendorRow onDone={() => setShowCreate(false)} />}
                     {data.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           No vendors found. Create your first entry!
                         </TableCell>
                       </TableRow>
@@ -140,10 +143,21 @@ function VendorList() {
   )
 }
 
-function VendorRow({ vendor }: { vendor: Vendor }) {
+function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
   const [editing, setEditing] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const updateMutation = useUpdateVendor(vendor.id)
   const deleteMutation = useDeleteVendor()
+  
+  // Lazy load relations only when expanded
+  const { data: relations } = useVendorRelations(vendor.id, { enabled: expanded })
+  
+  // Get sub-vendor IDs from relations
+  const subVendorIds = relations?.filter(r => 
+    r.relation_type === 'sub_vendor' && r.related_vendor_id
+  ).map(r => r.related_vendor_id!) || []
+  
+  const hasSubVendors = subVendorIds.length > 0
   
 
   const [form, setForm] = useState({
@@ -172,17 +186,36 @@ function VendorRow({ vendor }: { vendor: Vendor }) {
   }
 
   return (
-    <TableRow>
-      <TableCell className="font-medium">
-        {editing ? (
-          <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
-        ) : (
-          <Link to="/vendors/$vendorId" params={{ vendorId: vendor.id.toString() }} className="hover:underline flex items-center gap-2">
-            {vendor.company_name}
-            <ExternalLink className="h-3 w-3 opacity-50" />
-          </Link>
-        )}
-      </TableCell>
+    <>
+      <TableRow>
+        <TableCell>
+          {hasSubVendors && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded(!expanded)}
+              className="h-6 w-6 p-0"
+            >
+              {expanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className=" h-4 w-4" />
+              )}
+            </Button>
+          )}
+        </TableCell>
+        <TableCell className="font-medium">
+          <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 24}px` }}>
+            {editing ? (
+              <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+            ) : (
+              <Link to="/vendors/$vendorId" params={{ vendorId: vendor.id.toString() }} className="hover:underline flex items-center gap-2">
+                {vendor.company_name}
+                <ExternalLink className="h-3 w-3 opacity-50" />
+              </Link>
+            )}
+          </div>
+        </TableCell>
       <TableCell>
         {editing ? (
           <Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
@@ -250,7 +283,23 @@ function VendorRow({ vendor }: { vendor: Vendor }) {
         </div>
       </TableCell>
     </TableRow>
+    
+    {/* Render sub-vendors when expanded */}
+    {expanded && hasSubVendors && subVendorIds.map((subId) => (
+      <SubVendorRow key={subId} vendorId={subId} level={level + 1} />
+    ))}
+    </>
   )
+}
+
+function SubVendorRow({ vendorId, level }: { vendorId: number; level: number }) {
+  const { data: vendor, isLoading } = useVendor(vendorId)
+  
+  if (isLoading || !vendor) {
+    return null
+  }
+  
+  return <VendorRow vendor={vendor} level={level} />
 }
 
 function ClearanceBadge({ level }: { level: ClearanceLevel }) {
