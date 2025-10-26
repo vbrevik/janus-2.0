@@ -14,14 +14,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, ChevronDown, ChevronRightIcon } from 'lucide-react'
 import {
   useVendorList,
+  useVendor,
   useCreateVendor,
   useUpdateVendor,
   useDeleteVendor,
 } from '@/hooks/use-vendors'
 import { usePersonnelList } from '@/hooks/use-personnel'
+import { useVendorRelations } from '@/hooks/use-vendor-relations'
+import { Link } from '@tanstack/react-router'
 import type { Vendor, ClearanceLevel, CreateVendorRequest } from '@/types/vendor'
 import type { Personnel } from '@/types/personnel'
 
@@ -139,10 +142,21 @@ function VendorList() {
   )
 }
 
-function VendorRow({ vendor }: { vendor: Vendor }) {
+function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
   const [editing, setEditing] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const updateMutation = useUpdateVendor(vendor.id)
   const deleteMutation = useDeleteVendor()
+  
+  // Lazy load sub-vendors only when expanded
+  const { data: relations, isLoading: relationsLoading } = useVendorRelations(vendor.id, { enabled: expanded })
+  
+  // Get sub-vendor IDs from relations
+  const subVendorIds = relations?.filter(r => 
+    r.relation_type === 'sub_vendor' && r.related_vendor_id
+  ).map(r => r.related_vendor_id!) || []
+  
+  const hasSubVendors = subVendorIds.length违法违规
 
   const [form, setForm] = useState({
     company_name: vendor.company_name,

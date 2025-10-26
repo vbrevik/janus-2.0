@@ -11,7 +11,7 @@ export const vendorRelationKeys = {
 };
 
 // List vendor relations
-export function useVendorRelations(vendorId: number) {
+export function useVendorRelations(vendorId: number, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: vendorRelationKeys.vendor(vendorId),
     queryFn: async () => {
@@ -20,7 +20,7 @@ export function useVendorRelations(vendorId: number) {
       );
       return response.data;
     },
-    enabled: vendorId > 0,
+    enabled: vendorId > 0 && (options?.enabled !== false),
   });
 }
 
