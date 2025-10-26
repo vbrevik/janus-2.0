@@ -13,7 +13,7 @@ import { useVendorRelations, useCreateVendorRelation, useDeleteVendorRelation } 
 import { usePersonnelList } from '@/hooks/use-personnel'
 import { useVendorList } from '@/hooks/use-vendors'
 import { useVendorHierarchy } from '@/hooks/use-vendor-relations'
-import { ArrowLeft, Building2, Users, Trash2, Plus, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Trash2, Plus } from 'lucide-react'
 import type { RelationType } from '@/types/vendor-relation'
 
 export const Route = createFileRoute('/vendors/$vendorId')({
@@ -153,7 +153,7 @@ function DetailsTab({ vendor }: { vendor: any }) {
                   <SelectItem value="NONE">None</SelectItem>
                   <SelectItem value="CONFIDENTIAL">Confidential</SelectItem>
                   <SelectItem value="SECRET">Secret</SelectItem>
-                  <SelectItem value="TOP_SECRET">Top Secret</SelectItem البناء
+                  <SelectItem value="TOP_SECRET">Top Secret</SelectItem>
                 </SelectContent>
               </Select>
             ) : (
@@ -209,7 +209,7 @@ function DetailsTab({ vendor }: { vendor: any }) {
   )
 }
 
-function RelationsTab({ vendorId, relations, hierarchy, isLoading }: { 
+function RelationsTab({ vendorId, relations, isLoading }: { 
   vendorId: number
   relations: any[] | undefined
   hierarchy: any[] | undefined
