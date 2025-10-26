@@ -74,6 +74,7 @@ function VendorList() {
                       <TableHead>Company</TableHead>
                       <TableHead>Contact</TableHead>
                       <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
                       <TableHead>Contract #</TableHead>
                       <TableHead>Clearance</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -83,7 +84,7 @@ function VendorList() {
                     {showCreate && <CreateVendorRow onDone={() => setShowCreate(false)} />}
                     {data.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                           No vendors found. Create your first entry!
                         </TableCell>
                       </TableRow>
@@ -191,6 +192,13 @@ function VendorRow({ vendor }: { vendor: Vendor }) {
       </TableCell>
       <TableCell>
         {editing ? (
+          <Input type="tel" value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} />
+        ) : (
+          vendor.contact_phone || '-'
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
           <Input value={form.contract_number} onChange={(e) => setForm({ ...form, contract_number: e.target.value })} />
         ) : (
           vendor.contract_number
@@ -278,6 +286,9 @@ function CreateVendorRow({ onDone }: { onDone: () => void }) {
       </TableCell>
       <TableCell>
         <Input type="email" placeholder="Contact email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
+      </TableCell>
+      <TableCell>
+        <Input type="tel" placeholder="Phone (optional)" value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} />
       </TableCell>
       <TableCell>
         <Input placeholder="Contract #" value={form.contract_number} onChange={(e) => setForm({ ...form, contract_number: e.target.value })} />
