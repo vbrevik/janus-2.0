@@ -179,9 +179,9 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## 📈 **Development Status**
 
-- **Current Phase**: Phase 0 - Setup ✅ **COMPLETED**
-- **Next Phase**: MVP 1 - Core Foundation (Weeks 1-2) 🔄 **READY TO START**
-- **Timeline**: 6-8 weeks to production
+- **Current Phase**: MVP 1 - Week 1, Day 3 ✅ **COMPLETED**
+- **Next Phase**: MVP 1 - Week 1, Day 4 (Access Control)
+- **Timeline**: 4-5 weeks remaining to production
 
 ### Phase 0 Completed (October 26, 2025)
 - ✅ Backend directory structure with feature modules
@@ -191,7 +191,26 @@ docker-compose -f docker-compose.prod.yml up -d
 - ✅ Both backend and frontend build successfully
 - ✅ Health check endpoint working
 
-**Next Steps**: Begin MVP 1 - Week 1, Day 1 (Database Schema + Authentication)
+### MVP 1 - Week 1 Progress
+- ✅ **Day 1**: Database Schema + Authentication (JWT)
+- ✅ **Day 2**: Personnel GET APIs (List + Get by ID)
+- ✅ **Day 3**: Personnel CRUD Complete (POST/PUT/DELETE)
+- ⏳ **Day 4**: Access Control CRUD - **NEXT**
+- ⏳ **Day 5**: Vendors CRUD
+- ⏳ **Day 6**: Audit Logging
+- ⏳ **Day 7**: Integration Tests
+
+### API Endpoints (8 total)
+- `GET /` - Welcome message
+- `GET /api/health` - Health check with database status
+- `POST /api/auth/login` - User authentication (returns JWT)
+- `GET /api/personnel` - List all personnel (paginated, requires auth)
+- `GET /api/personnel/:id` - Get personnel by ID (requires auth)
+- `POST /api/personnel` - Create new personnel (requires auth)
+- `PUT /api/personnel/:id` - Update personnel (partial, requires auth)
+- `DELETE /api/personnel/:id` - Soft delete personnel (requires auth)
+
+**Next Steps**: Day 4 - Access Control CRUD
 
 ## 🤝 **Contributing**
 
