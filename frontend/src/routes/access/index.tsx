@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { X } from 'lucide-react'
 import { useGrantComputerAccess, useGrantDataAccess, useGrantPhysicalAccess } from '@/hooks/use-access'
 import { usePersonnelList } from '@/hooks/use-personnel'
+import { useInfoSystemsList } from '@/hooks/use-info-systems'
 import { Computer, Database, Key } from 'lucide-react'
 import type { CreateComputerAccessRequest, CreateDataAccessRequest, CreatePhysicalAccessRequest } from '@/types/access'
+import type { InfoSystem } from '@/types/info-system'
 
 export const Route = createFileRoute('/access/')({
   component: AccessControl,
@@ -179,6 +181,7 @@ function ComputerAccessForm({ personnelId, onSubmit, isLoading }: {
   onSubmit: (data: CreateComputerAccessRequest) => void
   isLoading: boolean 
 }) {
+  const { data: systemsPage } = useInfoSystemsList(1, 100)
   const [systemName, setSystemName] = useState('')
   const [accessLevel, setAccessLevel] = useState<'READ' | 'WRITE' | 'ADMIN'>('READ')
   const [expiresAt, setExpiresAt] = useState('')
@@ -196,13 +199,19 @@ function ComputerAccessForm({ personnelId, onSubmit, isLoading }: {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="system_name">System Name</Label>
-        <Input
-          id="system_name"
-          required
-          value={systemName}
-          onChange={(e) => setSystemName(e.target.value)}
-        />
+        <Label htmlFor="system_name">Information System</Label>
+        <Select value={systemName} onValueChange={setSystemName} required>
+          <SelectTrigger id="system_name">
+            <SelectValue placeholder="Choose system" />
+          </SelectTrigger>
+          <SelectContent>
+            {systemsPage?.items.map((system: InfoSystem) => (
+              <SelectItem key={system.id} value={system.system_name}>
+                {system.system_name} ({system.environment})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       
       <div className="space-y-2">
