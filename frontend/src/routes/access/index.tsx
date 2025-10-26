@@ -1,23 +1,375 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import { ProtectedRoute } from '@/components/protected-route'
 import { Layout } from '@/components/layout'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogDescription 
+} from '@/components/ui/dialog'
+import { useGrantComputerAccess, useGrantDataAccess, useGrantPhysicalAccess } from '@/hooks/use-access'
+import { Computer, Database, Key } from 'lucide-react'
+import type { CreateComputerAccessRequest, CreateDataAccessRequest, CreatePhysicalAccessRequest } from '@/types/access'
 
 export const Route = createFileRoute('/access/')({
   component: AccessControl,
 })
 
+type AccessType = 'computer' | 'data' | 'physical'
+
 function AccessControl() {
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState<number>(0)
+  const [openDialog, setOpenDialog] = useState<AccessType | null>(null)
+  
+  const grantComputerAccess = useGrantComputerAccess()
+  const grantDataAccess = useGrantDataAccess()
+  const grantPhysicalAccess = useGrantPhysicalAccess()
+
+  const handleSubmit = async (type: AccessType, formData: CreateComputerAccessRequest | CreateDataAccessRequest | CreatePhysicalAccessRequest) => {
+    try {
+      if (type === 'computer') {
+        await grantComputerAccess.mutateAsync(formData as CreateComputerAccessRequest)
+      } else if (type === 'data') {
+        await grantDataAccess.mutateAsync(formData as CreateDataAccessRequest)
+      } else if (type === 'physical') {
+        await grantPhysicalAccess.mutateAsync(formData as CreatePhysicalAccessRequest)
+      }
+      setOpenDialog(null)
+      // TODO: Show success message
+    } catch (error) {
+      console.error('Failed to grant access:', error)
+      // TODO: Show error message
+    }
+  }
+
   return (
     <ProtectedRoute>
       <Layout>
-        <div>
-          <h1 className="text-3xl font-bold mb-6">Access Control</h1>
-          <p className="text-muted-foreground">
-            Access control will be implemented in MVP 2...
-          </p>
+        <div className="space-y-6">
+          <h1 className="text-3xl font-bold">Access Control</h1>
+          
+          <div className="grid gap-4 md:grid-cols-3">
+            {/* Grant Computer Access */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Computer className="h-5 w-5" />
+                  <CardTitle>Computer Access</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Grant system-level access (READ, WRITE, ADMIN)
+                </p>
+                <Dialog open={openDialog === 'computer'} onOpenChange={(open) => setOpenDialog(open ? 'computer' : null)}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full">Grant Computer Access</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Grant Computer Access</DialogTitle>
+                      <DialogDescription>
+                        Grant system-level access to personnel
+                      </DialogDescription>
+                    </DialogHeader>
+                    <ComputerAccessForm 
+                      personnelId={selectedPersonnelId}
+                      onSubmit={(data) => handleSubmit('computer', data)}
+                      isLoading={grantComputerAccess.isPending}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+
+            {/* Grant Data Access */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  <CardTitle>Data Access</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Grant classification-based access (UNCLASSIFIED to TOP_SECRET)
+                </p>
+                <Dialog open={openDialog === 'data'} onOpenChange={(open) => setOpenDialog(open ? 'data' : null)}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full">Grant Data Access</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Grant Data Access</DialogTitle>
+                      <DialogDescription>
+                        Grant data classification access to personnel
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DataAccessForm 
+                      personnelId={selectedPersonnelId}
+                      onSubmit={(data) => handleSubmit('data', data)}
+                      isLoading={grantDataAccess.isPending}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+
+            {/* Grant Physical Access */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Key className="h-5 w-5" />
+                  <CardTitle>Physical Access</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Grant zone-based physical access (VISITOR to FULL)
+                </p>
+                <Dialog open={openDialog === 'physical'} onOpenChange={(open) => setOpenDialog(open ? 'physical' : null)}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full">Grant Physical Access</Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Grant Physical Access</DialogTitle>
+                      <DialogDescription>
+                        Grant physical zone access to personnel
+                      </DialogDescription>
+                    </DialogHeader>
+                    <PhysicalAccessForm 
+                      personnelId={selectedPersonnelId}
+                      onSubmit={(data) => handleSubmit('physical', data)}
+                      isLoading={grantPhysicalAccess.isPending}
+                    />
+                  </DialogContent>
+                </Dialog>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* TODO: Add personnel selector */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Personnel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Label htmlFor="personnel">Personnel ID</Label>
+              <Input
+                id="personnel"
+                type="number"
+                placeholder="Enter personnel ID"
+                value={selectedPersonnelId || ''}
+                onChange={(e) => setSelectedPersonnelId(parseInt(e.target.value) || 0)}
+              />
+            </CardContent>
+          </Card>
         </div>
       </Layout>
     </ProtectedRoute>
   )
 }
 
+// Computer Access Form Component
+function ComputerAccessForm({ personnelId, onSubmit, isLoading }: { 
+  personnelId: number
+  onSubmit: (data: CreateComputerAccessRequest) => void
+  isLoading: boolean 
+}) {
+  const [systemName, setSystemName] = useState('')
+  const [accessLevel, setAccessLevel] = useState<'READ' | 'WRITE' | 'ADMIN'>('READ')
+  const [expiresAt, setExpiresAt] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSubmit({
+      personnel_id: personnelId,
+      system_name: systemName,
+      access_level: accessLevel,
+      expires_at: expiresAt || undefined,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="system_name">System Name</Label>
+        <Input
+          id="system_name"
+          required
+          value={systemName}
+          onChange={(e) => setSystemName(e.target.value)}
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="access_level">Access Level</Label>
+        <Select value={accessLevel} onValueChange={(value) => setAccessLevel(value as any)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="READ">READ</SelectItem>
+            <SelectItem value="WRITE">WRITE</SelectItem>
+            <SelectItem value="ADMIN">ADMIN</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="expires_at">Expires At (optional)</Label>
+        <Input
+          id="expires_at"
+          type="datetime-local"
+          value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)}
+        />
+      </div>
+
+      <Button type="submit" disabled={isLoading} className="w-full">
+        {isLoading ? 'Granting...' : 'Grant Access'}
+      </Button>
+    </form>
+  )
+}
+
+// Data Access Form Component
+function DataAccessForm({ personnelId, onSubmit, isLoading }: { 
+  personnelId: number
+  onSubmit: (data: CreateDataAccessRequest) => void
+  isLoading: boolean 
+}) {
+  const [classification, setClassification] = useState<'UNCLASSIFIED' | 'CONFIDENTIAL' | 'SECRET' | 'TOP_SECRET'>('UNCLASSIFIED')
+  const [accessLevel, setAccessLevel] = useState<'READ' | 'WRITE' | 'DELETE'>('READ')
+  const [expiresAt, setExpiresAt] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSubmit({
+      personnel_id: personnelId,
+      data_classification: classification,
+      access_level: accessLevel,
+      expires_at: expiresAt || undefined,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="classification">Data Classification</Label>
+        <Select value={classification} onValueChange={(value) => setClassification(value as any)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="UNCLASSIFIED">UNCLASSIFIED</SelectItem>
+            <SelectItem value="CONFIDENTIAL">CONFIDENTIAL</SelectItem>
+            <SelectItem value="SECRET">SECRET</SelectItem>
+            <SelectItem value="TOP_SECRET">TOP_SECRET</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="access_level">Access Level</Label>
+        <Select value={accessLevel} onValueChange={(value) => setAccessLevel(value as any)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="READ">READ</SelectItem>
+            <SelectItem value="WRITE">WRITE</SelectItem>
+            <SelectItem value="DELETE">DELETE</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="expires_at">Expires At (optional)</Label>
+        <Input
+          id="expires_at"
+          type="datetime-local"
+          value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)}
+        />
+      </div>
+
+      <Button type="submit" disabled={isLoading} className="w-full">
+        {isLoading ? 'Granting...' : 'Grant Access'}
+      </Button>
+    </form>
+  )
+}
+
+// Physical Access Form Component
+function PhysicalAccessForm({ personnelId, onSubmit, isLoading }: { 
+  personnelId: number
+  onSubmit: (data: CreatePhysicalAccessRequest) => void
+  isLoading: boolean 
+}) {
+  const [zoneName, setZoneName] = useState('')
+  const [accessLevel, setAccessLevel] = useState<'VISITOR' | 'STANDARD' | 'RESTRICTED' | 'FULL'>('VISITOR')
+  const [validUntil, setValidUntil] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    onSubmit({
+      personnel_id: personnelId,
+      zone_name: zoneName,
+      access_level: accessLevel,
+      valid_until: validUntil || undefined,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="zone_name">Zone Name</Label>
+        <Input
+          id="zone_name"
+          required
+          value={zoneName}
+          onChange={(e) => setZoneName(e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="access_level">Access Level</Label>
+        <Select value={accessLevel} onValueChange={(value) => setAccessLevel(value as any)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="VISITOR">VISITOR</SelectItem>
+            <SelectItem value="STANDARD">STANDARD</SelectItem>
+            <SelectItem value="RESTRICTED">RESTRICTED</SelectItem>
+            <SelectItem value="FULL">FULL</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="valid_until">Valid Until (optional)</Label>
+        <Input
+          id="valid_until"
+          type="datetime-local"
+          value={validUntil}
+          onChange={(e) => setValidUntil(e.target.value)}
+        />
+      </div>
+
+      <Button type="submit" disabled={isLoading} className="w-full">
+        {isLoading ? 'Granting...' : 'Grant Access'}
+      </Button>
+    </form>
+  )
+}
