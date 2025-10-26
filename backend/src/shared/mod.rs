@@ -3,4 +3,5 @@
 pub mod response;
 pub mod pagination;
 pub mod database;
+pub mod handlers;
 

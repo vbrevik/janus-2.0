@@ -1,0 +1,225 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Janus 2.0 Security Clearance API",
+    "version": "2.0.0",
+    "description": "API for managing personnel, vendors, and three-tier access control in high-security environments",
+    "contact": {
+      "name": "Janus Development Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:15520/api",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Login with username and password",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username", "password"],
+                "properties": {
+                  "username": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 50
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 8
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "token": {"type": "string"},
+                        "user_id": {"type": "string"},
+                        "role": {"type": "string"}
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/personnel": {
+      "get": {
+        "summary": "List all personnel",
+        "tags": ["Personnel"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {"type": "integer", "default": 1}
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "schema": {"type": "integer", "default": 20}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {"$ref": "#/components/schemas/Personnel"}
+                    },
+                    "pagination": {"$ref": "#/components/schemas/Pagination"}
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create new personnel",
+        "tags": ["Personnel"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/CreatePersonnelRequest"}
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Personnel created",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/Personnel"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/personnel/{id}": {
+      "get": {
+        "summary": "Get personnel by ID",
+        "tags": ["Personnel"],
+        "parameters": [
+          {"name": "id", "in": "path", "required": true, "schema": {"type": "integer"}}
+        ],
+        "responses": {
+          "200": {"description": "Success"}
+        }
+      }
+    },
+    "/vendors": {
+      "get": {
+        "summary": "List all vendors",
+        "tags": ["Vendors"]
+      },
+      "post": {
+        "summary": "Create new vendor",
+        "tags": ["Vendors"]
+      }
+    },
+    "/access/computer": {
+      "post": {
+        "summary": "Grant computer access",
+        "tags": ["Access Control"]
+      }
+    },
+    "/access/data": {
+      "post": {
+        "summary": "Grant data access",
+        "tags": ["Access Control"]
+      }
+    },
+    "/access/physical": {
+      "post": {
+        "summary": "Grant physical access",
+        "tags": ["Access Control"]
+      }
+    },
+    "/personnel/{id}/access": {
+      "get": {
+        "summary": "List all access for personnel",
+        "tags": ["Access Control"]
+      }
+    },
+    "/access/{type}/{id}": {
+      "delete": {
+        "summary": "Revoke access",
+        "tags": ["Access Control"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Personnel": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "integer"},
+          "first_name": {"type": "string"},
+          "last_name": {"type": "string"},
+          "email": {"type": "string"},
+          "phone": {"type": "string"},
+          "clearance_level": {"type": "string", "enum": ["UNCLASSIFIED", "CONFIDENTIAL", "SECRET", "TOP_SECRET"]},
+          "department": {"type": "string"},
+          "position": {"type": "string"},
+          "created_at": {"type": "string", "format": "date-time"},
+          "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "CreatePersonnelRequest": {
+        "type": "object",
+        "required": ["first_name", "last_name", "email", "clearance_level", "department", "position"],
+        "properties": {
+          "first_name": {"type": "string"},
+          "last_name": {"type": "string"},
+          "email": {"type": "string"},
+          "phone": {"type": "string"},
+          "clearance_level": {"type": "string"},
+          "department": {"type": "string"},
+          "position": {"type": "string"}
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": {"type": "integer"},
+          "per_page": {"type": "integer"},
+          "total": {"type": "integer"},
+          "total_pages": {"type": "integer"}
+        }
+      }
+    }
+  }
+}
+

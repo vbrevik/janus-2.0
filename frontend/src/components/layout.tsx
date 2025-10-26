@@ -1,10 +1,19 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
-import { Shield, Users, Building2, Key, FileText, LogOut } from 'lucide-react'
+import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown, LayoutDashboard } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
+  const navigate = useNavigate()
 
   return (
     <div className="min-h-screen bg-background">
@@ -24,20 +33,47 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="text-sm">
-                <p className="font-medium">{user?.username}</p>
-                <p className="text-xs text-muted-foreground capitalize">
-                  {user?.role}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={logout}
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
+              {/* Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-medium">{user?.username}</p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {user?.role}
+                      </p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">{user?.username}</p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {user?.role}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); navigate({ to: '/profile' }) }}>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={(e) => { e.preventDefault(); navigate({ to: '/profile', search: { change: '1' } as any }) }}>
+                    <Shield className="mr-2 h-4 w-4" />
+                    Change Password
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout} className="text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
@@ -47,6 +83,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <nav className="border-b bg-card/50">
         <div className="container mx-auto px-4">
           <div className="flex gap-1">
+            <NavLink to="/dashboard" icon={<LayoutDashboard className="h-4 w-4" />}>
+              Dashboard
+            </NavLink>
             <NavLink to="/personnel" icon={<Users className="h-4 w-4" />}>
               Personnel
             </NavLink>

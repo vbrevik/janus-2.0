@@ -7,14 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger,
-  DialogDescription 
-} from '@/components/ui/dialog'
+import { X } from 'lucide-react'
 import { useGrantComputerAccess, useGrantDataAccess, useGrantPhysicalAccess } from '@/hooks/use-access'
 import { Computer, Database, Key } from 'lucide-react'
 import type { CreateComputerAccessRequest, CreateDataAccessRequest, CreatePhysicalAccessRequest } from '@/types/access'
@@ -27,7 +20,7 @@ type AccessType = 'computer' | 'data' | 'physical'
 
 function AccessControl() {
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number>(0)
-  const [openDialog, setOpenDialog] = useState<AccessType | null>(null)
+  const [openSection, setOpenSection] = useState<AccessType | null>(null)
   
   const grantComputerAccess = useGrantComputerAccess()
   const grantDataAccess = useGrantDataAccess()
@@ -42,7 +35,7 @@ function AccessControl() {
       } else if (type === 'physical') {
         await grantPhysicalAccess.mutateAsync(formData as CreatePhysicalAccessRequest)
       }
-      setOpenDialog(null)
+      setOpenSection(null)
       // TODO: Show success message
     } catch (error) {
       console.error('Failed to grant access:', error)
@@ -62,31 +55,29 @@ function AccessControl() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Computer className="h-5 w-5" />
-                  <CardTitle>Computer Access</CardTitle>
+                  <CardTitle>Information Systems</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Grant system-level access (READ, WRITE, ADMIN)
+                  Grant information systems access (READ, WRITE, ADMIN)
                 </p>
-                <Dialog open={openDialog === 'computer'} onOpenChange={(open) => setOpenDialog(open ? 'computer' : null)}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full">Grant Computer Access</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Grant Computer Access</DialogTitle>
-                      <DialogDescription>
-                        Grant system-level access to personnel
-                      </DialogDescription>
-                    </DialogHeader>
+                {openSection === 'computer' ? (
+                  <div className="space-y-4">
                     <ComputerAccessForm 
                       personnelId={selectedPersonnelId}
                       onSubmit={(data) => handleSubmit('computer', data)}
                       isLoading={grantComputerAccess.isPending}
                     />
-                  </DialogContent>
-                </Dialog>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setOpenSection(null)}>
+                        <X className="h-4 w-4 mr-1" /> Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button className="w-full" onClick={() => setOpenSection('computer')}>Grant Information Systems Access</Button>
+                )}
               </CardContent>
             </Card>
 
@@ -102,24 +93,22 @@ function AccessControl() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Grant classification-based access (UNCLASSIFIED to TOP_SECRET)
                 </p>
-                <Dialog open={openDialog === 'data'} onOpenChange={(open) => setOpenDialog(open ? 'data' : null)}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full">Grant Data Access</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Grant Data Access</DialogTitle>
-                      <DialogDescription>
-                        Grant data classification access to personnel
-                      </DialogDescription>
-                    </DialogHeader>
+                {openSection === 'data' ? (
+                  <div className="space-y-4">
                     <DataAccessForm 
                       personnelId={selectedPersonnelId}
                       onSubmit={(data) => handleSubmit('data', data)}
                       isLoading={grantDataAccess.isPending}
                     />
-                  </DialogContent>
-                </Dialog>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setOpenSection(null)}>
+                        <X className="h-4 w-4 mr-1" /> Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button className="w-full" onClick={() => setOpenSection('data')}>Grant Data Access</Button>
+                )}
               </CardContent>
             </Card>
 
@@ -135,24 +124,22 @@ function AccessControl() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Grant zone-based physical access (VISITOR to FULL)
                 </p>
-                <Dialog open={openDialog === 'physical'} onOpenChange={(open) => setOpenDialog(open ? 'physical' : null)}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full">Grant Physical Access</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Grant Physical Access</DialogTitle>
-                      <DialogDescription>
-                        Grant physical zone access to personnel
-                      </DialogDescription>
-                    </DialogHeader>
+                {openSection === 'physical' ? (
+                  <div className="space-y-4">
                     <PhysicalAccessForm 
                       personnelId={selectedPersonnelId}
                       onSubmit={(data) => handleSubmit('physical', data)}
                       isLoading={grantPhysicalAccess.isPending}
                     />
-                  </DialogContent>
-                </Dialog>
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => setOpenSection(null)}>
+                        <X className="h-4 w-4 mr-1" /> Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button className="w-full" onClick={() => setOpenSection('physical')}>Grant Physical Access</Button>
+                )}
               </CardContent>
             </Card>
           </div>
