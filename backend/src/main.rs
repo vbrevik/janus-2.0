@@ -8,6 +8,8 @@ mod audit;
 mod shared;
 
 use rocket::serde::json::Json;
+use rocket::http::Method;
+use rocket_cors::{AllowedOrigins, CorsOptions};
 use serde::Serialize;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -58,10 +60,26 @@ async fn rocket() -> _ {
     println!("✅ Database connected");
     println!("✅ JWT secret loaded");
 
+    // Configure CORS
+    let cors = CorsOptions::default()
+        .allowed_origins(AllowedOrigins::all())
+        .allowed_methods(
+            vec![Method::Get, Method::Post, Method::Put, Method::Delete, Method::Options]
+                .into_iter()
+                .map(From::from)
+                .collect(),
+        )
+        .allow_credentials(true)
+        .to_cors()
+        .expect("Failed to create CORS fairing");
+
+    println!("✅ CORS configured");
+
     rocket::build()
         .configure(rocket::Config::figment().merge(("port", 15520)))
         .manage(db_pool)
         .manage(jwt_secret)
+        .attach(cors)
         .mount("/", routes![
             index,
             health,
