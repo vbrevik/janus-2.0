@@ -35,9 +35,10 @@ export const Route = createFileRoute('/vendors/')({
 function VendorList() {
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
+  const [topLevelOnly, setTopLevelOnly] = useState(true) // Default: show only top-level vendors
   const perPage = 10
 
-  const { data, isLoading, error } = useVendorList(page, perPage)
+  const { data, isLoading, error } = useVendorList(page, perPage, topLevelOnly)
 
   return (
     <ProtectedRoute>
@@ -51,10 +52,24 @@ function VendorList() {
                 Manage vendors and their security clearances
               </p>
             </div>
-            <Button onClick={() => setShowCreate((v) => !v)}>
-              <Plus className="h-4 w-4 mr-2" />
-              {showCreate ? 'Hide New Row' : 'Add Vendor'}
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                variant={topLevelOnly ? "default" : "outline"}
+                onClick={() => setTopLevelOnly(true)}
+              >
+                Top Level Only
+              </Button>
+              <Button
+                variant={!topLevelOnly ? "default" : "outline"}
+                onClick={() => setTopLevelOnly(false)}
+              >
+                All Vendors
+              </Button>
+              <Button onClick={() => setShowCreate((v) => !v)}>
+                <Plus className="h-4 w-4 mr-2" />
+                {showCreate ? 'Hide New Row' : 'Add Vendor'}
+              </Button>
+            </div>
           </div>
 
           {/* Table */}

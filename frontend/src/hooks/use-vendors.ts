@@ -18,12 +18,12 @@ export const vendorKeys = {
 }
 
 // List Vendors
-export function useVendorList(page = 1, perPage = 10) {
+export function useVendorList(page = 1, perPage = 10, topLevelOnly = false) {
   return useQuery({
-    queryKey: vendorKeys.list(page, perPage),
+    queryKey: [...vendorKeys.list(page, perPage), topLevelOnly],
     queryFn: () =>
       api.get<VendorListResponse>(
-        `/vendors?page=${page}&per_page=${perPage}`
+        `/vendors?page=${page}&per_page=${perPage}${topLevelOnly ? '&top_level_only=true' : ''}`
       ),
   })
 }
