@@ -76,5 +76,6 @@ async fn rocket() -> _ {
             vendors::handlers::create_vendor,
             vendors::handlers::update_vendor,
             vendors::handlers::delete_vendor,
+            audit::handlers::list_audit_logs,
         ])
 }
