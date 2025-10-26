@@ -28,3 +28,21 @@ pub struct User {
     pub updated_at: chrono::NaiveDateTime,
 }
 
+#[derive(Debug, Serialize)]
+pub struct ProfileResponse {
+    pub id: i32,
+    pub username: String,
+    pub role: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct ChangePasswordRequest {
+    #[validate(length(min = 8))]
+    pub old_password: String,
+    
+    #[validate(length(min = 8))]
+    pub new_password: String,
+}
+

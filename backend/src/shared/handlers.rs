@@ -39,15 +39,9 @@ pub async fn get_stats(
     .map_err(|_| Status::InternalServerError)?
     .unwrap_or(0);
 
-    // Get total access grants
+    // Get total access grants (computer access only for now)
     let total_access_grants: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM (
-            SELECT id FROM computer_access 
-            UNION ALL
-            SELECT id FROM data_access
-            UNION ALL
-            SELECT id FROM physical_access
-        ) as all_access"
+        "SELECT COUNT(*) FROM computer_access"
     )
     .fetch_one(db.inner())
     .await
@@ -56,13 +50,7 @@ pub async fn get_stats(
 
     // Get active access grants
     let active_access_grants: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM (
-            SELECT id FROM computer_access WHERE status = 'ACTIVE'
-            UNION ALL
-            SELECT id FROM data_access WHERE status = 'ACTIVE'
-            UNION ALL
-            SELECT id FROM physical_access WHERE status = 'ACTIVE'
-        ) as all_active_access"
+        "SELECT COUNT(*) FROM computer_access WHERE status = 'ACTIVE'"
     )
     .fetch_one(db.inner())
     .await
