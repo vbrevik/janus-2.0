@@ -15,7 +15,7 @@ pub async fn list_vendor_relations(
         VendorRelation,
         r#"
         SELECT id, vendor_id, related_vendor_id, related_personnel_id, 
-               relation_type, notes, created_at, updated_at
+               relation_type, notes, valid_from, valid_until, created_at, updated_at
         FROM vendor_relations
         WHERE vendor_id = $1
         ORDER BY relation_type, created_at DESC
@@ -40,19 +40,36 @@ pub async fn create_vendor_relation(
         return Err("Either related_vendor_id or related_personnel_id must be provided".to_string());
     }
     
+    // Simple date parsing: YYYY-MM-DD format
+    let valid_from = match &data.valid_from {
+        Some(d) => chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d")
+            .ok()
+            .and_then(|date| date.and_hms_opt(0, 0, 0))
+            .unwrap_or_else(|| chrono::Utc::now().naive_utc()),
+        None => chrono::Utc::now().naive_utc(),
+    };
+    
+    let valid_until = data.valid_until.as_ref().and_then(|d| {
+        chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d")
+            .ok()
+            .and_then(|date| date.and_hms_opt(23, 59, 59))
+    });
+    
     let relation = sqlx::query_as!(
         VendorRelation,
         r#"
-        INSERT INTO vendor_relations (vendor_id, related_vendor_id, related_personnel_id, relation_type, notes)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO vendor_relations (vendor_id, related_vendor_id, related_personnel_id, relation_type, notes, valid_from, valid_until)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, vendor_id, related_vendor_id, related_personnel_id, 
-                  relation_type, notes, created_at, updated_at
+                  relation_type, notes, valid_from, valid_until, created_at, updated_at
         "#,
         data.vendor_id,
         data.related_vendor_id,
         data.related_personnel_id,
         data.relation_type,
-        data.notes
+        data.notes,
+        valid_from,
+        valid_until
     )
     .fetch_one(db.inner())
     .await

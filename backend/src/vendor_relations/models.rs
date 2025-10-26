@@ -11,6 +11,8 @@ pub struct VendorRelation {
     pub related_personnel_id: Option<i32>,
     pub relation_type: String,
     pub notes: Option<String>,
+    pub valid_from: NaiveDateTime,
+    pub valid_until: Option<NaiveDateTime>,
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -23,6 +25,8 @@ pub struct CreateVendorRelationRequest {
     pub related_vendor_id: Option<i32>,
     pub related_personnel_id: Option<i32>,
     pub notes: Option<String>,
+    pub valid_from: Option<String>, // ISO date string
+    pub valid_until: Option<String>, // ISO date string
 }
 
 fn validate_relation_type(relation_type: &str) -> Result<(), validator::ValidationError> {
@@ -38,6 +42,8 @@ fn validate_relation_type(relation_type: &str) -> Result<(), validator::Validati
 pub struct UpdateVendorRelationRequest {
     pub relation_type: Option<String>,
     pub notes: Option<String>,
+    pub valid_from: Option<String>,
+    pub valid_until: Option<String>,
 }
 
 // Hierarchical vendor tree structure
