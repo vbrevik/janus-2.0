@@ -71,5 +71,10 @@ async fn rocket() -> _ {
             personnel::handlers::create_personnel,
             personnel::handlers::update_personnel,
             personnel::handlers::delete_personnel,
+            vendors::handlers::list_vendors,
+            vendors::handlers::get_vendor,
+            vendors::handlers::create_vendor,
+            vendors::handlers::update_vendor,
+            vendors::handlers::delete_vendor,
         ])
 }
