@@ -8,3 +8,9 @@ export interface PaginatedResponse<T> {
   total_pages: number
 }
 
+export interface ApiResponse<T> {
+  success: boolean
+  data: T
+  error: string | null
+}
+

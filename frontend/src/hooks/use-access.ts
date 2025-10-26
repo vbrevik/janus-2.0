@@ -6,6 +6,8 @@ import type {
   CreateDataAccessRequest,
   CreatePhysicalAccessRequest,
 } from '@/types/access';
+import type { ApiResponse } from '@/types/api';
+import type { ComputerAccess, DataAccess, PhysicalAccess } from '@/types/access';
 
 // Grant computer access
 export function useGrantComputerAccess() {
@@ -13,10 +15,11 @@ export function useGrantComputerAccess() {
   
   return useMutation({
     mutationFn: async (data: CreateComputerAccessRequest) => {
-      return apiFetch<{ id: number }>('/api/access/computer', {
+      const response = await apiFetch<ApiResponse<ComputerAccess>>('/access/computer', {
         method: 'POST',
         body: JSON.stringify(data),
       });
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personnel-access'] });
@@ -30,10 +33,11 @@ export function useGrantDataAccess() {
   
   return useMutation({
     mutationFn: async (data: CreateDataAccessRequest) => {
-      return apiFetch<{ id: number }>('/api/access/data', {
+      const response = await apiFetch<ApiResponse<DataAccess>>('/access/data', {
         method: 'POST',
         body: JSON.stringify(data),
       });
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personnel-access'] });
@@ -47,10 +51,11 @@ export function useGrantPhysicalAccess() {
   
   return useMutation({
     mutationFn: async (data: CreatePhysicalAccessRequest) => {
-      return apiFetch<{ id: number }>('/api/access/physical', {
+      const response = await apiFetch<ApiResponse<PhysicalAccess>>('/access/physical', {
         method: 'POST',
         body: JSON.stringify(data),
       });
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['personnel-access'] });
@@ -63,7 +68,7 @@ export function usePersonnelAccess(personnelId: number) {
   return useQuery({
     queryKey: ['personnel-access', personnelId],
     queryFn: async () => {
-      return apiFetch<PersonnelAccess>(`/api/personnel/${personnelId}/access`);
+      return apiFetch<PersonnelAccess>(`/personnel/${personnelId}/access`);
     },
     enabled: personnelId > 0,
   });
@@ -75,7 +80,7 @@ export function useRevokeAccess() {
   
   return useMutation({
     mutationFn: async ({ accessType, accessId }: { accessType: string; accessId: number }) => {
-      return apiFetch<{ message: string }>(`/api/access/${accessType}/${accessId}`, {
+      return apiFetch<{ message: string }>(`/access/${accessType}/${accessId}`, {
         method: 'DELETE',
       });
     },
