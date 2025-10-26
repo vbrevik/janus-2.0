@@ -148,24 +148,34 @@ function VendorRelationsTab({ personnelId, personnelName }: { personnelId: numbe
   const personnelRelations: any[] = []
 
   const handleCreateRelation = async () => {
-    if (!selectedVendor) return
+    if (!selectedVendor) {
+      alert('Please select a vendor')
+      return
+    }
     
-    await createRelation.mutateAsync({
-      vendor_id: selectedVendor,
-      related_personnel_id: personnelId,
-      relation_type: relationType,
-      valid_from: validFrom || undefined,
-      valid_until: validUntil || undefined,
-      notes: notes || undefined,
-    })
-    
-    // Reset form
-    setShowAddForm(false)
-    setSelectedVendor(0)
-    setRelationType('employee')
-    setValidFrom('')
-    setValidUntil('')
-    setNotes('')
+    try {
+      await createRelation.mutateAsync({
+        vendor_id: selectedVendor,
+        related_personnel_id: personnelId,
+        relation_type: relationType,
+        valid_from: validFrom || undefined,
+        valid_until: validUntil || undefined,
+        notes: notes || undefined,
+      })
+      
+      // Reset form
+      setShowAddForm(false)
+      setSelectedVendor(0)
+      setRelationType('employee')
+      setValidFrom('')
+      setValidUntil('')
+      setNotes('')
+      
+      alert('Vendor relation created successfully!')
+    } catch (error) {
+      console.error('Error creating vendor relation:', error)
+      alert(`Error creating vendor relation: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
   }
 
   const handleDeleteRelation = async (relationId: number) => {
