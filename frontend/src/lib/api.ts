@@ -19,10 +19,14 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`
   
+  // Get token from localStorage
+  const token = localStorage.getItem('token')
+  
   const config: RequestInit = {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options?.headers,
     },
   }
@@ -37,6 +41,11 @@ export async function apiFetch<T>(
         response.status,
         error
       )
+    }
+
+    // Handle 204 No Content
+    if (response.status === 204) {
+      return {} as T
     }
 
     return response.json()
