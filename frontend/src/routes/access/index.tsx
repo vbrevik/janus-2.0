@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { X } from 'lucide-react'
 import { useGrantComputerAccess, useGrantDataAccess, useGrantPhysicalAccess } from '@/hooks/use-access'
+import { usePersonnelList } from '@/hooks/use-personnel'
 import { Computer, Database, Key } from 'lucide-react'
 import type { CreateComputerAccessRequest, CreateDataAccessRequest, CreatePhysicalAccessRequest } from '@/types/access'
 
@@ -21,6 +22,7 @@ type AccessType = 'computer' | 'data' | 'physical'
 function AccessControl() {
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<number>(0)
   const [openSection, setOpenSection] = useState<AccessType | null>(null)
+  const { data: personnelPage } = usePersonnelList(1, 100)
   
   const grantComputerAccess = useGrantComputerAccess()
   const grantDataAccess = useGrantDataAccess()
@@ -144,20 +146,25 @@ function AccessControl() {
             </Card>
           </div>
 
-          {/* TODO: Add personnel selector */}
+          {/* Personnel selector */}
           <Card>
             <CardHeader>
               <CardTitle>Select Personnel</CardTitle>
             </CardHeader>
             <CardContent>
-              <Label htmlFor="personnel">Personnel ID</Label>
-              <Input
-                id="personnel"
-                type="number"
-                placeholder="Enter personnel ID"
-                value={selectedPersonnelId || ''}
-                onChange={(e) => setSelectedPersonnelId(parseInt(e.target.value) || 0)}
-              />
+              <Label htmlFor="personnel">Personnel</Label>
+              <Select value={selectedPersonnelId ? String(selectedPersonnelId) : undefined} onValueChange={(v) => setSelectedPersonnelId(parseInt(v))}>
+                <SelectTrigger id="personnel">
+                  <SelectValue placeholder="Choose personnel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {personnelPage?.items.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.first_name} {p.last_name} (#{p.id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
         </div>

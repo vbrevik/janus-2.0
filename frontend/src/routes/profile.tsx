@@ -48,6 +48,15 @@ function Profile() {
     },
   })
 
+  // Auto-open change password when /profile?change=1
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search)
+    const shouldOpen = params.get('change') === '1'
+    if (shouldOpen && !showPasswordDialog) {
+      setShowPasswordDialog(true)
+    }
+  }
+
   // Change password mutation
   const changePasswordMutation = useMutation({
     mutationFn: async (data: ChangePasswordRequest) => {
