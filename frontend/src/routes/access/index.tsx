@@ -53,6 +53,28 @@ function AccessControl() {
         <div className="space-y-6">
           <h1 className="text-3xl font-bold">Access Control</h1>
           
+          {/* Personnel Selector - Moved to top */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Personnel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Label htmlFor="personnel">Personnel</Label>
+              <Select value={selectedPersonnelId ? String(selectedPersonnelId) : undefined} onValueChange={(v) => setSelectedPersonnelId(parseInt(v))}>
+                <SelectTrigger id="personnel">
+                  <SelectValue placeholder="Choose personnel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {personnelPage?.items.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.first_name} {p.last_name} (#{p.id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+          
           <div className="grid gap-4 md:grid-cols-3">
             {/* Grant Computer Access */}
             <Card>
@@ -147,28 +169,6 @@ function AccessControl() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Personnel selector */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Select Personnel</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Label htmlFor="personnel">Personnel</Label>
-              <Select value={selectedPersonnelId ? String(selectedPersonnelId) : undefined} onValueChange={(v) => setSelectedPersonnelId(parseInt(v))}>
-                <SelectTrigger id="personnel">
-                  <SelectValue placeholder="Choose personnel" />
-                </SelectTrigger>
-                <SelectContent>
-                  {personnelPage?.items.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.first_name} {p.last_name} (#{p.id})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
         </div>
       </Layout>
     </ProtectedRoute>
