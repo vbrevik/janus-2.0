@@ -1,7 +1,7 @@
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
-import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown, LayoutDashboard } from 'lucide-react'
+import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown, LayoutDashboard, Server } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -94,6 +94,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </NavLink>
             <NavLink to="/access" icon={<Key className="h-4 w-4" />}>
               Access Control
+            </NavLink>
+            <NavLink to="/info-systems" icon={<Server className="h-4 w-4" />}>
+              Info Systems
             </NavLink>
             <NavLink to="/audit" icon={<FileText className="h-4 w-4" />}>
               Audit Logs
