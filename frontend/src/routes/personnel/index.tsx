@@ -14,13 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import {
   usePersonnelList,
   useCreatePersonnel,
   useUpdatePersonnel,
   useDeletePersonnel,
 } from '@/hooks/use-personnel'
+import { Link } from '@tanstack/react-router'
 import type { Personnel, ClearanceLevel, CreatePersonnelRequest } from '@/types/personnel'
 
 export const Route = createFileRoute('/personnel/')({
