@@ -21,19 +21,21 @@ Janus 2.0 is a **simple, fast, and secure** personnel and access control managem
 ```
 ┌─────────────────────────────────────┐
 │   Frontend (React + TypeScript)    │
-│         Port: 3000                  │
+│         Port: 15510                 │
 └─────────────┬───────────────────────┘
               │ REST API (JWT)
 ┌─────────────▼───────────────────────┐
 │      Backend (Rust + Rocket)        │
-│         Port: 8000                  │
+│         Port: 15520                 │
 └─────────────┬───────────────────────┘
               │ SQLx (Direct queries)
 ┌─────────────▼───────────────────────┐
 │     PostgreSQL Database             │
-│     Database: janus2                │
+│      Port: 15530 | DB: janus2      │
 └─────────────────────────────────────┘
 ```
+
+**Port Allocation**: 15500-15599 range (see [PORT-ALLOCATION.md](PORT-ALLOCATION.md))
 
 ## 🛠️ **Technology Stack**
 
@@ -85,9 +87,10 @@ npm run dev
 ```
 
 ### Access
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **Health Check**: http://localhost:8000/api/health
+- **Frontend**: http://localhost:15510
+- **Backend API**: http://localhost:15520
+- **Health Check**: http://localhost:15520/api/health
+- **PostgreSQL**: localhost:15530 (Docker)
 
 ## 📚 **Documentation**
 
