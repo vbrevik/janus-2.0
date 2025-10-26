@@ -191,16 +191,16 @@ docker-compose -f docker-compose.prod.yml up -d
 - ✅ Both backend and frontend build successfully
 - ✅ Health check endpoint working
 
-### MVP 1 - Week 1 Progress (57% Complete)
+### MVP 1 - Week 1 Progress (71% Complete)
 - ✅ **Day 1**: Database Schema + Authentication (JWT)
 - ✅ **Day 2**: Personnel GET APIs (List + Get by ID)
 - ✅ **Day 3**: Personnel CRUD Complete (POST/PUT/DELETE)
 - ✅ **Day 4**: Vendors CRUD Complete (All 5 endpoints)
-- ⏳ **Day 5**: Audit Logging or Integration Tests - **NEXT**
-- ⏳ **Day 6**: Integration Tests
-- ⏳ **Day 7**: Week 1 wrap-up
+- ✅ **Day 5**: Audit Logging System (Query and filtering)
+- ⏳ **Day 6**: Integration Tests or Week 1 wrap-up - **NEXT**
+- ⏳ **Day 7**: Week 1 final review
 
-### API Endpoints (13 total)
+### API Endpoints (14 total)
 - `GET /` - Welcome message
 - `GET /api/health` - Health check with database status
 - `POST /api/auth/login` - User authentication (returns JWT)
@@ -214,8 +214,9 @@ docker-compose -f docker-compose.prod.yml up -d
 - `POST /api/vendors` - Create new vendor (requires auth)
 - `PUT /api/vendors/:id` - Update vendor (partial, requires auth)
 - `DELETE /api/vendors/:id` - Soft delete vendor (requires auth)
+- `GET /api/audit` - Query audit logs with filtering (requires auth)
 
-**Next Steps**: Day 4 - Access Control CRUD
+**Next Steps**: Day 6 - Integration Tests
 
 ## 🤝 **Contributing**
 
