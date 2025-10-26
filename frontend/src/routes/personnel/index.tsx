@@ -180,7 +180,10 @@ function PersonnelRow({ person }: { person: Personnel }) {
             <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
           </div>
         ) : (
-          `${person.first_name} ${person.last_name}`
+          <Link to="/personnel/$personnelId" params={{ personnelId: person.id.toString() }} className="hover:underline flex items-center gap-2">
+            {person.first_name} {person.last_name}
+            <ExternalLink className="h-3 w-3 opacity-50" />
+          </Link>
         )}
       </TableCell>
       <TableCell>
