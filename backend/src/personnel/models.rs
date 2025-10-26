@@ -12,6 +12,7 @@ pub struct Personnel {
     pub clearance_level: String,
     pub department: String,
     pub position: String,
+    pub deleted_at: Option<chrono::NaiveDateTime>,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }
