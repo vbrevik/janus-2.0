@@ -3,6 +3,7 @@ use rocket::request::{FromRequest, Request, Outcome};
 use rocket::http::Status;
 use super::jwt::{validate_jwt, Claims};
 
+#[allow(dead_code)]
 pub struct AuthGuard {
     pub claims: Claims,
 }

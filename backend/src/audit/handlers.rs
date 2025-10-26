@@ -38,7 +38,7 @@ pub async fn list_audit_logs(
     }
     if resource_type.is_some() {
         query.push_str(&format!(" AND resource_type = ${}", param_count));
-        param_count += 1;
+        // param_count is intentionally not incremented here as it's not used further
     }
 
     // Get total count with filters
@@ -113,6 +113,7 @@ pub async fn list_audit_logs(
 }
 
 /// Create an audit log entry (used by middleware and handlers)
+#[allow(dead_code)]
 pub async fn create_audit_log(
     log_request: &CreateAuditLogRequest,
     db: &PgPool,
