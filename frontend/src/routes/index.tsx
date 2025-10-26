@@ -9,7 +9,7 @@ function Index() {
   const { isAuthenticated } = useAuth()
 
   if (isAuthenticated) {
-    return <Navigate to="/personnel" />
+    return <Navigate to="/dashboard" />
   }
 
   return <Navigate to="/login" />

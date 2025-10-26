@@ -84,6 +84,7 @@ async fn rocket() -> _ {
             index,
             health,
             auth::handlers::login,
+            shared::handlers::get_stats,
             personnel::handlers::list_personnel,
             personnel::handlers::get_personnel,
             personnel::handlers::create_personnel,

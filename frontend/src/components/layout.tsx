@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useAuth } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
-import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown } from 'lucide-react'
+import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown, LayoutDashboard } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,6 +82,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <nav className="border-b bg-card/50">
         <div className="container mx-auto px-4">
           <div className="flex gap-1">
+            <NavLink to="/dashboard" icon={<LayoutDashboard className="h-4 w-4" />}>
+              Dashboard
+            </NavLink>
             <NavLink to="/personnel" icon={<Users className="h-4 w-4" />}>
               Personnel
             </NavLink>
