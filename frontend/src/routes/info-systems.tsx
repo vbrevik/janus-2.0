@@ -77,6 +77,8 @@ function InfoSystemsList() {
                       <TableHead>System Name</TableHead>
                       <TableHead>Environment</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>IP Address</TableHead>
                       <TableHead>Domain</TableHead>
                       <TableHead>Managed By</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -86,7 +88,7 @@ function InfoSystemsList() {
                     {showCreate && <CreateInfoSystemRow onDone={() => setShowCreate(false)} />}
                     {data.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           No systems found. Create your first entry!
                         </TableCell>
                       </TableRow>
@@ -155,20 +157,40 @@ function InfoSystemRow({ system }: { system: InfoSystem }) {
   })
 
   const onSave = async () => {
-    await updateMutation.mutateAsync({
-      system_name: form.system_name,
-      description: form.description || null,
-      environment: form.environment,
-      status: form.status,
-      ip_address: form.ip_address || null,
-      domain: form.domain || null,
-      managed_by: form.managed_by || null,
-    })
-    setEditing(false)
+    // Validation
+    if (!form.system_name.trim()) {
+      alert('System name is required')
+      return
+    }
+
+    try {
+      await updateMutation.mutateAsync({
+        system_name: form.system_name,
+        description: form.description || null,
+        environment: form.environment,
+        status: form.status,
+        ip_address: form.ip_address || null,
+        domain: form.domain || null,
+        managed_by: form.managed_by || null,
+      })
+      setEditing(false)
+      alert('System updated successfully')
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to update system')
+    }
   }
 
   const onDelete = async () => {
-    await deleteMutation.mutateAsync(system.id)
+    if (!confirm(`Are you sure you want to delete "${system.system_name}"?`)) {
+      return
+    }
+
+    try {
+      await deleteMutation.mutateAsync(system.id)
+      alert('System deleted successfully')
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to delete system')
+    }
   }
 
   return (
@@ -220,6 +242,35 @@ function InfoSystemRow({ system }: { system: InfoSystem }) {
       </TableCell>
       <TableCell>
         {editing ? (
+          <Input 
+            value={form.description || ''} 
+            onChange={(e) => setForm({ ...form, description: e.target.value })} 
+            placeholder="Description"
+          />
+        ) : (
+          system.description || '-'
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
+          <Input 
+            value={form.ip_address || ''} 
+            onChange={(e) => setForm({ ...form, ip_address: e.target.value })} 
+            placeholder="IP Address"
+          />
+        ) : (
+          system.ip_address || '-'
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
+          <Input value={form.domain || ''} onChange={(e) => setForm({ ...form, domain: e.target.value })} placeholder="Domain" />
+        ) : (
+          system.domain || '-'
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
           <Input value={form.managed_by} onChange={(e) => setForm({ ...form, managed_by: e.target.value })} placeholder="Managed by" />
         ) : (
           system.managed_by || '-'
@@ -230,9 +281,26 @@ function InfoSystemRow({ system }: { system: InfoSystem }) {
           {editing ? (
             <>
               <Button size="sm" onClick={onSave} disabled={updateMutation.isPending}>
-                <Check className="h-4 w-4 mr-1" /> Save
+                {updateMutation.isPending ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                ) : (
+                  <Check className="h-4 w-4 mr-1" />
+                )}
+                Save
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+              <Button size="sm" variant="outline" onClick={() => {
+                setEditing(false)
+                // Reset form to original values
+                setForm({
+                  system_name: system.system_name,
+                  description: system.description || '',
+                  environment: system.environment,
+                  status: system.status,
+                  ip_address: system.ip_address || '',
+                  domain: system.domain || '',
+                  managed_by: system.managed_by || '',
+                })
+              }}>
                 <X className="h-4 w-4 mr-1" /> Cancel
               </Button>
             </>
@@ -242,7 +310,11 @@ function InfoSystemRow({ system }: { system: InfoSystem }) {
             </Button>
           )}
           <Button variant="ghost" size="sm" onClick={onDelete} disabled={deleteMutation.isPending}>
-            <Trash2 className="h-4 w-4 text-destructive" />
+            {deleteMutation.isPending ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-destructive"></div>
+            ) : (
+              <Trash2 className="h-4 w-4 text-destructive" />
+            )}
           </Button>
         </div>
       </TableCell>
@@ -263,23 +335,34 @@ function CreateInfoSystemRow({ onDone }: { onDone: () => void }) {
   })
 
   const onCreate = async () => {
-    await createMutation.mutateAsync({
-      ...form,
-      description: form.description || null,
-      ip_address: form.ip_address || null,
-      domain: form.domain || null,
-      managed_by: form.managed_by || null,
-    })
-    onDone()
-    setForm({
-      system_name: '',
-      description: null,
-      environment: 'PROD' as Environment,
-      status: 'ACTIVE' as SystemStatus,
-      ip_address: null,
-      domain: null,
-      managed_by: null,
-    })
+    // Validation
+    if (!form.system_name.trim()) {
+      alert('System name is required')
+      return
+    }
+
+    try {
+      await createMutation.mutateAsync({
+        ...form,
+        description: form.description || null,
+        ip_address: form.ip_address || null,
+        domain: form.domain || null,
+        managed_by: form.managed_by || null,
+      })
+      onDone()
+      setForm({
+        system_name: '',
+        description: null,
+        environment: 'PROD' as Environment,
+        status: 'ACTIVE' as SystemStatus,
+        ip_address: null,
+        domain: null,
+        managed_by: null,
+      })
+      alert('System created successfully')
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to create system')
+    }
   }
 
   return (
@@ -315,12 +398,30 @@ function CreateInfoSystemRow({ onDone }: { onDone: () => void }) {
         </Select>
       </TableCell>
       <TableCell>
+        <Input placeholder="Description" value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+      </TableCell>
+      <TableCell>
+        <Input placeholder="IP Address" value={form.ip_address || ''} onChange={(e) => setForm({ ...form, ip_address: e.target.value })} />
+      </TableCell>
+      <TableCell>
+        <Input placeholder="Domain" value={form.domain || ''} onChange={(e) => setForm({ ...form, domain: e.target.value })} />
+      </TableCell>
+      <TableCell>
         <Input placeholder="Managed by" value={form.managed_by || ''} onChange={(e) => setForm({ ...form, managed_by: e.target.value })} />
       </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
           <Button size="sm" onClick={onCreate} disabled={createMutation.isPending}>
-            <Check className="h-4 w-4 mr-1" /> Add
+            {createMutation.isPending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                Creating...
+              </>
+            ) : (
+              <>
+                <Check className="h-4 w-4 mr-1" /> Add
+              </>
+            )}
           </Button>
           <Button size="sm" variant="outline" onClick={onDone}>
             <X className="h-4 w-4 mr-1" /> Cancel
