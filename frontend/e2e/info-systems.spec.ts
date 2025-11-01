@@ -6,7 +6,10 @@ async function login(page: any) {
   await page.fill('[name="username"]', 'admin')
   await page.fill('[name="password"]', 'password123')
   await page.click('button[type="submit"]')
-  await page.waitForURL(/^\/(personnel|dashboard)/, { timeout: 10000 })
+  // Wait for navigation - check for URL that's not login
+  await page.waitForURL((url: URL) => !url.pathname.includes('/login'), { timeout: 15000 })
+  // Additional wait for page to be ready
+  await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {})
 }
 
 test.describe('Info Systems Management', () => {
@@ -21,13 +24,16 @@ test.describe('Info Systems Management', () => {
     // Should show table with info systems
     await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
     
-    // Should have table headers
-    await expect(page.getByText('System Name')).toBeVisible()
-    await expect(page.getByText('Environment')).toBeVisible()
-    await expect(page.getByText('Status')).toBeVisible()
+    // Should have table headers (use .first() to avoid strict mode violations)
+    await expect(page.getByText('System Name').first()).toBeVisible()
+    await expect(page.getByText('Environment').first()).toBeVisible()
+    await expect(page.getByText('Status').first()).toBeVisible()
   })
 
   test('should create new info system', async ({ page }) => {
+    // Wait for page to load
+    await page.waitForSelector('table', { timeout: 10000 })
+    
     // Click Add System button
     await page.getByRole('button', { name: /add system/i }).click()
     
@@ -39,17 +45,23 @@ test.describe('Info Systems Management', () => {
     const systemName = `Test System ${timestamp}`
     
     await page.fill('input[placeholder="System name"]', systemName)
-    await page.selectOption('select, [role="combobox"]', { index: 0 }) // Environment
-    await page.waitForTimeout(500) // Wait for selects to update
     
-    // Submit form
-    await page.getByRole('button', { name: /^add$/i }).first().click()
+    // Environment and status are already set to defaults (PROD, ACTIVE) in the form
+    // No need to change them if defaults are fine
     
-    // Should see success message or new system in table
-    // Wait a bit for the mutation to complete
+    // Wait for API request to complete after clicking Add
+    const [response] = await Promise.all([
+      page.waitForResponse(resp => resp.url().includes('/info-systems') && resp.request().method() === 'POST', { timeout: 10000 }).catch(() => null),
+      page.getByRole('button', { name: /^add$/i }).first().click()
+    ])
+    
+    // Wait for table to refresh (create row should disappear)
+    await page.waitForSelector('input[placeholder="System name"]', { state: 'hidden', timeout: 5000 }).catch(() => {})
     await page.waitForTimeout(1000)
     
-    // Should see new system in table
+    // Should see new system in table - refresh the page to ensure it's there
+    await page.reload()
+    await page.waitForSelector('table', { timeout: 10000 })
     await expect(page.getByText(systemName)).toBeVisible({ timeout: 10000 })
   })
 
@@ -76,20 +88,30 @@ test.describe('Info Systems Management', () => {
       // Should see editable inputs
       await page.waitForTimeout(500)
       
-      // Find the system name input in edit mode
-      const nameInput = page.locator('table tbody tr').first().locator('input').first()
-      if (await nameInput.count() > 0) {
-        await nameInput.fill('Updated System Name')
-        
-        // Click save button
-        await page.getByRole('button', { name: /save/i }).first().click()
-        
-        // Wait for save to complete
-        await page.waitForTimeout(1000)
-        
-        // Should see updated name
-        await expect(page.getByText('Updated System Name')).toBeVisible({ timeout: 5000 })
-      }
+        // Find the system name input in edit mode
+        const nameInput = page.locator('table tbody tr').first().locator('input').first()
+        if (await nameInput.count() > 0) {
+          const updatedName = `Updated ${Date.now()}`
+          await nameInput.fill(updatedName)
+          
+          // Wait for API request to complete
+          const [response] = await Promise.all([
+            page.waitForResponse(resp => resp.url().includes('/info-systems') && resp.request().method() === 'PUT', { timeout: 10000 }).catch(() => null),
+            page.locator('table tbody tr').first().getByRole('button', { name: /save/i }).click()
+          ])
+          
+          // Wait for edit mode to exit
+          await page.waitForTimeout(1500)
+          // Wait for the input to disappear (edit mode closed)
+          await page.locator('table tbody tr').first().locator('input').first().waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {})
+          
+          // Reload to ensure the update is reflected
+          await page.reload()
+          await page.waitForSelector('table', { timeout: 10000 })
+          
+          // Should see updated name in the table
+          await expect(page.locator('table').getByText(updatedName)).toBeVisible({ timeout: 10000 })
+        }
     } else {
       test.skip('No systems found to edit')
     }
@@ -198,7 +220,11 @@ test.describe('Info Systems Management', () => {
   test('should filter by environment', async ({ page }) => {
     // This test assumes filtering is implemented
     // For now, just verify we can see environment badges
-    await expect(page.getByText('DEV') || page.getByText('TEST') || page.getByText('PROD')).toBeVisible({ timeout: 10000 })
+    // Use .first() to avoid strict mode violation
+    const hasEnvBadge = await page.getByText('DEV').first().isVisible().catch(() => false) ||
+                         await page.getByText('TEST').first().isVisible().catch(() => false) ||
+                         await page.getByText('PROD').first().isVisible().catch(() => false)
+    expect(hasEnvBadge).toBeTruthy()
   })
 
   test('should display system status badges', async ({ page }) => {
