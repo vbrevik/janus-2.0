@@ -1,0 +1,424 @@
+import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { Layout } from '@/components/layout'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, ExternalLink, ChevronDown } from 'lucide-react'
+import {
+  useVendorList,
+  useVendor,
+  useCreateVendor,
+  useUpdateVendor,
+  useDeleteVendor,
+} from '@/hooks/use-vendors'
+import { usePersonnelList } from '@/hooks/use-personnel'
+import { useVendorRelations } from '@/hooks/use-vendor-relations'
+import { Link } from '@tanstack/react-router'
+import type { Vendor, ClearanceLevel, CreateVendorRequest } from '@/types/vendor'
+import type { Personnel } from '@/types/personnel'
+
+export const Route = createFileRoute('/admin/vendors/')({
+  component: VendorList,
+})
+
+function VendorList() {
+  const [page, setPage] = useState(1)
+  const [showCreate, setShowCreate] = useState(false)
+  const [topLevelOnly, setTopLevelOnly] = useState(true) // Default: show only top-level vendors
+  const perPage = 10
+
+  const { data, isLoading, error } = useVendorList(page, perPage, topLevelOnly)
+
+  return (
+    <ProtectedRoute allowedRoles={['admin']}>
+      <Layout>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold">Vendor Management</h1>
+              <p className="text-muted-foreground mt-1">
+                Manage vendors and their security clearances
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant={topLevelOnly ? "default" : "outline"}
+                onClick={() => setTopLevelOnly(true)}
+              >
+                Top Level Only
+              </Button>
+              <Button
+                variant={!topLevelOnly ? "default" : "outline"}
+                onClick={() => setTopLevelOnly(false)}
+              >
+                All Vendors
+              </Button>
+              <Button onClick={() => setShowCreate((v) => !v)}>
+                <Plus className="h-4 w-4 mr-2" />
+                {showCreate ? 'Hide New Row' : 'Add Vendor'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Table */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-destructive/10 text-destructive p-4 rounded-md">
+              Error loading vendors: {error.message}
+            </div>
+          )}
+
+          {data && (
+            <>
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12"></TableHead>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Contract #</TableHead>
+                      <TableHead>Clearance</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {showCreate && <CreateVendorRow onDone={() => setShowCreate(false)} />}
+                    {data.items.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          No vendors found. Create your first entry!
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      data.items.map((vendor) => (
+                        <VendorRow key={vendor.id} vendor={vendor} />
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Pagination */}
+              {data.total_pages > 1 && (
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {(page - 1) * perPage + 1} to{' '}
+                    {Math.min(page * perPage, data.total)} of {data.total} results
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Previous
+                    </Button>
+                    <span className="text-sm">
+                      Page {page} of {data.total_pages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPage((p) => Math.min(data.total_pages, p + 1))}
+                      disabled={page === data.total_pages}
+                    >
+                      Next
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </Layout>
+    </ProtectedRoute>
+  )
+}
+
+function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
+  const [editing, setEditing] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const updateMutation = useUpdateVendor(vendor.id)
+  const deleteMutation = useDeleteVendor()
+  
+  // Lazy load relations only when expanded
+  const { data: relations } = useVendorRelations(vendor.id, { enabled: expanded })
+  
+  // Get sub-vendor IDs from relations
+  const subVendorIds = relations?.filter(r => 
+    r.relation_type === 'sub_vendor' && r.related_vendor_id
+  ).map(r => r.related_vendor_id!) || []
+  
+  const hasSubVendors = subVendorIds.length > 0
+  
+
+  const [form, setForm] = useState({
+    company_name: vendor.company_name,
+    contact_name: vendor.contact_name,
+    contact_email: vendor.contact_email,
+    contact_phone: vendor.contact_phone || '',
+    contract_number: vendor.contract_number,
+    clearance_level: vendor.clearance_level as ClearanceLevel,
+  })
+
+  const onSave = async () => {
+    await updateMutation.mutateAsync({
+      company_name: form.company_name,
+      contact_name: form.contact_name,
+      contact_email: form.contact_email,
+      contact_phone: form.contact_phone || undefined,
+      contract_number: form.contract_number,
+      clearance_level: form.clearance_level,
+    })
+    setEditing(false)
+  }
+
+  const onDelete = async () => {
+    await deleteMutation.mutateAsync(vendor.id)
+  }
+
+  return (
+    <>
+      <TableRow>
+        <TableCell>
+          {hasSubVendors && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded(!expanded)}
+              className="h-6 w-6 p-0"
+            >
+              {expanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className=" h-4 w-4" />
+              )}
+            </Button>
+          )}
+        </TableCell>
+        <TableCell className="font-medium">
+          <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 24}px` }}>
+            {editing ? (
+              <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+            ) : (
+              <Link to="/admin/vendors/$vendorId" params={{ vendorId: vendor.id.toString() }} className="hover:underline flex items-center gap-2">
+                {vendor.company_name}
+                <ExternalLink className="h-3 w-3 opacity-50" />
+              </Link>
+            )}
+          </div>
+        </TableCell>
+      <TableCell>
+        {editing ? (
+          <Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
+        ) : (
+          vendor.contact_name
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
+          <Input type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
+        ) : (
+          vendor.contact_email
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
+          <Input type="tel" value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} />
+        ) : (
+          vendor.contact_phone || '-'
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
+          <Input value={form.contract_number} onChange={(e) => setForm({ ...form, contract_number: e.target.value })} />
+        ) : (
+          vendor.contract_number
+        )}
+      </TableCell>
+      <TableCell>
+        {editing ? (
+          <Select value={form.clearance_level} onValueChange={(v) => setForm({ ...form, clearance_level: v as ClearanceLevel })}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NONE">None</SelectItem>
+              <SelectItem value="CONFIDENTIAL">Confidential</SelectItem>
+              <SelectItem value="SECRET">Secret</SelectItem>
+              <SelectItem value="TOP_SECRET">Top Secret</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <ClearanceBadge level={vendor.clearance_level} />
+        )}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          {editing ? (
+            <>
+              <Button size="sm" onClick={onSave} disabled={updateMutation.isPending}>
+                <Check className="h-4 w-4 mr-1" /> Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setEditing(false)}>
+                <X className="h-4 w-4 mr-1" /> Cancel
+              </Button>
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={onDelete} disabled={deleteMutation.isPending}>
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+    
+    {/* Render sub-vendors when expanded */}
+    {expanded && hasSubVendors && subVendorIds.map((subId) => (
+      <SubVendorRow key={subId} vendorId={subId} level={level + 1} />
+    ))}
+    </>
+  )
+}
+
+function SubVendorRow({ vendorId, level }: { vendorId: number; level: number }) {
+  const { data: vendor, isLoading } = useVendor(vendorId)
+  
+  if (isLoading || !vendor) {
+    return null
+  }
+  
+  return <VendorRow vendor={vendor} level={level} />
+}
+
+function ClearanceBadge({ level }: { level: ClearanceLevel }) {
+  const variants: Record<ClearanceLevel, 'default' | 'secondary' | 'warning' | 'destructive'> = {
+    NONE: 'secondary',
+    CONFIDENTIAL: 'default',
+    SECRET: 'warning',
+    TOP_SECRET: 'destructive',
+  }
+
+  return <Badge variant={variants[level]}>{level}</Badge>
+}
+
+function CreateVendorRow({ onDone }: { onDone: () => void }) {
+  const createMutation = useCreateVendor()
+  const { data: personnelPage } = usePersonnelList(1, 100)
+  const [selectedPersonnelId, setSelectedPersonnelId] = useState<string>('')
+  const [form, setForm] = useState<CreateVendorRequest>({
+    company_name: '',
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    contract_number: '',
+    clearance_level: 'NONE' as ClearanceLevel,
+  })
+
+  const handlePersonnelChange = (personnelId: string) => {
+    setSelectedPersonnelId(personnelId)
+    const personnel = personnelPage?.items.find(p => p.id === parseInt(personnelId))
+    if (personnel) {
+      setForm({
+        ...form,
+        contact_name: `${personnel.first_name} ${personnel.last_name}`,
+        contact_email: personnel.email,
+        contact_phone: personnel.phone || '',
+      })
+    }
+  }
+
+  const onCreate = async () => {
+    await createMutation.mutateAsync({
+      ...form,
+      contact_phone: form.contact_phone || undefined,
+    })
+    onDone()
+  }
+
+  return (
+    <TableRow className="bg-accent/30">
+      <TableCell className="font-medium">
+        <Input placeholder="Company name" value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
+      </TableCell>
+      <TableCell>
+        <Select value={selectedPersonnelId} onValueChange={handlePersonnelChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select contact..." />
+          </SelectTrigger>
+          <SelectContent>
+            {personnelPage?.items.map((person: Personnel) => (
+              <SelectItem key={person.id} value={person.id.toString()}>
+                {person.first_name} {person.last_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell>
+        <Input type="email" value={form.contact_email} readOnly className="bg-muted" />
+      </TableCell>
+      <TableCell>
+        <Input type="tel" value={form.contact_phone} readOnly className="bg-muted" />
+      </TableCell>
+      <TableCell>
+        <Input placeholder="Contract #" value={form.contract_number} onChange={(e) => setForm({ ...form, contract_number: e.target.value })} />
+      </TableCell>
+      <TableCell>
+        <Select value={form.clearance_level} onValueChange={(v) => setForm({ ...form, clearance_level: v as ClearanceLevel })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Level" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="NONE">None</SelectItem>
+            <SelectItem value="CONFIDENTIAL">Confidential</SelectItem>
+            <SelectItem value="SECRET">Secret</SelectItem>
+            <SelectItem value="TOP_SECRET">Top Secret</SelectItem>
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          <Button size="sm" onClick={onCreate} disabled={createMutation.isPending}>
+            <Check className="h-4 w-4 mr-1" /> Add
+          </Button>
+          <Button size="sm" variant="outline" onClick={onDone}>
+            <X className="h-4 w-4 mr-1" /> Cancel
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  )
+}
+
+// Inline editing replaces EditVendorDialog
+
+// Delete handled inline in VendorRow
+
+// Removed old modal form; inline fields are used instead
