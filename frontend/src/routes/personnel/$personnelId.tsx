@@ -8,10 +8,12 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { usePersonnel } from '@/hooks/use-personnel'
 import { useCreateVendorRelation, useDeleteVendorRelation } from '@/hooks/use-vendor-relations'
 import { useVendorList } from '@/hooks/use-vendors'
-import { ArrowLeft, Trash2, Plus } from 'lucide-react'
+import { useNDAList, useCreateNDA } from '@/hooks/use-nda'
+import { ArrowLeft, Trash2, Plus, FileText, Send } from 'lucide-react'
 import type { RelationType } from '@/types/vendor-relation'
 
 export const Route = createFileRoute('/personnel/$personnelId')({
@@ -21,7 +23,7 @@ export const Route = createFileRoute('/personnel/$personnelId')({
 function PersonnelDetails() {
   const { personnelId } = Route.useParams()
   const personnelIdNum = parseInt(personnelId)
-  const [activeTab, setActiveTab] = useState<'details' | 'vendor-relations'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'vendor-relations' | 'ndas'>('details')
 
   const { data: personnel, isLoading: personnelLoading } = usePersonnel(personnelIdNum)
   
@@ -69,6 +71,14 @@ function PersonnelDetails() {
                   >
                     Vendor Relations
                   </button>
+                  <button
+                    onClick={() => setActiveTab('ndas')}
+                    className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                      activeTab === 'ndas' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'
+                    }`}
+                  >
+                    NDAs
+                  </button>
                 </nav>
               </div>
 
@@ -76,6 +86,9 @@ function PersonnelDetails() {
               {activeTab === 'details' && <DetailsTab personnel={personnel} />}
               {activeTab === 'vendor-relations' && (
                 <VendorRelationsTab personnelId={personnelIdNum} personnelName={`${personnel.first_name} ${personnel.last_name}`} />
+              )}
+              {activeTab === 'ndas' && (
+                <NDATab personnelId={personnelIdNum} />
               )}
             </>
           ) : (
@@ -282,6 +295,205 @@ function VendorRelationsTab({ personnelId, personnelName }: { personnelId: numbe
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+function NDATab({ personnelId }: { personnelId: number }) {
+  const [showSendDialog, setShowSendDialog] = useState(false)
+  const [newNDA, setNewNDA] = useState({
+    title: '',
+    content: '',
+    version: '',
+    expires_at: '',
+    sent_by_vendor_id: '',
+  })
+  
+  const { data: ndas, isLoading, refetch } = useNDAList({ personnel_id: personnelId })
+  const { data: vendors } = useVendorList(1, 100)
+  const createNDA = useCreateNDA()
+  
+  const handleSendNDA = async () => {
+    if (!newNDA.title || !newNDA.content) {
+      alert('Please fill in title and content')
+      return
+    }
+    
+    try {
+      await createNDA.mutateAsync({
+        personnel_id: personnelId,
+        title: newNDA.title,
+        content: newNDA.content,
+        version: newNDA.version || undefined,
+        expires_at: newNDA.expires_at || undefined,
+        sent_by_vendor_id: newNDA.sent_by_vendor_id ? parseInt(newNDA.sent_by_vendor_id) : undefined,
+      })
+      
+      setShowSendDialog(false)
+      setNewNDA({ title: '', content: '', version: '', expires_at: '', sent_by_vendor_id: '' })
+      refetch()
+      alert('NDA sent successfully!')
+    } catch (error) {
+      console.error('Error sending NDA:', error)
+      alert(`Error sending NDA: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+  
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return 'N/A'
+    return new Date(dateStr).toLocaleDateString()
+  }
+  
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'PENDING':
+      case 'ACTIVE':
+        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800">{status}</Badge>
+      case 'SIGNED':
+        return <Badge className="bg-green-100 text-green-800">{status}</Badge>
+      case 'EXPIRED':
+      case 'REVOKED':
+        return <Badge variant="outline" className="bg-gray-100 text-gray-800">{status}</Badge>
+      default:
+        return <Badge>{status}</Badge>
+    }
+  }
+  
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Non-Disclosure Agreements
+            </CardTitle>
+            <Button onClick={() => setShowSendDialog(true)}>
+              <Send className="h-4 w-4 mr-2" />
+              Send NDA
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : ndas && ndas.length > 0 ? (
+            <div className="space-y-3">
+              {ndas.map((nda) => (
+                <Card key={nda.id}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-base">{nda.title}</CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Version {nda.version} • {formatDate(nda.issued_at)}
+                          {nda.sent_at && ` • Sent: ${formatDate(nda.sent_at)}`}
+                          {nda.signed_at && ` • Signed: ${formatDate(nda.signed_at)}`}
+                        </p>
+                      </div>
+                      {getStatusBadge(nda.status)}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted/50 p-3 rounded-lg max-h-[150px] overflow-y-auto">
+                      <pre className="text-xs whitespace-pre-wrap font-mono">{nda.content}</pre>
+                    </div>
+                    {nda.rejection_reason && (
+                      <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                        <strong>Rejected:</strong> {nda.rejection_reason}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No NDAs found. Click "Send NDA" to create one.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Send NDA Dialog */}
+      <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Send NDA</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="nda-title">Title *</Label>
+              <Input
+                id="nda-title"
+                value={newNDA.title}
+                onChange={(e) => setNewNDA({ ...newNDA, title: e.target.value })}
+                placeholder="e.g., Standard NDA 2025"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="nda-version">Version</Label>
+                <Input
+                  id="nda-version"
+                  value={newNDA.version}
+                  onChange={(e) => setNewNDA({ ...newNDA, version: e.target.value })}
+                  placeholder="e.g., 1.0"
+                />
+              </div>
+              <div>
+                <Label htmlFor="nda-expires">Expires At</Label>
+                <Input
+                  id="nda-expires"
+                  type="date"
+                  value={newNDA.expires_at}
+                  onChange={(e) => setNewNDA({ ...newNDA, expires_at: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="nda-vendor">Sent By Vendor (Optional)</Label>
+              <Select value={newNDA.sent_by_vendor_id} onValueChange={(v) => setNewNDA({ ...newNDA, sent_by_vendor_id: v })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select vendor (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">None</SelectItem>
+                  {vendors?.items.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.company_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="nda-content">Content *</Label>
+              <textarea
+                id="nda-content"
+                className="w-full min-h-[200px] p-2 border rounded-md text-sm font-mono"
+                value={newNDA.content}
+                onChange={(e) => setNewNDA({ ...newNDA, content: e.target.value })}
+                placeholder="Enter NDA content..."
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowSendDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSendNDA} 
+                disabled={!newNDA.title || !newNDA.content || createNDA.isPending}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {createNDA.isPending ? 'Sending...' : 'Send NDA'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
