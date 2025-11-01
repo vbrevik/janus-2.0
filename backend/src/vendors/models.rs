@@ -11,6 +11,7 @@ pub struct Vendor {
     pub contact_phone: Option<String>,
     pub clearance_level: String,
     pub contract_number: String,
+    pub department: Option<String>,
     pub deleted_at: Option<chrono::NaiveDateTime>,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
@@ -35,6 +36,9 @@ pub struct CreateVendorRequest {
     
     #[validate(length(min = 1, max = 100))]
     pub contract_number: String,
+    
+    #[validate(length(max = 100))]
+    pub department: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
@@ -56,4 +60,7 @@ pub struct UpdateVendorRequest {
     
     #[validate(length(min = 1, max = 100))]
     pub contract_number: Option<String>,
+    
+    #[validate(length(max = 100))]
+    pub department: Option<String>,
 }

@@ -21,14 +21,15 @@ CREATE TABLE IF NOT EXISTS nda (
     )
 );
 
--- Create indexes
-CREATE INDEX idx_nda_personnel ON nda(personnel_id);
-CREATE INDEX idx_nda_status ON nda(status);
-CREATE INDEX idx_nda_lockdownd ON nda(signed_at) WHERE signed_at IS NOT NULL;
-CREATE INDEX idx_nda_expires ON nda(expires_at) WHERE expires_at IS NOT NULL;
-CREATE INDEX idx_nda_issued_by ON nda(issued_by);
+-- Create indexes (IF NOT EXISTS for idempotency)
+CREATE INDEX IF NOT EXISTS idx_nda_personnel ON nda(personnel_id);
+CREATE INDEX IF NOT EXISTS idx_nda_status ON nda(status);
+CREATE INDEX IF NOT EXISTS idx_nda_lockdownd ON nda(signed_at) WHERE signed_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_nda_expires ON nda(expires_at) WHERE expires_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_nda_issued_by ON nda(issued_by);
 
--- Create trigger to update updated_at
+-- Create trigger to update updated_at (DROP IF EXISTS for idempotency)
+DROP TRIGGER IF EXISTS update_nda_updated_at ON nda;
 CREATE TRIGGER update_nda_updated_at
     BEFORE UPDATE ON nda
     FOR EACH ROW

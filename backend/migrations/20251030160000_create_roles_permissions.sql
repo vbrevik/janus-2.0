@@ -35,7 +35,9 @@ INSERT INTO permissions (key, description) VALUES
 ('personnel.read', 'Read personnel'),
 ('personnel.write', 'Write personnel'),
 ('vendors.read', 'Read vendors'),
-('vendors.write', 'Write vendors')
+('vendors.write', 'Write vendors'),
+('roles.read', 'Read roles and permissions'),
+('roles.write', 'Write roles and permissions')
 ON CONFLICT (key) DO NOTHING;
 
 -- Grant default permissions

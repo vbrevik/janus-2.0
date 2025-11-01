@@ -1,14 +1,13 @@
 use rocket::serde::json::Json;
 use rocket::State;
+use rocket::http::Status;
 use sqlx::PgPool;
 use chrono::Utc;
 
 use crate::nda::models::*;
-use crate::shared::response::ApiResponse;
 use crate::audit::handlers::create_audit_log;
 use crate::audit::models::CreateAuditLogRequest;
 use crate::auth::middleware::AuthGuard;
-use crate::shared::error::AppError;
 
 /// List NDAs for personnel or by user email
 #[get("/?<personnel_id>&<status>&<email>")]
@@ -18,7 +17,7 @@ pub async fn list_ndas(
     status: Option<String>,
     email: Option<String>,
     _auth: AuthGuard,
-) -> Result<Json<ApiResponse<Vec<NDA>>>, AppError> {
+) -> Result<Json<Vec<NDA>>, Status> {
     let query_result = if let Some(e) = email {
         // Join with personnel table to filter by email
         if let Some(s) = status {
@@ -81,8 +80,8 @@ pub async fn list_ndas(
         .await
     };
 
-    let ndas = query_result?;
-    Ok(Json(ApiResponse::success(ndas)))
+    let ndas = query_result.map_err(|_| Status::InternalServerError)?;
+    Ok(Json(ndas))
 }
 
 /// Get a specific NDA
@@ -91,7 +90,7 @@ pub async fn get_nda(
     db: &State<PgPool>,
     id: i32,
     _auth: AuthGuard,
-) -> Result<Json<ApiResponse<NDA>>, AppError> {
+) -> Result<Json<NDA>, Status> {
     let nda = sqlx::query_as!(
         NDA,
         r#"
@@ -101,10 +100,12 @@ pub async fn get_nda(
         "#,
         id
     )
-    .fetch_one(db.inner())
-    .await?;
+    .fetch_optional(db.inner())
+    .await
+    .map_err(|_| Status::InternalServerError)?
+    .ok_or(Status::NotFound)?;
 
-    Ok(Json(ApiResponse::success(nda)))
+    Ok(Json(nda))
 }
 
 /// Create a new NDA
@@ -113,7 +114,7 @@ pub async fn create_nda(
     db: &State<PgPool>,
     data: Json<CreateNDARequest>,
     auth: AuthGuard,
-) -> Result<Json<ApiResponse<NDA>>, AppError> {
+) -> Result<Json<NDA>, Status> {
     let issued_by = auth.claims.sub.parse::<i32>().unwrap_or(0);
     let version = data.version.clone().unwrap_or_else(|| "1.0".to_string());
 
@@ -141,7 +142,8 @@ pub async fn create_nda(
         Some(Utc::now().naive_utc())
     )
     .fetch_one(db.inner())
-    .await?;
+    .await
+    .map_err(|_| Status::InternalServerError)?;
 
     // Audit: NDA_SENT
     let _ = create_audit_log(&CreateAuditLogRequest {
@@ -155,7 +157,7 @@ pub async fn create_nda(
         user_agent: None,
     }, db.inner()).await;
 
-    Ok(Json(ApiResponse::success(nda)))
+    Ok(Json(nda))
 }
 
 /// Sign an NDA
@@ -165,7 +167,7 @@ pub async fn sign_nda(
     id: i32,
     data: Json<SignNDARequest>,
     auth: AuthGuard,
-) -> Result<Json<ApiResponse<NDA>>, AppError> {
+) -> Result<Json<NDA>, Status> {
     let now = Utc::now().naive_utc();
 
     let nda = sqlx::query_as!(
@@ -183,8 +185,10 @@ pub async fn sign_nda(
         data.signature,
         id
     )
-    .fetch_one(db.inner())
-    .await?;
+    .fetch_optional(db.inner())
+    .await
+    .map_err(|_| Status::InternalServerError)?
+    .ok_or(Status::NotFound)?;
 
     // Audit: NDA_SIGNED
     let _ = create_audit_log(&CreateAuditLogRequest {
@@ -198,7 +202,7 @@ pub async fn sign_nda(
         user_agent: None,
     }, db.inner()).await;
 
-    Ok(Json(ApiResponse::success(nda)))
+    Ok(Json(nda))
 }
 
 /// Reject an NDA (end-user)
@@ -208,7 +212,7 @@ pub async fn reject_nda(
     id: i32,
     data: Json<RejectNDARequest>,
     auth: AuthGuard,
-) -> Result<Json<ApiResponse<NDA>>, AppError> {
+) -> Result<Json<NDA>, Status> {
     let now = Utc::now().naive_utc();
 
     let nda = sqlx::query_as!(
@@ -225,8 +229,10 @@ pub async fn reject_nda(
         now,
         id
     )
-    .fetch_one(db.inner())
-    .await?;
+    .fetch_optional(db.inner())
+    .await
+    .map_err(|_| Status::InternalServerError)?
+    .ok_or(Status::NotFound)?;
 
     // Audit: NDA_REJECTED
     let _ = create_audit_log(&CreateAuditLogRequest {
@@ -240,7 +246,7 @@ pub async fn reject_nda(
         user_agent: None,
     }, db.inner()).await;
 
-    Ok(Json(ApiResponse::success(nda)))
+    Ok(Json(nda))
 }
 
 /// Update NDA status (admin only)
@@ -250,7 +256,7 @@ pub async fn update_nda_status(
     id: i32,
     data: Json<UpdateNDARequest>,
     _auth: AuthGuard,
-) -> Result<Json<ApiResponse<NDA>>, AppError> {
+) -> Result<Json<NDA>, Status> {
     let nda = sqlx::query_as!(
         NDA,
         r#"
@@ -263,10 +269,12 @@ pub async fn update_nda_status(
         data.status,
         id
     )
-    .fetch_one(db.inner())
-    .await?;
+    .fetch_optional(db.inner())
+    .await
+    .map_err(|_| Status::InternalServerError)?
+    .ok_or(Status::NotFound)?;
 
-    Ok(Json(ApiResponse::success(nda)))
+    Ok(Json(nda))
 }
 
 /// Delete/Revoke NDA
@@ -275,10 +283,11 @@ pub async fn delete_nda(
     db: &State<PgPool>,
     id: i32,
     _auth: AuthGuard,
-) -> Result<Json<ApiResponse<String>>, AppError> {
+) -> Result<Json<&'static str>, Status> {
     sqlx::query!("UPDATE nda SET status = 'REVOKED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", id)
         .execute(db.inner())
-        .await?;
+        .await
+        .map_err(|_| Status::InternalServerError)?;
 
-    Ok(Json(ApiResponse::success("Revoked".to_string())))
+    Ok(Json("Revoked"))
 }

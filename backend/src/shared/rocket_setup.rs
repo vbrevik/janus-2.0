@@ -6,8 +6,8 @@ use std::env;
 
 // Import all needed modules - these must be available when compiled as lib
 use crate::{
-    auth, audit, access, info_systems, personnel, roles, vendors, vendor_relations,
-    discussions, document_references, nda, shared
+    auth, audit, access, info_systems, person, roles, vendors, vendor_relations, relations,
+    discussions, document_references, nda, shared, messaging
 };
 
 pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
@@ -28,6 +28,25 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
         .connect(&database_url)
         .await
         .expect("Failed to create database pool");
+
+    // Create WebSocket manager
+    let ws_manager = messaging::websocket::WebSocketManager::new();
+    
+    // Start WebSocket server on separate port (15540)
+    let ws_addr = "0.0.0.0:15540".parse().expect("Invalid WebSocket address");
+    let ws_manager_clone = ws_manager.clone();
+    let jwt_secret_clone = jwt_secret.clone();
+    let db_pool_clone = db_pool.clone();
+    tokio::spawn(async move {
+        if let Err(e) = messaging::handlers::start_websocket_server(
+            ws_addr,
+            jwt_secret_clone,
+            ws_manager_clone,
+            db_pool_clone,
+        ).await {
+            eprintln!("Failed to start WebSocket server: {}", e);
+        }
+    });
 
     if cfg!(not(test)) {
         println!("✅ Database connected");
@@ -55,6 +74,7 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
         .configure(rocket::Config::figment().merge(("port", 15520)))
         .manage(db_pool)
         .manage(jwt_secret)
+        .manage(ws_manager.clone())
         .attach(cors)
         .mount("/", rocket::routes![
             crate::index,
@@ -63,11 +83,11 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
             auth::handlers::get_profile,
             auth::handlers::change_password,
             shared::handlers::get_stats,
-            personnel::handlers::list_personnel,
-            personnel::handlers::get_personnel,
-            personnel::handlers::create_personnel,
-            personnel::handlers::update_personnel,
-            personnel::handlers::delete_personnel,
+            person::handlers::list_persons,
+            person::handlers::get_person,
+            person::handlers::create_person,
+            person::handlers::update_person,
+            person::handlers::delete_person,
             vendors::handlers::list_vendors,
             vendors::handlers::get_vendor,
             vendors::handlers::create_vendor,
@@ -93,5 +113,6 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
         .mount("/api/nda", nda::routes())
         .mount("/api/discussions", discussions::routes())
         .mount("/api/document-references", document_references::routes())
+        .mount("/api", relations::routes())
 }
 

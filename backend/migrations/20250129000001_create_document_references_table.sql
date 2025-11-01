@@ -17,13 +17,14 @@ CREATE TABLE IF NOT EXISTS document_references (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes
-CREATE INDEX idx_document_references_personnel ON document_references(personnel_id);
-CREATE INDEX idx_document_references_type ON document_references(document_type);
-CREATE INDEX idx_document_references_status ON document_references(status);
-CREATE INDEX idx_document_references_issued_date ON document_references(issued_date);
+-- Create indexes (IF NOT EXISTS for idempotency)
+CREATE INDEX IF NOT EXISTS idx_document_references_personnel ON document_references(personnel_id);
+CREATE INDEX IF NOT EXISTS idx_document_references_type ON document_references(document_type);
+CREATE INDEX IF NOT EXISTS idx_document_references_status ON document_references(status);
+CREATE INDEX IF NOT EXISTS idx_document_references_issued_date ON document_references(issued_date);
 
--- Create trigger to update updated_at
+-- Create trigger to update updated_at (DROP IF EXISTS for idempotency)
+DROP TRIGGER IF EXISTS update_document_references_updated_at ON document_references;
 CREATE TRIGGER update_document_references_updated_at
     BEFORE UPDATE ON document_references
     FOR EACH ROW

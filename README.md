@@ -20,14 +20,10 @@ Janus 2.0 is a **simple, fast, and secure** personnel and access control managem
 
 ```
 ┌─────────────────────────────────────────┐
-│  Frontend (Admin) - React + TypeScript  │
+│  Unified Frontend - React + TypeScript  │
+│    Role-based routing (Admin/EndUser/   │
+│         Official views)                 │
 │           Port: 15510                    │
-├─────────────────────────────────────────┤
-│  EndUser Frontend - React + TypeScript │
-│           Port: 15511                    │
-├─────────────────────────────────────────┤
-│  Official Frontend - React + TypeScript │
-│           Port: 15513                    │
 └─────────────┬───────────────────────────┘
               │ REST API (JWT)
 ┌─────────────▼───────────────────────────┐
@@ -41,10 +37,10 @@ Janus 2.0 is a **simple, fast, and secure** personnel and access control managem
 └─────────────────────────────────────────┘
 ```
 
-**Three Frontend Applications**:
-- **Admin Frontend** (15510): Full CRUD for system administrators
-- **EndUser Frontend** (15511): Task management for end users (e.g., signing NDAs)
-- **Official Frontend** (15513): Read-only lookup for official entities
+**Unified Frontend Application** (15510):
+- **Admin Routes** (`/admin/*`): Full CRUD for system administrators
+- **EndUser Routes** (`/enduser/*`): Task management for end users (e.g., signing NDAs)
+- **Official Routes** (`/official/*`): Read-only lookup for official entities
 
 **Port Allocation**: 15500-15599 range (see [PORT-ALLOCATION.md](PORT-ALLOCATION.md))
 
@@ -98,9 +94,10 @@ npm run dev
 ```
 
 ### Access
-- **Frontend (Admin)**: http://localhost:15510
-- **EndUser Frontend**: http://localhost:15511
-- **Official Frontend**: http://localhost:15513
+- **Frontend**: http://localhost:15510
+  - Admin: `/admin/dashboard` (requires admin role)
+  - EndUser: `/enduser/tasks` (requires enduser role)
+  - Official: `/official/dashboard` (requires official role)
 - **Backend API**: http://localhost:15520
 - **Health Check**: http://localhost:15520/api/health
 - **PostgreSQL**: localhost:15530 (Docker)
@@ -195,6 +192,16 @@ docker-compose -f docker-compose.prod.yml up -d
 - **Input Validation**: Comprehensive validation
 
 ## 📈 **Development Status**
+
+### ✅ **Database & Messaging Infrastructure - COMPLETE** (November 1, 2025)
+- ✅ **Phase 1 Complete**: All critical database tables created (discussions, nda, document_references, info_systems)
+- ✅ **Phase 2 Complete**: Messaging module fixed - WebSocket functionality operational
+- ✅ **Phase 3 Complete**: All endpoints verified working, database accessible
+- ✅ **Code Cleanup**: Relations and Document References handlers standardized to use `Status` instead of `ApiResponse` wrapper
+- ✅ **Backend Compiles**: Main binary builds successfully
+- ✅ **API Verified**: All critical endpoints (discussions, nda, info-systems, document-references) tested and working
+
+**Status**: Backend infrastructure fully operational. All critical database tables accessible. Messaging/WebSocket module ready for use.
 
 ### ⚠️ **FRONTEND CONSOLIDATION IN PROGRESS** (Current Work)
 - **Branch**: `feature/frontend-consolidation`

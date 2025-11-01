@@ -1,9 +1,10 @@
 #[macro_use] extern crate rocket;
 
 mod auth;
-mod personnel;
+mod person;
 mod vendors;
 mod vendor_relations;
+mod relations;
 mod access;
 mod audit;
 mod shared;
@@ -12,6 +13,7 @@ mod roles;
 mod nda;
 mod discussions;
 mod document_references;
+mod messaging;
 
 use rocket::serde::json::Json;
 use serde::Serialize;

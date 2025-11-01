@@ -99,6 +99,20 @@ pub async fn create_personnel(
     // Validate input
     personnel_request.validate().map_err(|_| Status::BadRequest)?;
 
+    // Validate that department exists in vendors
+    let department_exists = sqlx::query_scalar!(
+        "SELECT EXISTS(SELECT 1 FROM vendors WHERE department = $1 AND deleted_at IS NULL)",
+        personnel_request.department
+    )
+    .fetch_one(db.inner())
+    .await
+    .map_err(|_| Status::InternalServerError)?
+    .unwrap_or(false);
+
+    if !department_exists {
+        return Err(Status::BadRequest);
+    }
+
     // Insert personnel
     let personnel = sqlx::query_as!(
         Personnel,
@@ -150,6 +164,22 @@ pub async fn update_personnel(
 
     if !exists {
         return Err(Status::NotFound);
+    }
+
+    // Validate department if it's being updated
+    if let Some(ref department) = personnel_request.department {
+        let department_exists = sqlx::query_scalar!(
+            "SELECT EXISTS(SELECT 1 FROM vendors WHERE department = $1 AND deleted_at IS NULL)",
+            department
+        )
+        .fetch_one(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?
+        .unwrap_or(false);
+
+        if !department_exists {
+            return Err(Status::BadRequest);
+        }
     }
 
     // Build dynamic update query

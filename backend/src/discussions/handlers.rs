@@ -4,9 +4,9 @@ use rocket::{get, post};
 use sqlx::PgPool;
 
 use crate::discussions::models::*;
+use crate::auth::middleware::AuthGuard;
 use crate::shared::response::ApiResponse;
 use crate::shared::error::AppError;
-use crate::auth::middleware::AuthGuard;
 
 /// List discussions for a personnel (end-user inbox)
 #[get("/?<personnel_id>&<status>&<type>")]
@@ -151,8 +151,18 @@ pub async fn create_reply(
     id: i32,
     data: Json<CreateReplyRequest>,
     auth: AuthGuard,
+    ws_manager: &State<crate::messaging::websocket::WebSocketManager>,
 ) -> Result<Json<ApiResponse<DiscussionReply>>, AppError> {
     let created_by = auth.claims.sub.parse::<i32>().unwrap_or(0);
+
+    // Get discussion to find personnel_id and assigned_to for notifications
+    let discussion = sqlx::query!(
+        "SELECT personnel_id, assigned_to FROM discussions WHERE id = $1",
+        id
+    )
+    .fetch_optional(db.inner())
+    .await?
+    .ok_or(AppError::NotFound)?;
 
     let reply = sqlx::query_as::<sqlx::Postgres, DiscussionReply>(
         r#"
@@ -172,6 +182,28 @@ pub async fn create_reply(
         .bind(id)
         .execute(db.inner())
         .await?;
+
+    // Broadcast WebSocket message to relevant users
+    let mut notify_users = vec![discussion.personnel_id];
+    if let Some(assigned_to) = discussion.assigned_to {
+        if assigned_to != created_by {
+            notify_users.push(assigned_to);
+        }
+    }
+    if created_by != discussion.personnel_id {
+        // Don't notify the sender
+        notify_users.retain(|&uid| uid != created_by);
+    }
+
+    if !notify_users.is_empty() {
+        let ws_message = crate::messaging::models::WebSocketMessage::NewMessage {
+            discussion_id: id,
+            message: data.message.clone(),
+            created_by,
+            created_at: reply.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
+        };
+        ws_manager.broadcast_to_users(&notify_users, ws_message).await;
+    }
 
     Ok(Json(ApiResponse::success(reply)))
 }

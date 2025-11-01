@@ -29,12 +29,12 @@ pub async fn list_vendors(
     let (total_sql, vendors_sql) = if filter_top_level {
         (
             "SELECT COUNT(*) FROM vendors WHERE deleted_at IS NULL AND id NOT IN (SELECT DISTINCT related_vendor_id FROM vendor_relations WHERE related_vendor_id IS NOT NULL)",
-            "SELECT id, company_name, contact_name, contact_email, contact_phone, clearance_level, contract_number, deleted_at, created_at, updated_at FROM vendors WHERE deleted_at IS NULL AND id NOT IN (SELECT DISTINCT related_vendor_id FROM vendor_relations WHERE related_vendor_id IS NOT NULL) ORDER BY company_name LIMIT $1 OFFSET $2"
+            "SELECT id, company_name, contact_name, contact_email, contact_phone, clearance_level, contract_number, department, deleted_at, created_at, updated_at FROM vendors WHERE deleted_at IS NULL AND id NOT IN (SELECT DISTINCT related_vendor_id FROM vendor_relations WHERE related_vendor_id IS NOT NULL) ORDER BY company_name LIMIT $1 OFFSET $2"
         )
     } else {
         (
             "SELECT COUNT(*) FROM vendors WHERE deleted_at IS NULL",
-            "SELECT id, company_name, contact_name, contact_email, contact_phone, clearance_level, contract_number, deleted_at, created_at, updated_at FROM vendors WHERE deleted_at IS NULL ORDER BY company_name LIMIT $1 OFFSET $2"
+            "SELECT id, company_name, contact_name, contact_email, contact_phone, clearance_level, contract_number, department, deleted_at, created_at, updated_at FROM vendors WHERE deleted_at IS NULL ORDER BY company_name LIMIT $1 OFFSET $2"
         )
     };
 
@@ -71,7 +71,7 @@ pub async fn get_vendor(
         Vendor,
         r#"
         SELECT id, company_name, contact_name, contact_email, contact_phone,
-               clearance_level, contract_number, deleted_at, created_at, updated_at
+               clearance_level, contract_number, department, deleted_at, created_at, updated_at
         FROM vendors
         WHERE id = $1 AND deleted_at IS NULL
         "#,
@@ -99,17 +99,18 @@ pub async fn create_vendor(
         Vendor,
         r#"
         INSERT INTO vendors 
-        (company_name, contact_name, contact_email, contact_phone, clearance_level, contract_number)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        (company_name, contact_name, contact_email, contact_phone, clearance_level, contract_number, department)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING id, company_name, contact_name, contact_email, contact_phone,
-                  clearance_level, contract_number, deleted_at, created_at, updated_at
+                  clearance_level, contract_number, department, deleted_at, created_at, updated_at
         "#,
         vendor_request.company_name,
         vendor_request.contact_name,
         vendor_request.contact_email,
         vendor_request.contact_phone,
         vendor_request.clearance_level,
-        vendor_request.contract_number
+        vendor_request.contract_number,
+        vendor_request.department
     )
     .fetch_one(db.inner())
     .await
@@ -173,6 +174,10 @@ pub async fn update_vendor(
         query.push_str(&format!(", contract_number = ${}", param_count));
         param_count += 1;
     }
+    if vendor_request.department.is_some() {
+        query.push_str(&format!(", department = ${}", param_count));
+        param_count += 1;
+    }
 
     query.push_str(&format!(" WHERE id = ${} RETURNING *", param_count));
 
@@ -196,6 +201,9 @@ pub async fn update_vendor(
     }
     if let Some(ref contract_number) = vendor_request.contract_number {
         query_builder = query_builder.bind(contract_number);
+    }
+    if let Some(ref department) = vendor_request.department {
+        query_builder = query_builder.bind(department);
     }
     
     query_builder = query_builder.bind(id);

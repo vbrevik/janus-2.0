@@ -4,9 +4,10 @@
 #[macro_use] extern crate rocket;
 
 pub mod auth;
-pub mod personnel;
+pub mod person;
 pub mod vendors;
 pub mod vendor_relations;
+pub mod relations;
 pub mod access;
 pub mod audit;
 pub mod shared;
@@ -15,6 +16,7 @@ pub mod roles;
 pub mod nda;
 pub mod discussions;
 pub mod document_references;
+pub mod messaging;
 
 // Re-export routes and handlers needed for rocket setup
 use rocket::serde::json::Json;

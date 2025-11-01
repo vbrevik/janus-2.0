@@ -1,11 +1,10 @@
 use rocket::serde::json::Json;
 use rocket::State;
 use rocket::{get, post, put, delete};
+use rocket::http::Status;
 use sqlx::PgPool;
 
 use crate::document_references::models::*;
-use crate::shared::response::ApiResponse;
-use crate::shared::error::AppError;
 use crate::auth::middleware::AuthGuard;
 use validator::Validate;
 use base64::Engine as _;
@@ -20,7 +19,7 @@ pub async fn list_document_references(
     document_type: Option<String>,
     status: Option<String>,
     _auth: AuthGuard,
-) -> Result<Json<ApiResponse<Vec<DocumentReference>>>, AppError> {
+) -> Result<Json<Vec<DocumentReference>>, Status> {
     // Query shape reference (intentionally unused): kept for documentation of selected columns
     let _ = "SELECT id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE 1=1";
 
@@ -72,8 +71,11 @@ pub async fn list_document_references(
         .await
     };
 
-    let documents = documents?;
-    Ok(Json(ApiResponse::success(documents)))
+    let documents = documents.map_err(|e| {
+        eprintln!("Database error in list_document_references: {:?}", e);
+        Status::InternalServerError
+    })?;
+    Ok(Json(documents))
 }
 
 /// Get a specific document reference
@@ -82,7 +84,7 @@ pub async fn get_document_reference(
     db: &State<PgPool>,
     id: i32,
     _auth: AuthGuard,
-) -> Result<Json<ApiResponse<DocumentReference>>, AppError> {
+) -> Result<Json<DocumentReference>, Status> {
     let doc = sqlx::query_as!(
         DocumentReference,
         r#"
@@ -93,9 +95,13 @@ pub async fn get_document_reference(
         id
     )
     .fetch_one(db.inner())
-    .await?;
+    .await
+    .map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?;
 
-    Ok(Json(ApiResponse::success(doc)))
+    Ok(Json(doc))
 }
 
 /// Create a new document reference (self-report)
@@ -104,7 +110,7 @@ pub async fn create_document_reference(
     db: &State<PgPool>,
     data: Json<CreateDocumentReferenceRequest>,
     auth: AuthGuard,
-) -> Result<Json<ApiResponse<DocumentReference>>, AppError> {
+) -> Result<Json<DocumentReference>, Status> {
     let user_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
     
     // Get personnel_id from user (similar to discussions)
@@ -113,8 +119,9 @@ pub async fn create_document_reference(
         user_id
     )
     .fetch_optional(db.inner())
-    .await?
-    .ok_or(AppError::NotFound)?;
+    .await
+    .map_err(|_| Status::InternalServerError)?
+    .ok_or(Status::NotFound)?;
 
     // Find linked personnel by email matching username
     // Try multiple matching strategies:
@@ -141,7 +148,11 @@ pub async fn create_document_reference(
             p3
         )
         .fetch_optional(db.inner())
-        .await?
+        .await
+        .map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?
     } else {
         sqlx::query_scalar!(
             "SELECT id FROM personnel WHERE email LIKE $1 OR email LIKE $2 LIMIT 1",
@@ -149,13 +160,17 @@ pub async fn create_document_reference(
             pattern2
         )
         .fetch_optional(db.inner())
-        .await?
+        .await
+        .map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?
     };
 
     // If personnel not found, require personnel_id to be found - this is expected behavior for self-reporting
     let personnel_id = personnel_id.ok_or_else(|| {
         eprintln!("Personnel not found for user: {}", user.username);
-        AppError::NotFound
+        Status::NotFound
     })?;
     let document_type = data.document_type.clone().unwrap_or_else(|| "security_brief".to_string());
 
@@ -181,9 +196,13 @@ pub async fn create_document_reference(
         data.notes
     )
     .fetch_one(db.inner())
-    .await?;
+    .await
+    .map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?;
 
-    Ok(Json(ApiResponse::success(doc)))
+    Ok(Json(doc))
 }
 
 /// Update document reference (end-user can update their own, admin can verify)
@@ -193,7 +212,7 @@ pub async fn update_document_reference(
     id: i32,
     data: Json<UpdateDocumentReferenceRequest>,
     _auth: AuthGuard,
-) -> Result<Json<ApiResponse<DocumentReference>>, AppError> {
+) -> Result<Json<DocumentReference>, Status> {
     let doc = sqlx::query_as!(
         DocumentReference,
         r#"
@@ -219,9 +238,13 @@ pub async fn update_document_reference(
         id
     )
     .fetch_one(db.inner())
-    .await?;
+    .await
+    .map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?;
 
-    Ok(Json(ApiResponse::success(doc)))
+    Ok(Json(doc))
 }
 /// Upload an attachment for a document reference (PDF/image as base64)
 #[post("/<id>/attachment", data = "<data>")]
@@ -230,13 +253,13 @@ pub async fn upload_document_attachment(
     id: i32,
     data: Json<AttachmentUploadRequest>,
     _auth: AuthGuard,
-) -> Result<Json<ApiResponse<DocumentReference>>, AppError> {
-    data.0.validate().map_err(AppError::from)?;
+) -> Result<Json<DocumentReference>, Status> {
+    data.0.validate().map_err(|_| Status::BadRequest)?;
 
     // Decode base64
     let bytes = base64::engine::general_purpose::STANDARD
         .decode(&data.data_base64)
-        .map_err(|_| AppError::BadRequest)?;
+        .map_err(|_| Status::BadRequest)?;
 
     // MinIO configuration from environment
     let endpoint = std::env::var("MINIO_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".to_string());
@@ -252,11 +275,17 @@ pub async fn upload_document_attachment(
         None,
         None,
         None,
-    ).map_err(|_| AppError::Internal)?;
+    ).map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?;
 
     let region = Region::Custom { region: region.clone(), endpoint: endpoint.clone() };
     let bucket = Bucket::new(&bucket_name, region, credentials)
-        .map_err(|_| AppError::Internal)?
+        .map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?
         .with_path_style();
 
     // Upload file to MinIO
@@ -264,7 +293,10 @@ pub async fn upload_document_attachment(
     let key = format!("document_references/{}/{}", id, sanitized);
     
     bucket.put_object(&key, &bytes).await
-        .map_err(|_| AppError::Internal)?;
+        .map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?;
 
     let path = format!("s3://{}/{}", bucket_name, key);
 
@@ -286,9 +318,13 @@ pub async fn upload_document_attachment(
         id
     )
     .fetch_one(db.inner())
-    .await?;
+    .await
+    .map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?;
 
-    Ok(Json(ApiResponse::success(doc)))
+    Ok(Json(doc))
 }
 
 /// Delete document reference
@@ -297,11 +333,15 @@ pub async fn delete_document_reference(
     db: &State<PgPool>,
     id: i32,
     _auth: AuthGuard,
-) -> Result<Json<ApiResponse<String>>, AppError> {
+) -> Result<Json<&'static str>, Status> {
     sqlx::query!("DELETE FROM document_references WHERE id = $1", id)
         .execute(db.inner())
-        .await?;
+        .await
+    .map_err(|e| {
+    eprintln!("Database error: {:?}", e);
+    Status::InternalServerError
+})?;
 
-    Ok(Json(ApiResponse::success("Deleted".to_string())))
+    Ok(Json("Deleted"))
 }
 

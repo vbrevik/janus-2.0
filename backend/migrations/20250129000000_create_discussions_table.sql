@@ -25,21 +25,23 @@ CREATE TABLE IF NOT EXISTS discussion_replies (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes
-CREATE INDEX idx_discussions_personnel ON discussions(personnel_id);
-CREATE INDEX idx_discussions_status ON discussions(status);
-CREATE INDEX idx_discussions_type ON discussions(type);
-CREATE INDEX idx_discussions_assigned_to ON discussions(assigned_to);
-CREATE INDEX idx_discussions_created_at ON discussions(created_at DESC);
-CREATE INDEX idx_discussion_replies_discussion ON discussion_replies(discussion_id);
-CREATE INDEX idx_discussion_replies_created_at ON discussion_replies(created_at DESC);
+-- Create indexes (IF NOT EXISTS for idempotency)
+CREATE INDEX IF NOT EXISTS idx_discussions_personnel ON discussions(personnel_id);
+CREATE INDEX IF NOT EXISTS idx_discussions_status ON discussions(status);
+CREATE INDEX IF NOT EXISTS idx_discussions_type ON discussions(type);
+CREATE INDEX IF NOT EXISTS idx_discussions_assigned_to ON discussions(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_discussions_created_at ON discussions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_discussion_replies_discussion ON discussion_replies(discussion_id);
+CREATE INDEX IF NOT EXISTS idx_discussion_replies_created_at ON discussion_replies(created_at DESC);
 
--- Create triggers to update updated_at
+-- Create triggers to update updated_at (DROP IF EXISTS for idempotency)
+DROP TRIGGER IF EXISTS update_discussions_updated_at ON discussions;
 CREATE TRIGGER update_discussions_updated_at
     BEFORE UPDATE ON discussions
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_discussion_replies_updated_at ON discussion_replies;
 CREATE TRIGGER update_discussion_replies_updated_at
     BEFORE UPDATE ON discussion_replies
     FOR EACH ROW

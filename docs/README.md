@@ -44,6 +44,31 @@ Read these documents in order for complete understanding:
 13. **[features/](features/)** - Feature-specific documentation
    - **[Info Systems](features/info-systems/)** - Information Systems CRUD feature
 
+### Recent Infrastructure Work
+14. **[PHASE-2-COMPLETE.md](PHASE-2-COMPLETE.md)** - Messaging module fixes (November 2025)
+15. **[PHASE-3-COMPLETE.md](PHASE-3-COMPLETE.md)** - Testing & verification complete (November 2025)
+
+### Testing & Guides
+14. **[TESTING-GUIDE.md](TESTING-GUIDE.md)** - Comprehensive manual testing guide
+15. **[QUICK-TEST-SUMMARY.md](QUICK-TEST-SUMMARY.md)** - Quick reference for testing
+16. **[USER-GUIDE.md](USER-GUIDE.md)** - End-user documentation
+17. **[ADMIN-GUIDE.md](ADMIN-GUIDE.md)** - Administrator documentation
+
+### Project Management
+18. **[PROJECT-HISTORY.md](PROJECT-HISTORY.md)** - Consolidated project history and milestones
+19. **[ROLES-PERMISSIONS-USER-STORIES.md](ROLES-PERMISSIONS-USER-STORIES.md)** - RBAC user stories
+20. **[USER-STORIES-MANAGEMENT.md](USER-STORIES-MANAGEMENT.md)** - User stories management guide
+21. **[ARCHITECTURE-REVIEWS.md](ARCHITECTURE-REVIEWS.md)** - Architecture reviews and analysis
+
+### Worktree & Parallel Development
+22. **[WORKTREES-PARALLEL-WORK-PROPOSAL.md](WORKTREES-PARALLEL-WORK-PROPOSAL.md)** - Git worktrees strategy
+23. **[GIT-WORKTREES-FOR-AGENTS.md](GIT-WORKTREES-FOR-AGENTS.md)** - Worktree guide for agents
+24. **[WORKTREE-MERGE-CANDIDATES.md](WORKTREE-MERGE-CANDIDATES.md)** - Merge status tracking
+
+### Future Enhancements
+25. **[FRONTEND-MIGRATION-PLAN.md](FRONTEND-MIGRATION-PLAN.md)** - Plan for consolidating three frontends
+26. **[USER-STORIES-TOOL-EVALUATION.md](USER-STORIES-TOOL-EVALUATION.md)** - Tool evaluation for user stories
+
 ## 🚀 **Quick Start for AI Agents**
 
 ### For Backend Development
@@ -139,38 +164,23 @@ cargo run --bin migrate
 
 ## 📊 **Project Status**
 
-- **Status**: 🔨 **IMPLEMENTATION PHASE** (Parallel Development)
-- **Version**: 2.0.0-beta
+- **Status**: ✅ **MVP 1 & MVP 2 COMPLETE** - Extended Features Complete
+- **Version**: 2.0.0
 - **Last Updated**: 2025-01-30
-- **Current Branch**: `feature/info-systems-crud` (main) + 6 worktree branches
-- **Phase**: MVP 2 - Feature Completion (Parallel Work)
-- **Parallel Work**: Using Git worktrees for simultaneous development
-  - See `../janus-2.0-worktrees/STATUS.md` for detailed worktree status
-
-### Parallel Worktree Status
-
-**✅ Completed and Merged (6 worktrees - 100%)**:
-- ✅ NDA Backend (`feature/nda-backend-complete`) - Auth context fixes (merged)
-- ✅ Discussions Backend (`feature/discussions-backend-complete`) - Auth context fixes (merged)
-- ✅ Document References Backend (`feature/doc-ref-backend-complete`) - Verification (merged)
-- ✅ Roles Frontend (`feature/roles-frontend`) - Verified existing implementation (merged)
-- ✅ NDA Frontend (`feature/nda-frontend`) - Created dedicated management page (review pending)
-- ✅ Info Systems Frontend (`feature/info-systems-frontend`) - Verified existing implementation (review pending)
-
-**🔄 In Progress**:
-- None currently - all worktree tasks complete
+- **Current Phase**: Production Preparation
 
 ### Feature Completion Status
 
 **✅ Completed**:
 - ✅ MVP 1: Authentication, Personnel, Vendors, Audit Logs (Week 1-2)
-- ✅ Roles & Permissions: Backend + Frontend complete
-- ✅ NDA Management: Backend + Frontend complete (dedicated page created)
-- ✅ Discussions: Backend complete (merged from worktree)
-- ✅ Document References: Backend complete (merged from worktree)
-- ✅ Info Systems: Backend + Frontend complete (with E2E tests) - **Completed 2025-11-01**
+- ✅ MVP 2: Three-Tier Access Control, Roles & Permissions, Info Systems
+- ✅ Extended Features: NDA Management, Discussions, Document References
+- ✅ Multi-Frontend Architecture: Admin, End-User, Official Entities portals
+- ✅ E2E Testing: Comprehensive test coverage for critical paths
 
-**🎉 Parallel Work Complete**: All 6 worktree branches completed successfully!
+**📊 Current Status**: See main [README.md](../README.md) for latest project status
+
+**📜 History**: See [PROJECT-HISTORY.md](PROJECT-HISTORY.md) for detailed milestone history
 
 ## 🤝 **Contributing**
 
