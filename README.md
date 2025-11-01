@@ -19,21 +19,32 @@ Janus 2.0 is a **simple, fast, and secure** personnel and access control managem
 ## 🏗️ **Architecture**
 
 ```
-┌─────────────────────────────────────┐
-│   Frontend (React + TypeScript)    │
-│         Port: 15510                 │
-└─────────────┬───────────────────────┘
+┌─────────────────────────────────────────┐
+│  Frontend (Admin) - React + TypeScript  │
+│           Port: 15510                    │
+├─────────────────────────────────────────┤
+│  EndUser Frontend - React + TypeScript │
+│           Port: 15511                    │
+├─────────────────────────────────────────┤
+│  Official Frontend - React + TypeScript │
+│           Port: 15513                    │
+└─────────────┬───────────────────────────┘
               │ REST API (JWT)
-┌─────────────▼───────────────────────┐
-│      Backend (Rust + Rocket)        │
-│         Port: 15520                 │
-└─────────────┬───────────────────────┘
+┌─────────────▼───────────────────────────┐
+│      Backend (Rust + Rocket)            │
+│         Port: 15520                     │
+└─────────────┬───────────────────────────┘
               │ SQLx (Direct queries)
-┌─────────────▼───────────────────────┐
-│     PostgreSQL Database             │
-│      Port: 15530 | DB: janus2      │
-└─────────────────────────────────────┘
+┌─────────────▼───────────────────────────┐
+│     PostgreSQL Database                 │
+│      Port: 15530 | DB: janus2          │
+└─────────────────────────────────────────┘
 ```
+
+**Three Frontend Applications**:
+- **Admin Frontend** (15510): Full CRUD for system administrators
+- **EndUser Frontend** (15511): Task management for end users (e.g., signing NDAs)
+- **Official Frontend** (15513): Read-only lookup for official entities
 
 **Port Allocation**: 15500-15599 range (see [PORT-ALLOCATION.md](PORT-ALLOCATION.md))
 
@@ -87,10 +98,14 @@ npm run dev
 ```
 
 ### Access
-- **Frontend**: http://localhost:15510
+- **Frontend (Admin)**: http://localhost:15510
+- **EndUser Frontend**: http://localhost:15511
+- **Official Frontend**: http://localhost:15513
 - **Backend API**: http://localhost:15520
 - **Health Check**: http://localhost:15520/api/health
 - **PostgreSQL**: localhost:15530 (Docker)
+
+**Note**: See [PORT-ALLOCATION.md](PORT-ALLOCATION.md) for complete port documentation.
 
 ## 📚 **Documentation**
 
@@ -103,6 +118,8 @@ Complete documentation is in the `/docs` folder:
 - **02-ARCHITECTURE.md** - System architecture
 - **03-TECHNOLOGY-STACK.md** - Technology details
 - **11-IMPLEMENTATION-PLAN.md** - Week-by-week roadmap
+- **TESTING-GUIDE.md** - Comprehensive manual testing guide
+- **QUICK-TEST-SUMMARY.md** - Quick reference for testing
 
 ## ✨ **Core Features**
 
@@ -179,8 +196,14 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## 📈 **Development Status**
 
-- **Current Phase**: MVP 1 - Week 1 ✅ **COMPLETED**
-- **Next Phase**: MVP 1 - Week 2 (Frontend Development)
+- **Current Phase**: MVP 2 - Security & Access Control
+- **Last Completed Tasks**: 
+  - ✅ Added authentication guards to all access control endpoints
+  - ✅ Fixed roles handlers compilation errors  
+  - ✅ Resolved MinIO/S3 Rust version compatibility using `s3-tokio` crate (compatible with Rust 1.86+)
+  - ✅ Re-enabled document attachment upload functionality
+- **Agent**: Full-Stack Developer
+- **Status**: Backend authentication, authorization, and storage infrastructure complete
 - **Timeline**: 3-4 weeks remaining to production
 
 ### Phase 0 Completed (October 26, 2025)
@@ -201,32 +224,119 @@ docker-compose -f docker-compose.prod.yml up -d
 
 **Backend Foundation**: Complete and production-ready! 🎉
 
-### MVP 1 - Week 2 (Frontend) - **NEXT**
-- ⏳ Frontend setup (React + TypeScript + Vite)
-- ⏳ TanStack Router + TanStack Query
-- ⏳ Authentication UI
-- ⏳ Personnel management UI
-- ⏳ Vendor management UI
-- ⏳ Audit log viewer
+### MVP 1 - Week 2 (Frontend) - ✅ **COMPLETED**
+- ✅ Frontend setup (React + TypeScript + Vite)
+- ✅ TanStack Router + TanStack Query
+- ✅ Authentication UI
+- ✅ Personnel management UI
+- ✅ Vendor management UI
+- ✅ Audit log viewer
+- ✅ Roles & Permissions Management UI (CRUD + Permission assignment)
+- ✅ E2E Tests for Roles & Permissions
+- ✅ API Endpoints Documentation Updated (50+ endpoints organized)
 
-### API Endpoints (14 total)
+### MVP 2 - NDA Management Features - 🔄 **PARTIAL**
+- ✅ Backend: NDA CRUD, Sign NDA, Reject NDA with reason tracking (untracked)
+- ✅ Backend: Track sent_by_vendor_id and sent_at metadata (untracked)
+- ✅ Backend: Database migrations (rejection_reason, sent_by_vendor_id, sent_at) (untracked)
+- ✅ Backend: Routes mounted (nda, discussions, document_references) (untracked)
+- ⚠️ Frontend Admin: Send NDA dialog with vendor selection (exists, untracked)
+- ⚠️ Frontend Admin: NDA list tab showing status, dates, rejection reasons (exists, untracked)
+- ⚠️ Frontend Enduser: Reject NDA dialog with reason textarea (exists, untracked)
+- ⚠️ Frontend Enduser: Display sent_at, signed_at, rejection_reason (exists, untracked)
+- ⚠️ Frontend Hooks: useRejectNDA in both admin and enduser frontends (exists, untracked)
+- ❌ E2E Tests: Missing for NDA workflows
+
+### MVP 2 - Info Systems CRUD - 🔄 **IN PROGRESS** (Current Branch)
+- 🔄 Backend: Info Systems CRUD implementation
+- ⏳ Backend: Unit tests
+- ⏳ Frontend: Info Systems management UI
+- ⏳ E2E Tests: Info Systems workflows
+
+### API Endpoints (50+ total)
+
+#### Core
 - `GET /` - Welcome message
 - `GET /api/health` - Health check with database status
+- `GET /api/stats` - System statistics (requires auth)
+
+#### Authentication
 - `POST /api/auth/login` - User authentication (returns JWT)
+- `GET /api/auth/profile` - Get current user profile (requires auth)
+- `PUT /api/auth/change-password` - Change user password (requires auth)
+
+#### Personnel
 - `GET /api/personnel` - List all personnel (paginated, requires auth)
 - `GET /api/personnel/:id` - Get personnel by ID (requires auth)
 - `POST /api/personnel` - Create new personnel (requires auth)
 - `PUT /api/personnel/:id` - Update personnel (partial, requires auth)
 - `DELETE /api/personnel/:id` - Soft delete personnel (requires auth)
+
+#### Vendors
 - `GET /api/vendors` - List all vendors (paginated, requires auth)
 - `GET /api/vendors/:id` - Get vendor by ID (requires auth)
 - `POST /api/vendors` - Create new vendor (requires auth)
 - `PUT /api/vendors/:id` - Update vendor (partial, requires auth)
 - `DELETE /api/vendors/:id` - Soft delete vendor (requires auth)
+
+#### Vendor Relations
+- `GET /api/vendor-relations` - List vendor relations (requires auth)
+- `POST /api/vendor-relations` - Create vendor relation (requires auth)
+- `GET /api/vendor-relations/:id/hierarchy` - Get vendor hierarchy (requires auth)
+- `DELETE /api/vendor-relations/:id` - Delete vendor relation (requires auth)
+
+#### Access Control
+- `POST /api/access/computer` - Grant computer access (requires auth)
+- `POST /api/access/data` - Grant data access (requires auth)
+- `POST /api/access/physical` - Grant physical access (requires auth)
+- `GET /api/personnel/:id/access` - List all access for personnel (requires auth)
+- `DELETE /api/access/:type/:id` - Revoke access (requires auth)
+
+#### Information Systems
+- `GET /api/info-systems` - List information systems (paginated)
+- `GET /api/info-systems/:id` - Get info system by ID
+- `POST /api/info-systems` - Create info system (requires auth)
+- `PUT /api/info-systems/:id` - Update info system (requires auth)
+- `DELETE /api/info-systems/:id` - Delete info system (requires auth)
+
+#### Audit Logs
 - `GET /api/audit` - Query audit logs with filtering (requires auth)
 
+#### Roles & Permissions
+- `GET /api/roles` - List all roles (requires auth, roles.read permission)
+- `POST /api/roles` - Create role (requires auth, roles.write permission)
+- `PUT /api/roles/:id` - Update role (requires auth, roles.write permission)
+- `DELETE /api/roles/:id` - Delete role (requires auth, roles.write permission)
+- `GET /api/roles/permissions` - List all permissions (requires auth, roles.read permission)
+- `GET /api/roles/:id/permissions` - Get role permissions (requires auth, roles.read permission)
+- `PUT /api/roles/:id/permissions` - Set role permissions (requires auth, roles.write permission)
+
+#### NDAs
+- `GET /api/nda` - List NDAs (requires auth)
+- `GET /api/nda/:id` - Get NDA by ID (requires auth)
+- `POST /api/nda` - Create NDA (requires auth)
+- `POST /api/nda/:id/sign` - Sign NDA (requires auth)
+- `POST /api/nda/:id/reject` - Reject NDA (requires auth)
+- `PUT /api/nda/:id/status` - Update NDA status (requires auth)
+- `DELETE /api/nda/:id` - Delete NDA (requires auth)
+
+#### Discussions
+- `GET /api/discussions` - List discussions (requires auth)
+- `GET /api/discussions/:id` - Get discussion by ID (requires auth)
+- `POST /api/discussions` - Create discussion (requires auth)
+- `POST /api/discussions/:id/replies` - Add reply to discussion (requires auth)
+
+#### Document References
+- `GET /api/document-references` - List document references (requires auth)
+- `GET /api/document-references/:id` - Get document reference by ID (requires auth)
+- `POST /api/document-references` - Create document reference (requires auth)
+- `PUT /api/document-references/:id` - Update document reference (requires auth)
+- `DELETE /api/document-references/:id` - Delete document reference (requires auth)
+- `POST /api/document-references/:id/attachment` - Upload document attachment (requires auth)
+
 **Week 1 Complete**: All backend core functionality implemented and tested!  
-**Next Steps**: Week 2 - Frontend Development (React + TypeScript)
+**Week 2 Complete**: Frontend development for core features completed!  
+**NDA Features Complete**: Full NDA lifecycle (send, sign, reject) with metadata tracking - Ready for smoke testing
 
 ## 🤝 **Contributing**
 
