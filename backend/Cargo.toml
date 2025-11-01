@@ -5,6 +5,10 @@ edition = "2021"
 authors = ["Janus Development Team"]
 description = "Janus 2.0 Security Clearance System - Backend API"
 
+[lib]
+name = "janus_backend"
+path = "src/lib.rs"
+
 [dependencies]
 # Web framework
 rocket = { version = "0.5", features = ["json"] }
@@ -31,6 +35,10 @@ tokio = { version = "1", features = ["full"] }
 uuid = { version = "1.5", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 dotenvy = "0.15"
+base64 = "0.22"
+# MinIO/S3 client (compatible with Rust 1.86+)
+# Using s3-tokio which is a maintained fork compatible with Rust 1.86+
+s3 = { package = "s3-tokio", version = "0.39" }
 
 # Logging
 log = "0.4"

@@ -1,17 +1,20 @@
+use rocket::{State, http::Status};
 use rocket::serde::json::Json;
-use rocket::State;
 use sqlx::PgPool;
 
 use crate::access::models::*;
+use crate::auth::middleware::AuthGuard;
 use crate::shared::response::ApiResponse;
 
 /// Grant computer access to a personnel member
 #[post("/api/access/computer", data = "<data>")]
 pub async fn grant_computer_access(
     db: &State<PgPool>,
+    auth: AuthGuard,
     data: Json<CreateComputerAccessRequest>,
-) -> Result<Json<ApiResponse<ComputerAccess>>, String> {
-    // TODO: Add auth guard and permission check
+) -> Result<Json<ApiResponse<ComputerAccess>>, Status> {
+    let granted_by = auth.claims.sub.parse::<i32>()
+        .map_err(|_| Status::InternalServerError)?;
     
     // Insert computer access
     let access = sqlx::query_as!(
@@ -27,12 +30,12 @@ pub async fn grant_computer_access(
         data.personnel_id,
         data.system_name,
         data.access_level,
-        1i32, // TODO: Get from auth guard
+        granted_by,
         data.expires_at
     )
     .fetch_one(db.inner())
     .await
-    .map_err(|e| format!("Database error: {}", e))?;
+    .map_err(|_| Status::InternalServerError)?;
     
     Ok(Json(ApiResponse::success(access)))
 }
@@ -41,9 +44,11 @@ pub async fn grant_computer_access(
 #[post("/api/access/data", data = "<data>")]
 pub async fn grant_data_access(
     db: &State<PgPool>,
+    auth: AuthGuard,
     data: Json<CreateDataAccessRequest>,
-) -> Result<Json<ApiResponse<DataAccess>>, String> {
-    // TODO: Add auth guard and permission check
+) -> Result<Json<ApiResponse<DataAccess>>, Status> {
+    let granted_by = auth.claims.sub.parse::<i32>()
+        .map_err(|_| Status::InternalServerError)?;
     
     // Insert data access
     let access = sqlx::query_as!(
@@ -59,12 +64,12 @@ pub async fn grant_data_access(
         data.personnel_id,
         data.data_classification,
         data.access_level,
-        1i32, // TODO: Get from auth guard
+        granted_by,
         data.expires_at
     )
     .fetch_one(db.inner())
     .await
-    .map_err(|e| format!("Database error: {}", e))?;
+    .map_err(|_| Status::InternalServerError)?;
     
     Ok(Json(ApiResponse::success(access)))
 }
@@ -73,9 +78,11 @@ pub async fn grant_data_access(
 #[post("/api/access/physical", data = "<data>")]
 pub async fn grant_physical_access(
     db: &State<PgPool>,
+    auth: AuthGuard,
     data: Json<CreatePhysicalAccessRequest>,
-) -> Result<Json<ApiResponse<PhysicalAccess>>, String> {
-    // TODO: Add auth guard and permission check
+) -> Result<Json<ApiResponse<PhysicalAccess>>, Status> {
+    let granted_by = auth.claims.sub.parse::<i32>()
+        .map_err(|_| Status::InternalServerError)?;
     
     // Insert physical access
     let access = sqlx::query_as!(
@@ -92,11 +99,11 @@ pub async fn grant_physical_access(
         data.zone_name,
         data.access_level,
         data.valid_until,
-        1i32, // TODO: Get from auth guard
+        granted_by,
     )
     .fetch_one(db.inner())
     .await
-    .map_err(|e| format!("Database error: {}", e))?;
+    .map_err(|_| Status::InternalServerError)?;
     
     Ok(Json(ApiResponse::success(access)))
 }
@@ -105,9 +112,9 @@ pub async fn grant_physical_access(
 #[get("/api/personnel/<id>/access")]
 pub async fn list_personnel_access(
     db: &State<PgPool>,
+    _auth: AuthGuard,
     id: i32,
-) -> Result<Json<ApiResponse<PersonnelAccess>>, String> {
-    // TODO: Add auth guard and permission check
+) -> Result<Json<ApiResponse<PersonnelAccess>>, Status> {
     
     // Query computer access
     let computer_access = sqlx::query_as!(
@@ -123,7 +130,7 @@ pub async fn list_personnel_access(
     )
     .fetch_all(db.inner())
     .await
-    .map_err(|e| format!("Database error: {}", e))?;
+    .map_err(|_| Status::InternalServerError)?;
     
     // Query data access
     let data_access = sqlx::query_as!(
@@ -139,7 +146,7 @@ pub async fn list_personnel_access(
     )
     .fetch_all(db.inner())
     .await
-    .map_err(|e| format!("Database error: {}", e))?;
+    .map_err(|_| Status::InternalServerError)?;
     
     // Query physical access
     let physical_access = sqlx::query_as!(
@@ -155,7 +162,7 @@ pub async fn list_personnel_access(
     )
     .fetch_all(db.inner())
     .await
-    .map_err(|e| format!("Database error: {}", e))?;
+    .map_err(|_| Status::InternalServerError)?;
     
     let access = PersonnelAccess {
         computer_access,
@@ -170,11 +177,10 @@ pub async fn list_personnel_access(
 #[delete("/api/access/<access_type>/<id>")]
 pub async fn revoke_access(
     db: &State<PgPool>,
+    _auth: AuthGuard,
     access_type: &str,
     id: i32,
-) -> Result<Json<ApiResponse<&'static str>>, String> {
-    // TODO: Add auth guard and permission check
-    
+) -> Result<Json<ApiResponse<&'static str>>, Status> {
     match access_type {
         "computer" => {
             sqlx::query!(
@@ -183,7 +189,7 @@ pub async fn revoke_access(
             )
             .execute(db.inner())
             .await
-            .map_err(|e| format!("Database error: {}", e))?;
+            .map_err(|_| Status::InternalServerError)?;
         }
         "data" => {
             sqlx::query!(
@@ -192,7 +198,7 @@ pub async fn revoke_access(
             )
             .execute(db.inner())
             .await
-            .map_err(|e| format!("Database error: {}", e))?;
+            .map_err(|_| Status::InternalServerError)?;
         }
         "physical" => {
             sqlx::query!(
@@ -201,10 +207,10 @@ pub async fn revoke_access(
             )
             .execute(db.inner())
             .await
-            .map_err(|e| format!("Database error: {}", e))?;
+            .map_err(|_| Status::InternalServerError)?;
         }
         _ => {
-            return Err(format!("Invalid access type: {}", access_type));
+            return Err(Status::BadRequest);
         }
     }
     

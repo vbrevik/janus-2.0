@@ -1,4 +1,4 @@
-use chrono::{NaiveDateTime, Utc};
+use chrono::NaiveDateTime;
 use rocket::serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use validator::Validate;
@@ -29,6 +29,7 @@ pub struct CreateVendorRelationRequest {
     pub valid_until: Option<String>, // ISO date string
 }
 
+#[allow(dead_code)]
 fn validate_relation_type(relation_type: &str) -> Result<(), validator::ValidationError> {
     let valid_types = ["sub_vendor", "employee", "consultant", "partner", "subcontractor"];
     if valid_types.contains(&relation_type) {

@@ -85,7 +85,7 @@ pub async fn get_vendor_hierarchy(
     vendor_id: i32,
 ) -> Result<Json<ApiResponse<Vec<VendorHierarchy>>>, String> {
     // First, get the vendor name
-    let vendor_name = sqlx::query_scalar!(
+    let _vendor_name = sqlx::query_scalar!(
         "SELECT company_name FROM vendors WHERE id = $1",
         vendor_id
     )
@@ -94,7 +94,7 @@ pub async fn get_vendor_hierarchy(
     .map_err(|e| format!("Database error: {}", e))?;
     
     // Use recursive CTE to build hierarchy
-    let hierarchy_raw = sqlx::query!(
+    let _hierarchy_raw = sqlx::query!(
         r#"
         WITH RECURSIVE vendor_tree AS (
             -- Base case: starting vendor
