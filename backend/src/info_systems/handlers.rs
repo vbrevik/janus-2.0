@@ -5,7 +5,7 @@ use sqlx::PgPool;
 use validator::Validate;
 
 use super::models::{InfoSystem, CreateInfoSystemRequest, UpdateInfoSystemRequest};
-use crate::shared::response::PaginatedResponse;
+use crate::shared::response::{PaginatedResponse, ApiResponse};
 use crate::shared::pagination::PaginationParams;
 use crate::auth::middleware::AuthGuard;
 
@@ -153,83 +153,41 @@ pub async fn update_info_system(
         .transpose()
         .map_err(|_| Status::BadRequest)?;
 
-    // Build dynamic update query with parameterized placeholders
-    let mut query = String::from("UPDATE info_systems SET updated_at = CURRENT_TIMESTAMP");
-    let mut param_count = 1;
-
-    if request.system_name.is_some() {
-        query.push_str(&format!(", system_name = ${}", param_count));
-        param_count += 1;
-    }
-    if request.description.is_some() {
-        query.push_str(&format!(", description = ${}", param_count));
-        param_count += 1;
-    }
-    if request.environment.is_some() {
-        query.push_str(&format!(", environment = ${}", param_count));
-        param_count += 1;
-    }
-    if request.status.is_some() {
-        query.push_str(&format!(", status = ${}", param_count));
-        param_count += 1;
-    }
-    if request.ip_address.is_some() {
-        query.push_str(&format!(", ip_address = ${}", param_count));
-        param_count += 1;
-    }
-    if request.domain.is_some() {
-        query.push_str(&format!(", domain = ${}", param_count));
-        param_count += 1;
-    }
-    if request.managed_by.is_some() {
-        query.push_str(&format!(", managed_by = ${}", param_count));
-        param_count += 1;
-    }
-    if audit_date.is_some() {
-        query.push_str(&format!(", last_audit_date = ${}", param_count));
-        param_count += 1;
-    }
-
-    query.push_str(&format!(" WHERE id = ${} RETURNING id, system_name, description, environment, status, ip_address, domain, managed_by, last_audit_date, created_at, updated_at", param_count));
-
-    // Build query with proper parameter binding
-    let mut query_builder = sqlx::query_as::<_, InfoSystem>(&query);
-
-    if let Some(ref system_name) = request.system_name {
-        query_builder = query_builder.bind(system_name);
-    }
-    if let Some(ref description) = request.description {
-        query_builder = query_builder.bind(description);
-    }
-    if let Some(ref environment) = request.environment {
-        query_builder = query_builder.bind(environment);
-    }
-    if let Some(ref status) = request.status {
-        query_builder = query_builder.bind(status);
-    }
-    if let Some(ref ip_address) = request.ip_address {
-        query_builder = query_builder.bind(ip_address);
-    }
-    if let Some(ref domain) = request.domain {
-        query_builder = query_builder.bind(domain);
-    }
-    if let Some(ref managed_by) = request.managed_by {
-        query_builder = query_builder.bind(managed_by);
-    }
-    if let Some(ref audit_date) = audit_date {
-        query_builder = query_builder.bind(audit_date);
-    }
-
-    // Bind the id parameter last
-    query_builder = query_builder.bind(id);
-
-    let system = query_builder
-        .fetch_one(db.inner())
-        .await
-        .map_err(|e| {
-            eprintln!("Database error: {:?}", e);
-            Status::InternalServerError
-        })?;
+    // Use COALESCE for optional fields to update only what's provided
+    let system = sqlx::query_as!(
+        InfoSystem,
+        r#"
+        UPDATE info_systems
+        SET system_name = COALESCE($1, system_name),
+            description = COALESCE($2, description),
+            environment = COALESCE($3, environment),
+            status = COALESCE($4, status),
+            ip_address = COALESCE($5, ip_address),
+            domain = COALESCE($6, domain),
+            managed_by = COALESCE($7, managed_by),
+            last_audit_date = COALESCE($8, last_audit_date),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $9
+        RETURNING id, system_name, description, environment, status,
+                  ip_address, domain, managed_by, last_audit_date,
+                  created_at, updated_at
+        "#,
+        request.system_name.as_ref(),
+        request.description.as_ref(),
+        request.environment.as_ref(),
+        request.status.as_ref(),
+        request.ip_address.as_ref(),
+        request.domain.as_ref(),
+        request.managed_by.as_ref(),
+        audit_date,
+        id
+    )
+    .fetch_one(db.inner())
+    .await
+    .map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        Status::InternalServerError
+    })?;
 
     Ok(Json(system))
 }
@@ -239,7 +197,7 @@ pub async fn delete_info_system(
     id: i32,
     db: &State<PgPool>,
     _auth: AuthGuard,
-) -> Result<Status, Status> {
+) -> Result<Json<ApiResponse<String>>, Status> {
     let rows_affected = sqlx::query!(
         "DELETE FROM info_systems WHERE id = $1",
         id
@@ -253,6 +211,6 @@ pub async fn delete_info_system(
         return Err(Status::NotFound);
     }
 
-    Ok(Status::NoContent)
+    Ok(Json(ApiResponse::success("Deleted".to_string())))
 }
 
