@@ -83,11 +83,16 @@ export function useRejectNDA() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: RejectNDARequest }) => {
-      const response = await apiFetch<ApiResponse<NDA>>(`/nda/${id}/reject`, {
+      // Handle both response formats for compatibility
+      const response = await apiFetch<ApiResponse<NDA> | { data: NDA }>(`/nda/${id}/reject`, {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      return response.data;
+      // Normalize response format
+      if ('data' in response && !('success' in response)) {
+        return response.data;
+      }
+      return (response as ApiResponse<NDA>).data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ndaKeys.all });
