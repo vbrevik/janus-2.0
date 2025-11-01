@@ -92,3 +92,34 @@ export function useAuth() {
   return context
 }
 
+/**
+ * Get the default route for a user role after login
+ */
+export function getDefaultRoute(role: string): string {
+  switch (role) {
+    case 'admin':
+      return '/admin/dashboard'
+    case 'enduser':
+      return '/enduser/tasks'
+    case 'official':
+      return '/official/dashboard'
+    default:
+      return '/login'
+  }
+}
+
+/**
+ * Check if user has a specific role
+ */
+export function hasRole(userRole: string | null | undefined, requiredRole: string): boolean {
+  return userRole === requiredRole
+}
+
+/**
+ * Check if user has any of the allowed roles
+ */
+export function hasAnyRole(userRole: string | null | undefined, allowedRoles: string[]): boolean {
+  if (!userRole) return false
+  return allowedRoles.includes(userRole)
+}
+
