@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useAuth } from '@/contexts/auth-context'
+import { useAuth, getDefaultRoute } from '@/contexts/auth-context'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,8 +31,12 @@ function LoginPage() {
     setIsLoading(true)
 
     try {
-      await login(username, password)
-      navigate({ to: '/personnel' })
+      // Login via auth context (returns role for redirect)
+      const { role } = await login(username, password)
+      
+      // Redirect to default route based on user role
+      const defaultRoute = getDefaultRoute(role)
+      navigate({ to: defaultRoute as any })
     } catch (err: any) {
       setError(err.message || 'Invalid username or password')
     } finally {

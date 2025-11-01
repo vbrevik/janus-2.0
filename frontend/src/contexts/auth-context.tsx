@@ -10,7 +10,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   token: string | null
-  login: (username: string, password: string) => Promise<void>
+  login: (username: string, password: string) => Promise<{ role: string }>
   logout: () => void
   isAuthenticated: boolean
   isLoading: boolean
@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string): Promise<{ role: string }> => {
     const response = await apiFetch<{
       token: string
       user_id: string
@@ -59,6 +59,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Persist to localStorage
     localStorage.setItem('token', response.token)
     localStorage.setItem('user', JSON.stringify(userData))
+
+    // Return role for redirect purposes
+    return { role: response.role }
   }
 
   const logout = () => {
