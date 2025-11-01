@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { FileText, Plus, Eye, Check, X, Ban } from 'lucide-react'
+import { FileText, Plus, Eye, Ban } from 'lucide-react'
 import {
   useNDAList,
   useCreateNDA,
@@ -57,27 +57,6 @@ function NDAManagement() {
   const filteredNDAs = statusFilter
     ? (ndas || []).filter((nda) => nda.status === statusFilter)
     : ndas || []
-
-  const getStatusBadge = (status: NDAStatus) => {
-    const variants: Record<NDAStatus, 'default' | 'secondary' | 'warning' | 'destructive' | 'success'> = {
-      PENDING: 'warning',
-      ACTIVE: 'default',
-      SIGNED: 'success' as any,
-      EXPIRED: 'secondary',
-      REVOKED: 'destructive',
-    }
-
-    return (
-      <Badge variant={variants[status] || 'secondary'}>
-        {status}
-      </Badge>
-    )
-  }
-
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleDateString()
-  }
 
   return (
     <ProtectedRoute>

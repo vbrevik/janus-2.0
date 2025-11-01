@@ -5,8 +5,6 @@ import { apiFetch } from '@/lib/api'
 import { useNDAList, useCreateNDA } from '@/hooks/use-nda'
 import { Folder, FileText, FileSearch, CheckCircle2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 type DocumentReference = {
   id: number

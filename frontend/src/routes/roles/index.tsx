@@ -32,7 +32,7 @@ import {
   useDeleteRole,
   useSetRolePermissions,
 } from '@/hooks/use-roles'
-import type { Role, CreateRoleRequest, UpdateRoleRequest } from '@/types/roles'
+import type { Role, CreateRoleRequest } from '@/types/roles'
 
 export const Route = createFileRoute('/roles/')({
   component: RolesManagement,
