@@ -9,6 +9,7 @@ export interface Personnel {
   clearance_level: ClearanceLevel
   department: string
   position: string
+  deleted_at: string | null
   created_at: string
   updated_at: string
 }
