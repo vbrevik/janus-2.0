@@ -28,4 +28,3 @@ impl<'r> Responder<'r, 'static> for AppError {
     }
 }
 
-

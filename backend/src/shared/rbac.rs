@@ -21,4 +21,3 @@ pub async fn role_has_permission(db: &PgPool, role_name: &str, perm_key: &str) -
     Ok(exists)
 }
 
-

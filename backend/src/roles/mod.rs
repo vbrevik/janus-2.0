@@ -12,5 +12,3 @@ pub fn routes() -> Vec<rocket::Route> {
         handlers::set_role_permissions,
     ]
 }
-
-

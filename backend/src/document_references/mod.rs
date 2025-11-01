@@ -11,8 +11,3 @@ pub fn routes() -> Vec<rocket::Route> {
         handlers::upload_document_attachment,
     ]
 }
-
-
-
-
-
