@@ -196,6 +196,23 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ## 📈 **Development Status**
 
+### ⚠️ **FRONTEND CONSOLIDATION IN PROGRESS** (Current Work)
+- **Branch**: `feature/frontend-consolidation`
+- **Status**: Phase 0 - Preparation
+- **Work**: Consolidating three frontends (`frontend/`, `enduser-frontend/`, `official-frontend/`) into single frontend with role-based routing
+- **⚠️ DO NOT**:
+  - Make changes to `enduser-frontend/` or `official-frontend/` directories
+  - Add new routes to these frontends
+  - Modify shared code that will be migrated
+  - Work on frontend routing/navigation without checking this branch first
+- **✅ CAN**:
+  - Work on backend (no conflicts)
+  - Work on main `frontend/` admin features (will be migrated)
+  - Review migration plan: `docs/FRONTEND-MIGRATION-PLAN.md`
+- **Timeline**: ~14 days (2-3 weeks)
+- **Contact**: Check migration plan before any frontend work
+
+### Previous Status
 - **Current Phase**: MVP 2 - Security & Access Control
 - **Last Completed Tasks**: 
   - ✅ Added authentication guards to all access control endpoints
