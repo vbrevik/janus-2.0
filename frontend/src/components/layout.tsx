@@ -3,7 +3,7 @@ import { useAuth, getDefaultRoute } from '@/contexts/auth-context'
 import { useWebSocketContext } from '@/contexts/websocket-context'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown, LayoutDashboard, Server, Search, Lock, Wifi, WifiOff, ClipboardList } from 'lucide-react'
+import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown, LayoutDashboard, Server, Lock, Wifi, WifiOff, ClipboardList } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
