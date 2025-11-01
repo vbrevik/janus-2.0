@@ -1,0 +1,48 @@
+// Library crate for testing
+// Re-export all modules needed for rocket setup
+
+#[macro_use] extern crate rocket;
+
+pub mod auth;
+pub mod personnel;
+pub mod vendors;
+pub mod vendor_relations;
+pub mod access;
+pub mod audit;
+pub mod shared;
+pub mod info_systems;
+pub mod roles;
+pub mod nda;
+pub mod discussions;
+pub mod document_references;
+
+// Re-export routes and handlers needed for rocket setup
+use rocket::serde::json::Json;
+use serde::Serialize;
+
+#[derive(Serialize)]
+pub struct HealthResponse {
+    pub status: String,
+    pub version: String,
+    pub port: u16,
+    pub database: String,
+}
+
+#[rocket::get("/")]
+pub fn index() -> &'static str {
+    "Janus 2.0 API - Welcome"
+}
+
+#[rocket::get("/api/health")]
+pub fn health() -> Json<HealthResponse> {
+    Json(HealthResponse {
+        status: "healthy".to_string(),
+        version: "2.0.0".to_string(),
+        port: 15520,
+        database: "connected".to_string(),
+    })
+}
+
+// Re-export create_rocket for integration tests
+pub use shared::rocket_setup::create_rocket;
+
