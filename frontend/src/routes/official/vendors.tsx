@@ -115,7 +115,7 @@ function VendorsPage() {
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
-                              {vendor.deleted_at ? 'Inactive' : 'Active'}
+                              Active
                             </Badge>
                           </TableCell>
                         </TableRow>
