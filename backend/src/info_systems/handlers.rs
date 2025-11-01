@@ -7,12 +7,14 @@ use validator::Validate;
 use super::models::{InfoSystem, CreateInfoSystemRequest, UpdateInfoSystemRequest};
 use crate::shared::response::PaginatedResponse;
 use crate::shared::pagination::PaginationParams;
+use crate::auth::middleware::AuthGuard;
 
 #[get("/api/info-systems?<page>&<per_page>")]
 pub async fn list_info_systems(
     page: Option<i32>,
     per_page: Option<i32>,
     db: &State<PgPool>,
+    _auth: AuthGuard,
 ) -> Result<Json<PaginatedResponse<InfoSystem>>, Status> {
     let pagination = PaginationParams {
         page: page.unwrap_or(1).max(1),
@@ -61,6 +63,7 @@ pub async fn list_info_systems(
 pub async fn get_info_system(
     id: i32,
     db: &State<PgPool>,
+    _auth: AuthGuard,
 ) -> Result<Json<InfoSystem>, Status> {
     let system = sqlx::query_as!(
         InfoSystem,
@@ -85,12 +88,15 @@ pub async fn get_info_system(
 pub async fn create_info_system(
     request: Json<CreateInfoSystemRequest>,
     db: &State<PgPool>,
+    _auth: AuthGuard,
 ) -> Result<Json<InfoSystem>, Status> {
     request.validate().map_err(|_| Status::BadRequest)?;
 
         // Parse last_audit_date if provided
         let audit_date = request.last_audit_date.as_ref()
-            .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
+            .map(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d"))
+            .transpose()
+            .map_err(|_| Status::BadRequest)?;
 
         let system = sqlx::query_as!(
         InfoSystem,
@@ -123,52 +129,107 @@ pub async fn update_info_system(
     id: i32,
     request: Json<UpdateInfoSystemRequest>,
     db: &State<PgPool>,
+    _auth: AuthGuard,
 ) -> Result<Json<InfoSystem>, Status> {
     request.validate().map_err(|_| Status::BadRequest)?;
 
-    // Build dynamic update query
-    let mut updates = Vec::new();
-    
+    // Check if system exists
+    let exists = sqlx::query_scalar!(
+        "SELECT EXISTS(SELECT 1 FROM info_systems WHERE id = $1)",
+        id
+    )
+    .fetch_one(db.inner())
+    .await
+    .map_err(|_| Status::InternalServerError)?
+    .unwrap_or(false);
+
+    if !exists {
+        return Err(Status::NotFound);
+    }
+
+    // Parse last_audit_date if provided
+    let audit_date = request.last_audit_date.as_ref()
+        .map(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d"))
+        .transpose()
+        .map_err(|_| Status::BadRequest)?;
+
+    // Build dynamic update query with parameterized placeholders
+    let mut query = String::from("UPDATE info_systems SET updated_at = CURRENT_TIMESTAMP");
+    let mut param_count = 1;
+
     if request.system_name.is_some() {
-        updates.push("system_name = $".to_string());
+        query.push_str(&format!(", system_name = ${}", param_count));
+        param_count += 1;
     }
     if request.description.is_some() {
-        updates.push("description = $".to_string());
+        query.push_str(&format!(", description = ${}", param_count));
+        param_count += 1;
     }
     if request.environment.is_some() {
-        updates.push("environment = $".to_string());
+        query.push_str(&format!(", environment = ${}", param_count));
+        param_count += 1;
     }
     if request.status.is_some() {
-        updates.push("status = $".to_string());
+        query.push_str(&format!(", status = ${}", param_count));
+        param_count += 1;
     }
     if request.ip_address.is_some() {
-        updates.push("ip_address = $".to_string());
+        query.push_str(&format!(", ip_address = ${}", param_count));
+        param_count += 1;
     }
     if request.domain.is_some() {
-        updates.push("domain = $".to_string());
+        query.push_str(&format!(", domain = ${}", param_count));
+        param_count += 1;
     }
     if request.managed_by.is_some() {
-        updates.push("managed_by = $".to_string());
+        query.push_str(&format!(", managed_by = ${}", param_count));
+        param_count += 1;
     }
-    if request.last_audit_date.is_some() {
-        updates.push("last_audit_date = $".to_string());
-    }
-
-    if updates.is_empty() {
-        return get_info_system(id, db).await;
+    if audit_date.is_some() {
+        query.push_str(&format!(", last_audit_date = ${}", param_count));
+        param_count += 1;
     }
 
-    updates.push("updated_at = CURRENT_TIMESTAMP".to_string());
+    query.push_str(&format!(" WHERE id = ${} RETURNING id, system_name, description, environment, status, ip_address, domain, managed_by, last_audit_date, created_at, updated_at", param_count));
 
-    let update_sql = format!(
-        "UPDATE info_systems SET {} WHERE id = $1 RETURNING id, system_name, description, environment, status, ip_address, domain, managed_by, last_audit_date, created_at, updated_at",
-        updates.join(", ")
-    );
+    // Build query with proper parameter binding
+    let mut query_builder = sqlx::query_as::<_, InfoSystem>(&query);
 
-    let system = sqlx::query_as::<_, InfoSystem>(&update_sql)
+    if let Some(ref system_name) = request.system_name {
+        query_builder = query_builder.bind(system_name);
+    }
+    if let Some(ref description) = request.description {
+        query_builder = query_builder.bind(description);
+    }
+    if let Some(ref environment) = request.environment {
+        query_builder = query_builder.bind(environment);
+    }
+    if let Some(ref status) = request.status {
+        query_builder = query_builder.bind(status);
+    }
+    if let Some(ref ip_address) = request.ip_address {
+        query_builder = query_builder.bind(ip_address);
+    }
+    if let Some(ref domain) = request.domain {
+        query_builder = query_builder.bind(domain);
+    }
+    if let Some(ref managed_by) = request.managed_by {
+        query_builder = query_builder.bind(managed_by);
+    }
+    if let Some(ref audit_date) = audit_date {
+        query_builder = query_builder.bind(audit_date);
+    }
+
+    // Bind the id parameter last
+    query_builder = query_builder.bind(id);
+
+    let system = query_builder
         .fetch_one(db.inner())
         .await
-        .map_err(|_| Status::InternalServerError)?;
+        .map_err(|e| {
+            eprintln!("Database error: {:?}", e);
+            Status::InternalServerError
+        })?;
 
     Ok(Json(system))
 }
@@ -177,6 +238,7 @@ pub async fn update_info_system(
 pub async fn delete_info_system(
     id: i32,
     db: &State<PgPool>,
+    _auth: AuthGuard,
 ) -> Result<Status, Status> {
     let rows_affected = sqlx::query!(
         "DELETE FROM info_systems WHERE id = $1",
