@@ -9,15 +9,15 @@ async function login(page: any) {
   await page.waitForURL('/personnel', { timeout: 10000 })
 }
 
-test.describe('Vendor Management', () => {
+test.describe('Organization Management', () => {
   test.beforeEach(async ({ page }) => {
     await login(page)
-    await page.goto('/vendors')
-    await page.waitForURL('/vendors')
+    await page.goto('/organizations')
+    await page.waitForURL('/organizations')
   })
 
-  test('should display vendor list', async ({ page }) => {
-    // Should show table with vendors
+  test('should display organization list', async ({ page }) => {
+    // Should show table with organizations
     await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
     
     // Should have table headers (any of these should be present)
@@ -25,9 +25,9 @@ test.describe('Vendor Management', () => {
     await expect(tableHeaders).toBeVisible()
   })
 
-  test('should create new vendor', async ({ page }) => {
-    // Click Add Vendor button
-    await page.getByRole('button', { name: /add vendor/i }).click()
+  test('should create new organization', async ({ page }) => {
+    // Click Add Organization button
+    await page.getByRole('button', { name: /add organization/i }).click()
     
     // Fill in form
     const timestamp = Date.now()
@@ -44,11 +44,11 @@ test.describe('Vendor Management', () => {
     // Dialog should close
     await expect(page.getByRole('dialog')).not.toBeVisible()
     
-    // Should see new vendor in table
+    // Should see new organization in table
     await expect(page.getByText('Test Corp')).toBeVisible()
   })
 
-  test('should edit existing vendor', async ({ page }) => {
+  test('should edit existing organization', async ({ page }) => {
     // Wait for table to load
     await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
     
@@ -70,15 +70,15 @@ test.describe('Vendor Management', () => {
     }
   })
 
-  test('should navigate to vendor page from nav', async ({ page }) => {
+  test('should navigate to organization page from nav', async ({ page }) => {
     await page.goto('/personnel')
     
-    // Click Vendors nav link
-    await page.getByRole('link', { name: /vendors/i }).click()
+    // Click Organizations nav link
+    await page.getByRole('link', { name: /organizations/i }).click()
     
-    // Should be on vendors page
-    await expect(page).toHaveURL('/vendors')
-    await expect(page.getByRole('heading', { name: /vendor management/i })).toBeVisible()
+    // Should be on organizations page
+    await expect(page).toHaveURL('/organizations')
+    await expect(page.getByRole('heading', { name: /organization management/i })).toBeVisible()
   })
 })
 

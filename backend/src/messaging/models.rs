@@ -14,7 +14,7 @@ pub enum WebSocketMessage {
     NewDiscussion {
         discussion_id: i32,
         subject: String,
-        personnel_id: i32,
+        person_id: i32,
         created_by: i32,
         created_at: String,
     },

@@ -18,7 +18,7 @@ git checkout feature/personnel-crud
 
 # Agent 2 needs to work - must wait OR stash/switch
 git stash
-git checkout feature/vendor-crud
+git checkout feature/organization-crud
 # ... Agent 2 works ...
 ```
 
@@ -29,8 +29,8 @@ git checkout feature/personnel-crud
 # ... works in /janus-2.0 ...
 
 # Agent 2 in separate worktree
-git worktree add ../janus-2.0-vendor feature/vendor-crud
-cd ../janus-2.0-vendor
+git worktree add ../janus-2.0-organization feature/organization-crud
+cd ../janus-2.0-organization
 # ... works simultaneously, no conflicts ...
 ```
 
@@ -105,7 +105,7 @@ git checkout feature/personnel-crud
 
 # Tester worktree (testing completed feature)
 cd ../janus-2.0-worktrees/tester
-git checkout feature/vendor-crud  # Already merged to main
+git checkout feature/organization-crud  # Already merged to main
 # ... writes E2E tests ...
 
 # DevOps worktree (infrastructure improvement)
@@ -194,9 +194,9 @@ cd ../janus-2.0-worktrees/test
 
 ```bash
 # Developer worktree
-git worktree add ../janus-2.0-worktrees/dev feature/vendor-relations
+git worktree add ../janus-2.0-worktrees/dev feature/organization-relations
 cd ../janus-2.0-worktrees/dev
-# ... implements vendor relations feature ...
+# ... implements organization relations feature ...
 
 # DevOps worktree (separate concern)
 git worktree add ../janus-2.0-worktrees/devops feature/docker-m2-optimization
@@ -452,7 +452,7 @@ git worktree add -b feature/personnel-details ../janus-2.0-worktrees/dev
 # Tester: Tests Feature B (already merged)
 git worktree add ../janus-2.0-worktrees/test main
 cd ../janus-2.0-worktrees/test
-# Write E2E tests for vendor management (completed feature)
+# Write E2E tests for organization management (completed feature)
 ```
 
 **Developer and Tester work in parallel on different features**

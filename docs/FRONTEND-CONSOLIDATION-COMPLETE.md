@@ -53,7 +53,7 @@ Successfully consolidated three separate frontend applications into a single uni
 /admin/*          Admin routes (requires admin role)
   /dashboard
   /personnel
-  /vendors
+  /organizations
   /info-systems
   /access
   /ndas
@@ -68,7 +68,7 @@ Successfully consolidated three separate frontend applications into a single uni
 /official/*       Official routes (requires official role)
   /dashboard
   /personnel
-  /vendors
+  /organizations
   /profile
 ```
 

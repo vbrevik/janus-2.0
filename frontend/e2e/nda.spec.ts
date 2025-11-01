@@ -101,7 +101,7 @@ test.describe('NDA Management - Sign and Reject', () => {
         title: `Sign Test NDA ${timestamp}`,
         content: 'This NDA should be signed for testing purposes.',
         version: '1.0',
-        sent_by_vendor_id: null
+        sent_by_organization_id: null
       }
     })
     
@@ -181,24 +181,24 @@ test.describe('NDA Management - Sign and Reject', () => {
   })
 
   test('Admin can see NDA with sent metadata', async ({ page, request }) => {
-    // Create an NDA with vendor attribution
+    // Create an NDA with organization attribution
     const timestamp = Date.now()
     
-    // First, get a vendor ID
-    const vendorsResponse = await request.get('http://localhost:15520/api/vendors?per_page=10', {
+    // First, get a organization ID
+    const organizationsResponse = await request.get('http://localhost:15520/api/organizations?per_page=10', {
       headers: { Authorization: `Bearer ${adminToken}` }
     })
-    const vendorsData = await vendorsResponse.json()
-    const vendorId = vendorsData.data?.items?.[0]?.id || null
+    const organizationsData = await organizationsResponse.json()
+    const organizationId = organizationsData.data?.items?.[0]?.id || null
 
     const createNdaResponse = await request.post('http://localhost:15520/api/nda', {
       headers: { Authorization: `Bearer ${adminToken}` },
       data: {
         personnel_id: testPersonnelId,
-        title: `Vendor NDA ${timestamp}`,
-        content: 'This NDA was sent by a vendor for testing.',
+        title: `Organization NDA ${timestamp}`,
+        content: 'This NDA was sent by a organization for testing.',
         version: '1.0',
-        sent_by_vendor_id: vendorId
+        sent_by_organization_id: organizationId
       }
     })
     
@@ -206,7 +206,7 @@ test.describe('NDA Management - Sign and Reject', () => {
     const ndaData = await createNdaResponse.json()
     
     // Verify metadata was set
-    expect(ndaData.data.sent_by_vendor_id).toBe(vendorId)
+    expect(ndaData.data.sent_by_organization_id).toBe(organizationId)
     expect(ndaData.data.sent_at).toBeTruthy()
 
     // Test UI view
@@ -216,7 +216,7 @@ test.describe('NDA Management - Sign and Reject', () => {
     await page.waitForTimeout(1000)
 
     // Verify NDA appears with metadata
-    await expect(page.getByText(`Vendor NDA ${timestamp}`)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText(`Organization NDA ${timestamp}`)).toBeVisible({ timeout: 5000 })
   })
 
   test('Admin UI shows NDA list with metadata', async ({ page }) => {

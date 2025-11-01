@@ -12,15 +12,15 @@ Consolidate three separate frontends (`frontend/`, `enduser-frontend/`, `officia
 
 | Frontend | Port | Routes | Files | Purpose |
 |----------|------|--------|-------|---------|
-| `frontend/` | 15510 | `/dashboard`, `/personnel/*`, `/vendors/*`, `/info-systems`, `/access/*`, `/ndas/*`, `/audit/*`, `/roles/*` | 56 TS files | Admin - Full CRUD |
+| `frontend/` | 15510 | `/dashboard`, `/personnel/*`, `/organizations/*`, `/info-systems`, `/access/*`, `/ndas/*`, `/audit/*`, `/roles/*` | 56 TS files | Admin - Full CRUD |
 | `enduser-frontend/` | 15511 | `/tasks`, `/profile` | 30 TS files | End User - Tasks (NDAs, docs) |
-| `official-frontend/` | 15513 | `/dashboard`, `/personnel`, `/vendors` | 27 TS files | Official - Read-only lookup |
+| `official-frontend/` | 15513 | `/dashboard`, `/personnel`, `/organizations` | 27 TS files | Official - Read-only lookup |
 
 ### User Roles (from backend)
 
 - `admin` - Full access to all features
 - `enduser` - Limited to task completion (NDAs, documents)
-- `official` - Read-only access (personnel/vendor lookup)
+- `official` - Read-only access (personnel/organization lookup)
 
 ### Code Duplication Identified
 
@@ -46,7 +46,7 @@ Single Frontend (port 15510)
 ├── /admin/*                        # Admin routes (protected)
 │   ├── /admin/dashboard            # Admin dashboard
 │   ├── /admin/personnel/*          # Personnel CRUD
-│   ├── /admin/vendors/*            # Vendor CRUD
+│   ├── /admin/organizations/*            # Organization CRUD
 │   ├── /admin/info-systems         # Info Systems CRUD
 │   ├── /admin/access/*             # Access Control
 │   ├── /admin/ndas/*               # NDA Management
@@ -60,7 +60,7 @@ Single Frontend (port 15510)
 └── /official/*                      # Official routes (protected)
     ├── /official/dashboard          # Official dashboard
     ├── /official/personnel          # Personnel lookup (read-only)
-    └── /official/vendors             # Vendor lookup (read-only)
+    └── /official/organizations             # Organization lookup (read-only)
 ```
 
 ### Navigation Flow
@@ -146,7 +146,7 @@ export function hasAnyRole(userRole: string, allowedRoles: string[]): boolean {
 **Files to consolidate**:
 - `types/api.ts` - API response types
 - `types/personnel.ts` - Personnel types
-- `types/vendor.ts` - Vendor types
+- `types/organization.ts` - Organization types
 - `types/nda.ts` - NDA types
 - `types/user.ts` - User/auth types
 
@@ -158,7 +158,7 @@ export function hasAnyRole(userRole: string, allowedRoles: string[]): boolean {
 
 **Hooks to consolidate**:
 - `hooks/use-personnel.ts`
-- `hooks/use-vendors.ts`
+- `hooks/use-organizations.ts`
 - `hooks/use-nda.ts`
 - `hooks/use-document-references.ts`
 - `hooks/use-discussions.ts`
@@ -282,9 +282,9 @@ routes/
 │   ├── personnel/
 │   │   ├── index.tsx
 │   │   └── $personnelId.tsx
-│   ├── vendors/
+│   ├── organizations/
 │   │   ├── index.tsx
-│   │   └── $vendorId.tsx
+│   │   └── $organizationId.tsx
 │   ├── info-systems.tsx
 │   ├── access/
 │   │   └── index.tsx
@@ -339,7 +339,7 @@ export const Route = createFileRoute('/enduser/tasks')({
 **Files to copy**:
 - `official-frontend/src/routes/dashboard.tsx` → `frontend/src/routes/official/dashboard.tsx`
 - `official-frontend/src/routes/personnel.tsx` → `frontend/src/routes/official/personnel.tsx`
-- `official-frontend/src/routes/vendors.tsx` → `frontend/src/routes/official/vendors.tsx`
+- `official-frontend/src/routes/organizations.tsx` → `frontend/src/routes/official/organizations.tsx`
 
 #### 3.4 Update Unified Login
 - [ ] Update `routes/login.tsx` to redirect based on role after login
@@ -378,7 +378,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const adminNavItems = [
     { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/admin/personnel', label: 'Personnel', icon: Users },
-    { to: '/admin/vendors', label: 'Vendors', icon: Building2 },
+    { to: '/admin/organizations', label: 'Organizations', icon: Building2 },
     { to: '/admin/info-systems', label: 'Info Systems', icon: Server },
     { to: '/admin/access', label: 'Access Control', icon: Key },
     { to: '/admin/ndas', label: 'NDAs', icon: FileText },
@@ -394,7 +394,7 @@ function Layout({ children }: { children: React.ReactNode }) {
   const officialNavItems = [
     { to: '/official/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/official/personnel', label: 'Personnel Lookup', icon: Users },
-    { to: '/official/vendors', label: 'Vendor Lookup', icon: Building2 },
+    { to: '/official/organizations', label: 'Organization Lookup', icon: Building2 },
   ]
 
   const getNavItems = () => {

@@ -1,6 +1,6 @@
 export type ClearanceLevel = 'NONE' | 'CONFIDENTIAL' | 'SECRET' | 'TOP_SECRET'
 
-export interface Vendor {
+export interface Organization {
   id: number
   company_name: string
   contact_name: string
@@ -12,7 +12,7 @@ export interface Vendor {
   updated_at: string
 }
 
-export interface CreateVendorRequest {
+export interface CreateOrganizationRequest {
   company_name: string
   contact_name: string
   contact_email: string
@@ -21,7 +21,7 @@ export interface CreateVendorRequest {
   contract_number: string
 }
 
-export interface UpdateVendorRequest {
+export interface UpdateOrganizationRequest {
   company_name?: string
   contact_name?: string
   contact_email?: string
@@ -30,8 +30,8 @@ export interface UpdateVendorRequest {
   contract_number?: string
 }
 
-export interface VendorListResponse {
-  items: Vendor[]
+export interface OrganizationListResponse {
+  items: Organization[]
   total: number
   page: number
   per_page: number

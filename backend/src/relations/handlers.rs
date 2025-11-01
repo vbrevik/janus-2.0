@@ -17,7 +17,7 @@ pub async fn list_relations(
     _auth: AuthGuard,
 ) -> Result<Json<Vec<RelationWithNames>>, Status> {
     // Validate entity_type
-    if entity_type != "personnel" && entity_type != "vendor" {
+    if entity_type != "person" && entity_type != "organization" {
         return Err(Status::BadRequest);
     }
     
@@ -25,25 +25,23 @@ pub async fn list_relations(
 
     let relations = match dir {
         "incoming" => {
-            sqlx::query_as!(
-                Relation,
+            sqlx::query_as::<sqlx::Postgres, Relation>(
                 r#"
                 SELECT id, entity_type, entity_id, related_entity_type, related_entity_id,
                        relation_type, notes, valid_from, valid_until, created_at, updated_at
                 FROM relations
                 WHERE related_entity_type = $1 AND related_entity_id = $2
                 ORDER BY relation_type, created_at DESC
-                "#,
-                entity_type,
-                entity_id
+                "#
             )
+            .bind(&entity_type)
+            .bind(entity_id)
             .fetch_all(db.inner())
             .await
             .map_err(|_| Status::InternalServerError)?
         },
         "both" => {
-            sqlx::query_as!(
-                Relation,
+            sqlx::query_as::<sqlx::Postgres, Relation>(
                 r#"
                 SELECT id, entity_type, entity_id, related_entity_type, related_entity_id,
                        relation_type, notes, valid_from, valid_until, created_at, updated_at
@@ -51,27 +49,26 @@ pub async fn list_relations(
                 WHERE (entity_type = $1 AND entity_id = $2) 
                    OR (related_entity_type = $1 AND related_entity_id = $2)
                 ORDER BY relation_type, created_at DESC
-                "#,
-                entity_type,
-                entity_id
+                "#
             )
+            .bind(&entity_type)
+            .bind(entity_id)
             .fetch_all(db.inner())
             .await
             .map_err(|_| Status::InternalServerError)?
         },
         _ => { // "outgoing" or default
-            sqlx::query_as!(
-                Relation,
+            sqlx::query_as::<sqlx::Postgres, Relation>(
                 r#"
                 SELECT id, entity_type, entity_id, related_entity_type, related_entity_id,
                        relation_type, notes, valid_from, valid_until, created_at, updated_at
                 FROM relations
                 WHERE entity_type = $1 AND entity_id = $2
                 ORDER BY relation_type, created_at DESC
-                "#,
-                entity_type,
-                entity_id
+                "#
             )
+            .bind(&entity_type)
+            .bind(entity_id)
             .fetch_all(db.inner())
             .await
             .map_err(|_| Status::InternalServerError)?
@@ -81,15 +78,15 @@ pub async fn list_relations(
     // Get entity names
     let mut relations_with_names = Vec::new();
     for rel in relations {
-        let entity_name: String = if rel.entity_type == "personnel" {
+        let entity_name: String = if rel.entity_type == "person" {
             sqlx::query_scalar::<_, String>(
-                "SELECT CONCAT(first_name, ' ', last_name) FROM personnel WHERE id = $1 AND deleted_at IS NULL",
+                "SELECT COALESCE(CONCAT(first_name, ' ', last_name), username, email, 'Person #' || id::text) FROM person WHERE id = $1 AND deleted_at IS NULL",
             )
             .bind(rel.entity_id)
             .fetch_optional(db.inner())
             .await
             .map_err(|_| Status::InternalServerError)?
-            .unwrap_or_else(|| format!("Personnel #{}", rel.entity_id))
+            .unwrap_or_else(|| format!("Person #{}", rel.entity_id))
         } else {
             sqlx::query_scalar::<_, String>(
                 "SELECT company_name FROM vendors WHERE id = $1 AND deleted_at IS NULL",
@@ -101,15 +98,15 @@ pub async fn list_relations(
             .unwrap_or_else(|| format!("Vendor #{}", rel.entity_id))
         };
 
-        let related_entity_name: String = if rel.related_entity_type == "personnel" {
+        let related_entity_name: String = if rel.related_entity_type == "person" {
             sqlx::query_scalar::<_, String>(
-                "SELECT CONCAT(first_name, ' ', last_name) FROM personnel WHERE id = $1 AND deleted_at IS NULL",
+                "SELECT COALESCE(CONCAT(first_name, ' ', last_name), username, email, 'Person #' || id::text) FROM person WHERE id = $1 AND deleted_at IS NULL",
             )
             .bind(rel.related_entity_id)
             .fetch_optional(db.inner())
             .await
             .map_err(|_| Status::InternalServerError)?
-            .unwrap_or_else(|| format!("Personnel #{}", rel.related_entity_id))
+            .unwrap_or_else(|| format!("Person #{}", rel.related_entity_id))
         } else {
             sqlx::query_scalar::<_, String>(
                 "SELECT company_name FROM vendors WHERE id = $1 AND deleted_at IS NULL",
@@ -131,15 +128,15 @@ pub async fn list_relations(
     Ok(Json(relations_with_names))
 }
 
-/// Get relations for a specific personnel
-#[get("/personnel/<personnel_id>/relations?<direction>")]
-pub async fn list_personnel_relations(
+/// Get relations for a specific person
+#[get("/persons/<person_id>/relations?<direction>")]
+pub async fn list_person_relations(
     db: &State<PgPool>,
-    personnel_id: i32,
+    person_id: i32, // Changed from personnel_id
     direction: Option<String>,
     _auth: AuthGuard,
 ) -> Result<Json<Vec<RelationWithNames>>, Status> {
-    list_relations(db, "personnel".to_string(), personnel_id, direction, _auth).await
+    list_relations(db, "person".to_string(), person_id, direction, _auth).await
 }
 
 /// Get relations for a specific vendor
@@ -163,10 +160,10 @@ pub async fn create_relation(
     data.0.validate().map_err(|_| Status::BadRequest)?;
 
     // Validate entity types
-    if data.entity_type != "personnel" && data.entity_type != "vendor" {
+    if data.entity_type != "person" && data.entity_type != "organization" {
         return Err(Status::BadRequest);
     }
-    if data.related_entity_type != "personnel" && data.related_entity_type != "vendor" {
+    if data.related_entity_type != "person" && data.related_entity_type != "organization" {
         return Err(Status::BadRequest);
     }
 
@@ -185,32 +182,31 @@ pub async fn create_relation(
             .and_then(|date| date.and_hms_opt(23, 59, 59))
     });
 
-    let relation = sqlx::query_as!(
-        Relation,
+    let relation = sqlx::query_as::<sqlx::Postgres, Relation>(
         r#"
         INSERT INTO relations 
         (entity_type, entity_id, related_entity_type, related_entity_id, relation_type, notes, valid_from, valid_until)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id, entity_type, entity_id, related_entity_type, related_entity_id,
                   relation_type, notes, valid_from, valid_until, created_at, updated_at
-        "#,
-        data.entity_type,
-        data.entity_id,
-        data.related_entity_type,
-        data.related_entity_id,
-        data.relation_type,
-        data.notes,
-        valid_from,
-        valid_until
+        "#
     )
+    .bind(&data.entity_type)
+    .bind(data.entity_id)
+    .bind(&data.related_entity_type)
+    .bind(data.related_entity_id)
+    .bind(&data.relation_type)
+    .bind(data.notes.as_deref())
+    .bind(valid_from)
+    .bind(valid_until)
     .fetch_one(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?;
+    .await
+    .map_err(|_| Status::InternalServerError)?;
 
     Ok(Json(relation))
 }
 
-/// Get hierarchical structure (recursive) - supports both vendor and personnel hierarchies
+/// Get hierarchical structure (recursive) - supports both vendor and person hierarchies
 #[get("/relations/hierarchy?<entity_type>&<entity_id>&<relation_type>")]
 pub async fn get_hierarchy(
     db: &State<PgPool>,
@@ -220,7 +216,7 @@ pub async fn get_hierarchy(
     _auth: AuthGuard,
 ) -> Result<Json<Vec<EntityHierarchy>>, Status> {
     // Validate entity_type
-    if entity_type != "personnel" && entity_type != "vendor" {
+    if entity_type != "person" && entity_type != "organization" {
         return Err(Status::BadRequest);
     }
 
@@ -228,14 +224,14 @@ pub async fn get_hierarchy(
 
     // Determine which relation types are hierarchical based on entity type
     // For vendors: sub_vendor, subcontractor
-    // For personnel: subordinate, reports_to, team_member
-    let _hierarchical_relation_types = if entity_type == "vendor" {
+    // For person: subordinate, reports_to, team_member
+    let _hierarchical_relation_types = if entity_type == "organization" {
         vec!["sub_vendor", "subcontractor"]
     } else {
         vec!["subordinate", "reports_to", "team_member"]
     };
 
-    // Use recursive CTE to build hierarchy - works for both vendor and personnel
+    // Use recursive CTE to build hierarchy - works for both vendor and person
     let hierarchy_raw = sqlx::query!(
         r#"
         WITH RECURSIVE entity_tree AS (
@@ -250,8 +246,8 @@ pub async fn get_hierarchy(
             AND r.entity_id = $2
             AND r.related_entity_type = $1  -- Same entity type for hierarchical relations
             AND (
-                ($1 = 'vendor' AND r.relation_type IN ('sub_vendor', 'subcontractor')) OR
-                ($1 = 'personnel' AND r.relation_type IN ('subordinate', 'reports_to', 'team_member'))
+                ($1 = 'organization' AND r.relation_type IN ('sub_vendor', 'subcontractor')) OR
+                ($1 = 'person' AND r.relation_type IN ('subordinate', 'reports_to', 'team_member'))
             )
             AND r.relation_type LIKE $3
             
@@ -267,8 +263,8 @@ pub async fn get_hierarchy(
             JOIN entity_tree et ON r.entity_type = et.entity_type AND r.entity_id = et.entity_id
             WHERE r.related_entity_type = $1  -- Same entity type for hierarchical relations
             AND (
-                ($1 = 'vendor' AND r.relation_type IN ('sub_vendor', 'subcontractor')) OR
-                ($1 = 'personnel' AND r.relation_type IN ('subordinate', 'reports_to', 'team_member'))
+                ($1 = 'organization' AND r.relation_type IN ('sub_vendor', 'subcontractor')) OR
+                ($1 = 'person' AND r.relation_type IN ('subordinate', 'reports_to', 'team_member'))
             )
             AND r.relation_type LIKE $3
             AND et.level < 10  -- Prevent infinite recursion
@@ -294,15 +290,15 @@ pub async fn get_hierarchy(
     
     for row in hierarchy_raw {
         let entity_type_str = row.entity_type.as_deref().unwrap_or(&entity_type);
-        let entity_name: String = if entity_type_str == "personnel" {
+        let entity_name: String = if entity_type_str == "person" {
             sqlx::query_scalar::<_, String>(
-                "SELECT CONCAT(first_name, ' ', last_name) FROM personnel WHERE id = $1 AND deleted_at IS NULL",
+                "SELECT COALESCE(CONCAT(first_name, ' ', last_name), username, email, 'Person #' || id::text) FROM person WHERE id = $1 AND deleted_at IS NULL",
             )
             .bind(row.entity_id.unwrap_or(0))
             .fetch_optional(db.inner())
             .await
             .map_err(|_| Status::InternalServerError)?
-            .unwrap_or_else(|| format!("Personnel #{}", row.entity_id.unwrap_or(0)))
+            .unwrap_or_else(|| format!("Person #{}", row.entity_id.unwrap_or(0)))
         } else {
             sqlx::query_scalar::<_, String>(
                 "SELECT company_name FROM vendors WHERE id = $1 AND deleted_at IS NULL",
@@ -412,7 +408,8 @@ pub async fn delete_relation(
     id: i32,
     _auth: AuthGuard,
 ) -> Result<Json<&'static str>, Status> {
-    sqlx::query!("DELETE FROM relations WHERE id = $1", id)
+    sqlx::query("DELETE FROM relations WHERE id = $1")
+        .bind(id)
         .execute(db.inner())
             .await
             .map_err(|_| Status::InternalServerError)?;

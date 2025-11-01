@@ -1,19 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
-import type { Discussion, DiscussionWithReplies, CreateDiscussionRequest, CreateReplyRequest } from '@/types/discussion';
+import type { Discussion, DiscussionReply, DiscussionWithReplies, CreateDiscussionRequest, CreateReplyRequest } from '@/types/discussion';
 import type { ApiResponse } from '@/types/api';
 
 // Query Keys
 export const discussionKeys = {
   all: ['discussions'] as const,
-  list: (filters?: { personnel_id?: number; status?: string; type?: string }) => [...discussionKeys.all, 'list', filters] as const,
+  list: (filters?: { person_id?: number; status?: string; type?: string }) => [...discussionKeys.all, 'list', filters] as const,
   detail: (id: number) => [...discussionKeys.all, id] as const,
 };
 
 // List discussions
-export function useDiscussionsList(filters?: { personnel_id?: number; status?: string; type?: string }) {
+export function useDiscussionsList(filters?: { person_id?: number; status?: string; type?: string }) {
   const params = new URLSearchParams();
-  if (filters?.personnel_id) params.append('personnel_id', String(filters.personnel_id));
+  if (filters?.person_id) params.append('person_id', String(filters.person_id)); // Changed from person_id
   if (filters?.status) params.append('status', filters.status);
   if (filters?.type) params.append('type', filters.type);
   
@@ -21,11 +21,11 @@ export function useDiscussionsList(filters?: { personnel_id?: number; status?: s
     queryKey: discussionKeys.list(filters),
     queryFn: async () => {
       const queryString = params.toString();
-      const url = queryString ? `/discussions?${queryString}` : '/discussions';
+      const url = queryString ? `/api/discussions?${queryString}` : '/api/discussions';
       const response = await apiFetch<ApiResponse<Discussion[]>>(url);
       return response.data;
     },
-    enabled: filters !== undefined && !!filters.personnel_id,
+    enabled: filters === undefined || !!filters.person_id, // Changed from person_id
   });
 }
 
@@ -34,7 +34,7 @@ export function useDiscussion(id: number) {
   return useQuery({
     queryKey: discussionKeys.detail(id),
     queryFn: async () => {
-      const response = await apiFetch<ApiResponse<DiscussionWithReplies>>(`/discussions/${id}`);
+      const response = await apiFetch<ApiResponse<DiscussionWithReplies>>(`/api/discussions/${id}`);
       return response.data;
     },
     enabled: id > 0,
@@ -47,7 +47,7 @@ export function useCreateDiscussion() {
 
   return useMutation({
     mutationFn: async (data: CreateDiscussionRequest) => {
-      const response = await apiFetch<ApiResponse<Discussion>>('/discussions', {
+      const response = await apiFetch<ApiResponse<Discussion>>('/api/discussions', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -65,7 +65,7 @@ export function useCreateReply() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: CreateReplyRequest }) => {
-      const response = await apiFetch<ApiResponse<Discussion>>(`/discussions/${id}/replies`, {
+      const response = await apiFetch<ApiResponse<DiscussionReply>>(`/api/discussions/${id}/replies`, {
         method: 'POST',
         body: JSON.stringify(data),
       });

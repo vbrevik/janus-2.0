@@ -2,7 +2,7 @@
 
 ## 🚀 **Overview**
 
-Janus 2.0 is a **simple, fast, and secure** personnel and access control management system for high-security, air-gapped environments.
+Janus 2.0 is a **simple, fast, and secure** person and access control management system for high-security, air-gapped environments.
 
 **Built with lessons learned from Janus 1.0** - Complete rewrite focusing on **simplicity over complexity**.
 
@@ -122,8 +122,8 @@ Complete documentation is in the `/docs` folder:
 
 ### MVP 1 (Weeks 1-2)
 - ✅ User authentication (JWT)
-- ✅ Personnel management (CRUD)
-- ✅ Vendor management (CRUD)
+- ✅ Person management (CRUD)
+- ✅ Organization management (CRUD)
 - ✅ Basic RBAC (4 roles)
 
 ### MVP 2 (Weeks 3-4)
@@ -232,7 +232,7 @@ docker-compose -f docker-compose.prod.yml up -d
 - ✅ **Day 1**: Database Schema + Authentication (JWT)
 - ✅ **Day 2**: Personnel GET APIs (List + Get by ID)
 - ✅ **Day 3**: Personnel CRUD Complete (POST/PUT/DELETE)
-- ✅ **Day 4**: Vendors CRUD Complete (All 5 endpoints)
+- ✅ **Day 4**: Organizations CRUD Complete (All 5 endpoints)
 - ✅ **Day 5**: Audit Logging System (Query and filtering)
 - ✅ **Day 6**: Code cleanup, zero warnings, Week 1 wrap-up
 
@@ -243,7 +243,7 @@ docker-compose -f docker-compose.prod.yml up -d
 - ✅ TanStack Router + TanStack Query
 - ✅ Authentication UI
 - ✅ Personnel management UI
-- ✅ Vendor management UI
+- ✅ Organization management UI
 - ✅ Audit log viewer
 - ✅ Roles & Permissions Management UI (CRUD + Permission assignment)
 - ✅ E2E Tests for Roles & Permissions
@@ -251,10 +251,10 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ### MVP 2 - NDA Management Features - 🔄 **PARTIAL**
 - ✅ Backend: NDA CRUD, Sign NDA, Reject NDA with reason tracking (untracked)
-- ✅ Backend: Track sent_by_vendor_id and sent_at metadata (untracked)
-- ✅ Backend: Database migrations (rejection_reason, sent_by_vendor_id, sent_at) (untracked)
+- ✅ Backend: Track sent_by_organization_id and sent_at metadata (untracked)
+- ✅ Backend: Database migrations (rejection_reason, sent_by_organization_id, sent_at) (untracked)
 - ✅ Backend: Routes mounted (nda, discussions, document_references) (untracked)
-- ⚠️ Frontend Admin: Send NDA dialog with vendor selection (exists, untracked)
+- ⚠️ Frontend Admin: Send NDA dialog with organization selection (exists, untracked)
 - ⚠️ Frontend Admin: NDA list tab showing status, dates, rejection reasons (exists, untracked)
 - ⚠️ Frontend Enduser: Reject NDA dialog with reason textarea (exists, untracked)
 - ⚠️ Frontend Enduser: Display sent_at, signed_at, rejection_reason (exists, untracked)
@@ -279,31 +279,31 @@ docker-compose -f docker-compose.prod.yml up -d
 - `GET /api/auth/profile` - Get current user profile (requires auth)
 - `PUT /api/auth/change-password` - Change user password (requires auth)
 
-#### Personnel
-- `GET /api/personnel` - List all personnel (paginated, requires auth)
-- `GET /api/personnel/:id` - Get personnel by ID (requires auth)
-- `POST /api/personnel` - Create new personnel (requires auth)
-- `PUT /api/personnel/:id` - Update personnel (partial, requires auth)
-- `DELETE /api/personnel/:id` - Soft delete personnel (requires auth)
+#### Person
+- `GET /api/person` - List all persons (paginated, requires auth)
+- `GET /api/person/:id` - Get person by ID (requires auth)
+- `POST /api/person` - Create new person (requires auth)
+- `PUT /api/person/:id` - Update person (partial, requires auth)
+- `DELETE /api/person/:id` - Soft delete person (requires auth)
 
-#### Vendors
-- `GET /api/vendors` - List all vendors (paginated, requires auth)
-- `GET /api/vendors/:id` - Get vendor by ID (requires auth)
-- `POST /api/vendors` - Create new vendor (requires auth)
-- `PUT /api/vendors/:id` - Update vendor (partial, requires auth)
-- `DELETE /api/vendors/:id` - Soft delete vendor (requires auth)
+#### Organizations
+- `GET /api/organizations` - List all organizations (paginated, requires auth)
+- `GET /api/organizations/:id` - Get organization by ID (requires auth)
+- `POST /api/organizations` - Create new organization (requires auth)
+- `PUT /api/organizations/:id` - Update organization (partial, requires auth)
+- `DELETE /api/organizations/:id` - Soft delete organization (requires auth)
 
-#### Vendor Relations
-- `GET /api/vendor-relations` - List vendor relations (requires auth)
-- `POST /api/vendor-relations` - Create vendor relation (requires auth)
-- `GET /api/vendor-relations/:id/hierarchy` - Get vendor hierarchy (requires auth)
-- `DELETE /api/vendor-relations/:id` - Delete vendor relation (requires auth)
+#### Organization Relations
+- `GET /api/organization-relations` - List organization relations (requires auth)
+- `POST /api/organization-relations` - Create organization relation (requires auth)
+- `GET /api/organization-relations/:id/hierarchy` - Get organization hierarchy (requires auth)
+- `DELETE /api/organization-relations/:id` - Delete organization relation (requires auth)
 
 #### Access Control
 - `POST /api/access/computer` - Grant computer access (requires auth)
 - `POST /api/access/data` - Grant data access (requires auth)
 - `POST /api/access/physical` - Grant physical access (requires auth)
-- `GET /api/personnel/:id/access` - List all access for personnel (requires auth)
+- `GET /api/person/:id/access` - List all access for person (requires auth)
 - `DELETE /api/access/:type/:id` - Revoke access (requires auth)
 
 #### Information Systems

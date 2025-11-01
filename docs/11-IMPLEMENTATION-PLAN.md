@@ -98,7 +98,7 @@ backend/
 │   ├── db.rs
 │   ├── auth/
 │   ├── personnel/
-│   ├── vendors/
+│   ├── organizations/
 │   ├── access/
 │   ├── audit/
 │   └── shared/
@@ -207,7 +207,7 @@ frontend/
 **Tasks**:
 1. ✅ Create users table migration
 2. ✅ Create personnel table migration
-3. ✅ Create vendors table migration
+3. ✅ Create organizations table migration
 4. ✅ Implement JWT creation/validation
 5. ✅ Implement bcrypt password hashing
 6. ✅ Create auth middleware
@@ -215,7 +215,7 @@ frontend/
 **Deliverables**:
 - `migrations/001_users.sql`
 - `migrations/002_personnel.sql`
-- `migrations/003_vendors.sql`
+- `migrations/003_organizations.sql`
 - `src/auth/jwt.rs`
 - `src/auth/middleware.rs`
 
@@ -267,19 +267,19 @@ fn test_delete_personnel() { }
 fn test_pagination() { }
 ```
 
-#### Day 5: Vendor API
+#### Day 5: Organization API
 
 **Tasks**:
-1. ✅ Create Vendor model
-2. ✅ Implement GET /api/vendors (list)
-3. ✅ Implement GET /api/vendors/:id
-4. ✅ Implement POST /api/vendors
-5. ✅ Implement PUT /api/vendors/:id
-6. ✅ Implement DELETE /api/vendors/:id
+1. ✅ Create Organization model
+2. ✅ Implement GET /api/organizations (list)
+3. ✅ Implement GET /api/organizations/:id
+4. ✅ Implement POST /api/organizations
+5. ✅ Implement PUT /api/organizations/:id
+6. ✅ Implement DELETE /api/organizations/:id
 
 **Deliverables**:
-- `src/vendors/models.rs`
-- `src/vendors/handlers.rs`
+- `src/organizations/models.rs`
+- `src/organizations/handlers.rs`
 
 **Tests**:
 - Same as personnel (CRUD + pagination)
@@ -331,12 +331,12 @@ describe('Personnel List', () => {
 });
 ```
 
-#### Day 5: Vendor UI
+#### Day 5: Organization UI
 
 **Tasks**:
-1. ✅ Create vendor list page
-2. ✅ Create vendor detail page
-3. ✅ Create vendor create/edit form
+1. ✅ Create organization list page
+2. ✅ Create organization detail page
+3. ✅ Create organization create/edit form
 
 **Deliverables**:
 - Similar structure to personnel
@@ -796,8 +796,8 @@ curl http://localhost:8000/api/health
 | Week | Phase | Deliverable | Status |
 |------|-------|-------------|--------|
 | 0 | Setup | Project structure, dependencies | 🔄 Start here |
-| 1 | MVP 1 Backend | Auth + Personnel + Vendor APIs | ⏳ |
-| 2 | MVP 1 Frontend | Login + Personnel + Vendor UIs | ⏳ |
+| 1 | MVP 1 Backend | Auth + Personnel + Organization APIs | ⏳ |
+| 2 | MVP 1 Frontend | Login + Personnel + Organization UIs | ⏳ |
 | 3 | MVP 2 Backend | Three-tier access + Audit | ⏳ |
 | 4 | MVP 2 Frontend | Access management + Reports | ⏳ |
 | 5 | Polish | Performance + Security | ⏳ |

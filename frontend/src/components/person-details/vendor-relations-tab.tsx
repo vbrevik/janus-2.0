@@ -6,19 +6,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { usePersonnelRelations, useCreateRelation, useDeleteRelation } from '@/hooks/use-relations'
-import { useVendorList } from '@/hooks/use-vendors'
+import { usePersonRelations, useCreateRelation, useDeleteRelation } from '@/hooks/use-relations'
+import { useOrganizationList } from '@/hooks/use-organizations'
 import { Plus, Trash2 } from 'lucide-react'
 import type { RelationType } from '@/types/relation'
 
 interface VendorRelationsTabProps {
-  personnelId: number
+  personId: number
   personnelName: string
 }
 
-export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
+export function VendorRelationsTab({ personId }: VendorRelationsTabProps) {
   const [showAddForm, setShowAddForm] = useState(false)
-  const [selectedVendor, setSelectedVendor] = useState<number>(0)
+  const [selectedOrganization, setSelectedOrganization] = useState<number>(0)
   const [relationType, setRelationType] = useState<RelationType>('employee')
   const [validFrom, setValidFrom] = useState('')
   const [validUntil, setValidUntil] = useState('')
@@ -26,13 +26,13 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
   const [filterType, setFilterType] = useState<string>('all')
 
   // Get personnel relations (outgoing to vendors)
-  const { data: relations, isLoading, refetch } = usePersonnelRelations(personnelId, { direction: 'outgoing' })
-  const { data: vendors } = useVendorList(1, 1000)
+  const { data: relations, isLoading, refetch } = usePersonRelations(personId, { direction: 'outgoing' }) // Changed from usePersonnelRelations
+  const { data: organizations } = useOrganizationList(1, 1000)
   const createRelation = useCreateRelation()
   const deleteRelation = useDeleteRelation()
 
-  // Filter relations to only show vendor relations (not personnel-personnel)
-  const vendorRelations = relations?.filter(rel => rel.related_entity_type === 'vendor') || []
+  // Filter relations to only show organization relations (not personnel-personnel)
+  const vendorRelations = relations?.filter(rel => rel.related_entity_type === 'organization') || []
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString()
@@ -63,17 +63,17 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
   })
 
   const handleCreateRelation = async () => {
-    if (!selectedVendor) {
-      alert('Please select a vendor')
+    if (!selectedOrganization) {
+      alert('Please select an organization')
       return
     }
 
     try {
       await createRelation.mutateAsync({
-        entity_type: 'personnel',
-        entity_id: personnelId,
-        related_entity_type: 'vendor',
-        related_entity_id: selectedVendor,
+        entity_type: 'person',
+        entity_id: personId,
+        related_entity_type: 'organization',
+        related_entity_id: selectedOrganization,
         relation_type: relationType,
         valid_from: validFrom || undefined,
         valid_until: validUntil || undefined,
@@ -81,7 +81,7 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
       })
 
       setShowAddForm(false)
-      setSelectedVendor(0)
+      setSelectedOrganization(0)
       setRelationType('employee')
       setValidFrom('')
       setValidUntil('')
@@ -123,13 +123,13 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
               <h3 className="font-semibold text-sm">Add New Relation</h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs">Vendor</Label>
-                  <Select value={String(selectedVendor)} onValueChange={(v) => setSelectedVendor(parseInt(v))}>
+                  <Label className="text-xs">Organization</Label>
+                  <Select value={String(selectedOrganization)} onValueChange={(v) => setSelectedOrganization(parseInt(v))}>
                     <SelectTrigger className="h-8">
-                      <SelectValue placeholder="Select vendor" />
+                      <SelectValue placeholder="Select organization" />
                     </SelectTrigger>
                     <SelectContent>
-                      {vendors?.items.map((v) => (
+                      {organizations?.items.map((v) => (
                         <SelectItem key={v.id} value={String(v.id)}>
                           {v.company_name}
                         </SelectItem>
@@ -165,7 +165,7 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleCreateRelation} disabled={!selectedVendor || createRelation.isPending}>
+                <Button size="sm" onClick={handleCreateRelation} disabled={!selectedOrganization || createRelation.isPending}>
                   Create
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setShowAddForm(false)}>
@@ -210,7 +210,7 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="h-8 text-xs">Vendor</TableHead>
+                    <TableHead className="h-8 text-xs">Organization</TableHead>
                     <TableHead className="h-8 text-xs">Type</TableHead>
                     <TableHead className="h-8 text-xs">From</TableHead>
                     <TableHead className="h-8 text-xs">Until</TableHead>

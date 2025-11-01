@@ -36,8 +36,9 @@ import {
   useDeleteNDA,
   useNDA,
 } from '@/hooks/use-nda'
-import { usePersonnelList } from '@/hooks/use-personnel'
+import { usePersonList } from '@/hooks/use-person'
 import type { NDA, NDAStatus, CreateNDARequest } from '@/types/nda'
+import type { Person } from '@/types/person'
 import { Link } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/admin/ndas/')({
@@ -55,7 +56,7 @@ function NDAManagement() {
 
   // Filter NDAs by status if filter is set
   const filteredNDAs = statusFilter
-    ? (ndas || []).filter((nda) => nda.status === statusFilter)
+    ? (ndas || []).filter((nda: NDA) => nda.status === statusFilter)
     : ndas || []
 
   return (
@@ -141,7 +142,7 @@ function NDAManagement() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredNDAs.map((nda) => (
+                    filteredNDAs.map((nda: NDA) => (
                       <NDARow key={nda.id} nda={nda} onDeleted={() => refetch()} />
                     ))
                   )}
@@ -199,11 +200,11 @@ function NDARow({ nda, onDeleted }: { nda: NDA; onDeleted: () => void }) {
       <TableCell>{getStatusBadge(nda.status)}</TableCell>
       <TableCell>
         <Link
-          to="/admin/personnel/$personnelId"
-          params={{ personnelId: String(nda.personnel_id) }}
+          to="/admin/person/$personId"
+          params={{ personId: String(nda.person_id) }}
           className="text-primary hover:underline"
         >
-          {nda.personnel_id}
+          {nda.person_id}
         </Link>
       </TableCell>
       <TableCell>{formatDate(nda.issued_at)}</TableCell>
@@ -279,11 +280,11 @@ function NDADetailDialog({
                 <Label className="text-xs text-muted-foreground">Personnel ID</Label>
                 <p className="font-medium">
                   <Link
-                    to="/admin/personnel/$personnelId"
-                    params={{ personnelId: String(nda.personnel_id) }}
+                    to="/admin/person/$personId"
+                    params={{ personId: String(nda.person_id) }}
                     className="text-primary hover:underline"
                   >
-                    {nda.personnel_id}
+                    {nda.person_id}
                   </Link>
                 </p>
               </div>
@@ -347,7 +348,7 @@ function CreateNDADialog({
   onSuccess: () => void
 }) {
   const [formData, setFormData] = useState<CreateNDARequest>({
-    personnel_id: 0,
+    person_id: 0,
     title: '',
     content: '',
     version: undefined,
@@ -355,11 +356,11 @@ function CreateNDADialog({
     sent_by_vendor_id: undefined,
   })
   const createNDA = useCreateNDA()
-  const { data: personnelData } = usePersonnelList(1, 1000) // Get all personnel for dropdown
+  const { data: personData } = usePersonList(1, 1000) // Get all persons for dropdown (changed from personnelData)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.title || !formData.content || !formData.personnel_id) {
+    if (!formData.title || !formData.content || !formData.person_id) {
       alert('Please fill in all required fields')
       return
     }
@@ -367,7 +368,7 @@ function CreateNDADialog({
     try {
       await createNDA.mutateAsync(formData)
       setFormData({
-        personnel_id: 0,
+        person_id: 0,
         title: '',
         content: '',
         version: undefined,
@@ -401,16 +402,16 @@ function CreateNDADialog({
           <div>
             <Label htmlFor="nda-personnel">Personnel *</Label>
             <Select
-              value={formData.personnel_id ? String(formData.personnel_id) : ''}
+              value={formData.person_id ? String(formData.person_id) : ''}
               onValueChange={(value) =>
-                setFormData({ ...formData, personnel_id: parseInt(value) })
+                setFormData({ ...formData, person_id: parseInt(value) })
               }
             >
               <SelectTrigger id="nda-personnel">
                 <SelectValue placeholder="Select personnel" />
               </SelectTrigger>
               <SelectContent>
-                {personnelData?.items.map((p) => (
+                {personData?.items.map((p: Person) => (
                   <SelectItem key={p.id} value={String(p.id)}>
                     {p.first_name} {p.last_name} ({p.email})
                   </SelectItem>

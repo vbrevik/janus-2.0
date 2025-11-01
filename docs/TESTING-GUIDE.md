@@ -48,7 +48,7 @@ This document provides a comprehensive guide for manually testing all implemente
 **URL**: `http://localhost:15510/personnel`
 
 **What to Test**:
-- ✅ View list of personnel in table format
+- ✅ View list of persons in table format
 - ✅ See columns: Name, Email, Department, Position, Clearance Level
 - ✅ Pagination controls (if more than 10-20 items)
 - ✅ Inline editing:
@@ -74,26 +74,26 @@ This document provides a comprehensive guide for manually testing all implemente
 
 ---
 
-## 3. Vendor Management
+## 3. Organization Management
 
-### 3.1 Vendor List
-**URL**: `http://localhost:15510/vendors`
+### 3.1 Organization List
+**URL**: `http://localhost:15510/organizations`
 
 **What to Test**:
-- ✅ View list of vendors in table format
+- ✅ View list of organizations in table format
 - ✅ See columns: Name, Type, Clearance, Contact Email, Actions
 - ✅ Inline editing (similar to personnel)
-- ✅ Create new vendor:
-  - Click "Add Vendor" button
+- ✅ Create new organization:
+  - Click "Add Organization" button
   - Fill in: name (required), type (CONTRACTOR/SUPPLIER/PARTNER/INTERNAL), clearance level
-  - Optional: parent vendor (for hierarchy), contact email, phone, address
+  - Optional: parent organization (for hierarchy), contact email, phone, address
   - Save
-- ✅ Delete vendor (soft delete)
-- ✅ Navigate to vendor detail page (click vendor name)
+- ✅ Delete organization (soft delete)
+- ✅ Navigate to organization detail page (click organization name)
 
 **Expected Results**:
 - All CRUD operations work correctly
-- Vendor hierarchy can be established via parent vendor selection
+- Organization hierarchy can be established via parent organization selection
 
 ---
 
@@ -130,12 +130,12 @@ This document provides a comprehensive guide for manually testing all implemente
 - Default roles visible (admin, manager, operator, viewer)
 - Can create, edit, delete custom roles
 - Permission assignment works correctly
-- Permissions grouped by resource (audit, personnel, vendors, roles, etc.)
+- Permissions grouped by resource (audit, personnel, organizations, roles, etc.)
 
 **Permission Categories** (should be visible):
 - `audit.read`, `audit.write`
 - `personnel.read`, `personnel.write`
-- `vendors.read`, `vendors.write`
+- `organizations.read`, `organizations.write`
 - `roles.read`, `roles.write`
 
 ---
@@ -248,28 +248,28 @@ This document provides a comprehensive guide for manually testing all implemente
 **URL**: `http://localhost:15510/personnel/:id` (Personnel Details page, NDA tab)
 
 **What to Test**:
-- ✅ Navigate to personnel details page
+- ✅ Navigate to person details page
 - ✅ Click "NDAs" tab
 - ✅ Click "Send NDA" button
 - ✅ Fill in:
   - Title (required)
   - Content/Description
   - Optional: Expiration date
-  - Optional: Select vendor (if sent by vendor)
+  - Optional: Select organization (if sent by organization)
 - ✅ Submit
 - ✅ NDA appears in list with status "PENDING"
 
 **Expected Results**:
 - NDA created with correct personnel ID
 - Status shows as "PENDING"
-- Sent date recorded if vendor selected
+- Sent date recorded if organization selected
 
 ### 8.2 View NDA Status
 **What to Test**:
 - ✅ In NDA list, see columns:
   - Title
   - Status (PENDING, SIGNED, REJECTED, EXPIRED)
-  - Sent date (if vendor sent)
+  - Sent date (if organization sent)
   - Signed date (if signed)
   - Rejection reason (if rejected)
 - ✅ Click on NDA to view details
@@ -371,7 +371,7 @@ This document provides a comprehensive guide for manually testing all implemente
 - ✅ All navigation links work:
   - Dashboard
   - Personnel
-  - Vendors
+  - Organizations
   - Access Control
   - View Access
   - Info Systems
@@ -465,16 +465,16 @@ The following scenarios are covered by automated E2E tests and can also be teste
 ### 14.1 Complete Personnel Workflow
 1. Login → Navigate to Personnel
 2. Create new personnel
-3. Edit personnel details
+3. Edit person details
 4. View personnel detail page
 5. Delete personnel
 
-### 14.2 Complete Vendor Workflow
-1. Login → Navigate to Vendors
-2. Create new vendor
-3. Edit vendor details
-4. Create vendor relation (parent-child)
-5. View vendor hierarchy
+### 14.2 Complete Organization Workflow
+1. Login → Navigate to Organizations
+2. Create new organization
+3. Edit organization details
+4. Create organization relation (parent-child)
+5. View organization hierarchy
 
 ### 14.3 Complete Roles & Permissions Workflow
 1. Login → Navigate to Roles & Permissions
@@ -517,7 +517,7 @@ The following scenarios are covered by automated E2E tests and can also be teste
 **Core Features** (MVP 1):
 - [ ] Login/Logout works
 - [ ] Personnel CRUD works
-- [ ] Vendor CRUD works
+- [ ] Organization CRUD works
 - [ ] Roles & Permissions management works
 - [ ] Permission assignment works
 - [ ] Access control grants work

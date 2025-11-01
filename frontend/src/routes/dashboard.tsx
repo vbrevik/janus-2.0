@@ -11,8 +11,8 @@ export const Route = createFileRoute('/dashboard')({
 })
 
 interface DashboardStats {
-  total_personnel: number
-  total_vendors: number
+  total_persons: number // Changed from total_personnel
+  total_organizations: number
   total_access_grants: number
   active_access_grants: number
   recent_audit_logs: number
@@ -57,14 +57,14 @@ function Dashboard() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                      Total Personnel
+                      Total Persons
                     </CardTitle>
                     <Users className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats?.total_personnel || 0}</div>
+                    <div className="text-2xl font-bold">{stats?.total_persons || 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      Active personnel
+                      Active persons
                     </p>
                   </CardContent>
                 </Card>
@@ -72,14 +72,14 @@ function Dashboard() {
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">
-                      Vendors
+                      Organizations
                     </CardTitle>
                     <Building2 className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats?.total_vendors || 0}</div>
+                    <div className="text-2xl font-bold">{stats?.total_organizations || 0}</div>
                     <p className="text-xs text-muted-foreground">
-                      Vendor organizations
+                      Organizations
                     </p>
                   </CardContent>
                 </Card>
@@ -123,13 +123,13 @@ function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <a href="/personnel" className="flex items-center gap-2 text-sm hover:text-primary">
+                      <a href="/admin/person" className="flex items-center gap-2 text-sm hover:text-primary">
                         <Users className="h-4 w-4" />
-                        Manage Personnel
+                        Manage Persons
                       </a>
-                      <a href="/vendors" className="flex items-center gap-2 text-sm hover:text-primary">
+                      <a href="/organizations" className="flex items-center gap-2 text-sm hover:text-primary">
                         <Building2 className="h-4 w-4" />
-                        Manage Vendors
+                        Manage Organizations
                       </a>
                       <a href="/access" className="flex items-center gap-2 text-sm hover:text-primary">
                         <Key className="h-4 w-4" />

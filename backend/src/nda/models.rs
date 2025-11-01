@@ -6,12 +6,12 @@ use validator::Validate;
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct NDA {
     pub id: i32,
-    pub personnel_id: i32,
+    pub person_id: i32, // Changed from personnel_id
     pub title: String,
     pub content: String,
     pub version: String,
     pub status: String, // PENDING, ACTIVE, SIGNED, EXPIRED, REVOKED
-    pub issued_by: i32,
+    pub issued_by_person_id: i32, // Changed from issued_by
     pub issued_at: NaiveDateTime,
     pub signed_at: Option<NaiveDateTime>,
     pub expires_at: Option<NaiveDateTime>,
@@ -25,7 +25,7 @@ pub struct NDA {
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct CreateNDARequest {
-    pub personnel_id: i32,
+    pub person_id: i32, // Changed from personnel_id
     #[validate(length(min = 1))]
     pub title: String,
     #[validate(length(min = 10))]

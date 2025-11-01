@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { usePersonnelList } from '@/hooks/use-personnel'
+import { usePersonList } from '@/hooks/use-person'
 import { Search } from 'lucide-react'
 
 export const Route = createFileRoute('/official/personnel')({
@@ -18,7 +18,7 @@ export const Route = createFileRoute('/official/personnel')({
 function PersonnelPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [page] = useState(1)
-  const { data, isLoading } = usePersonnelList(page, 20)
+  const { data, isLoading } = usePersonList(page, 20)
 
   const clearances: Record<string, string> = {
     UNCLASSIFIED: 'bg-blue-100 text-blue-800',
@@ -32,13 +32,13 @@ function PersonnelPage() {
       <Layout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Personnel Lookup</h1>
-            <p className="text-muted-foreground">Search and verify personnel information</p>
+            <h1 className="text-3xl font-bold">Person Lookup</h1>
+            <p className="text-muted-foreground">Search and verify person information</p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Search Personnel</CardTitle>
+              <CardTitle>Search Persons</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">
@@ -79,9 +79,10 @@ function PersonnelPage() {
                     if (!searchTerm) return true
                     const search = searchTerm.toLowerCase()
                     return (
-                      person.first_name.toLowerCase().includes(search) ||
-                      person.last_name.toLowerCase().includes(search) ||
-                      person.email.toLowerCase().includes(search)
+                      (person.first_name && person.first_name.toLowerCase().includes(search)) ||
+                      (person.last_name && person.last_name.toLowerCase().includes(search)) ||
+                      (person.email && person.email.toLowerCase().includes(search)) ||
+                      (person.username && person.username.toLowerCase().includes(search))
                     )
                   }) || []
                   
@@ -101,14 +102,16 @@ function PersonnelPage() {
                       {filtered.map((person) => (
                         <TableRow key={person.id}>
                           <TableCell className="font-medium">
-                            {person.first_name} {person.last_name}
+                            {person.first_name && person.last_name
+                              ? `${person.first_name} ${person.last_name}`
+                              : person.username || person.email || `Person #${person.id}`}
                           </TableCell>
-                          <TableCell>{person.email}</TableCell>
-                          <TableCell>{person.department}</TableCell>
-                          <TableCell>{person.position}</TableCell>
+                          <TableCell>{person.email || person.username || 'N/A'}</TableCell>
+                          <TableCell>{person.department || 'N/A'}</TableCell>
+                          <TableCell>{person.position || 'N/A'}</TableCell>
                           <TableCell>
-                            <Badge className={clearances[person.clearance_level] || ''}>
-                              {person.clearance_level}
+                            <Badge className={clearances[person.clearance_level || 'UNCLASSIFIED'] || ''}>
+                              {person.clearance_level || 'UNCLASSIFIED'}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -122,7 +125,7 @@ function PersonnelPage() {
                   </Table>
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
-                    <p>No personnel found. Try a different search term.</p>
+                    <p>No persons found. Try a different search term.</p>
                   </div>
                 )
                 })()}

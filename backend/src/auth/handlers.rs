@@ -5,7 +5,8 @@ use sqlx::PgPool;
 use validator::Validate;
 use bcrypt;
 
-use super::models::{LoginRequest, LoginResponse, User, ProfileResponse, ChangePasswordRequest};
+use super::models::{LoginRequest, LoginResponse, PersonAuth, ProfileResponse, ChangePasswordRequest};
+use crate::person::models::Person;
 use super::jwt::create_jwt;
 use super::middleware::AuthGuard;
 
@@ -18,35 +19,42 @@ pub async fn login(
     // Validate input
     login_request.validate().map_err(|_| Status::BadRequest)?;
 
-    // Find user by username
-    let user = sqlx::query_as!(
-        User,
+    // Find person by username (must have username and password_hash - i.e., be a user)
+    let person_auth = sqlx::query_as::<_, PersonAuth>(
         "SELECT id, username, password_hash, role, created_at, updated_at 
-         FROM users 
-         WHERE username = $1",
-        login_request.username
+         FROM person 
+         WHERE username = $1 AND password_hash IS NOT NULL"
     )
+    .bind(&login_request.username)
     .fetch_optional(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?
     .ok_or(Status::Unauthorized)?;
 
+    // Verify password_hash exists
+    let password_hash = person_auth.password_hash.as_ref()
+        .ok_or(Status::Unauthorized)?;
+
     // Verify password
-    let is_valid = bcrypt::verify(&login_request.password, &user.password_hash)
+    let is_valid = bcrypt::verify(&login_request.password, password_hash)
         .map_err(|_| Status::InternalServerError)?;
 
     if !is_valid {
         return Err(Status::Unauthorized);
     }
 
+    // Get role (must exist for users)
+    let role = person_auth.role.as_ref()
+        .ok_or(Status::InternalServerError)?;
+
     // Create JWT token
-    let token = create_jwt(&user.id.to_string(), &user.role, jwt_secret)
+    let token = create_jwt(&person_auth.id.to_string(), role, jwt_secret)
         .map_err(|_| Status::InternalServerError)?;
 
     Ok(Json(LoginResponse {
         token,
-        user_id: user.id.to_string(),
-        role: user.role.clone(),
+        person_id: person_auth.id.to_string(),
+        role: role.clone(),
     }))
 }
 
@@ -55,25 +63,36 @@ pub async fn get_profile(
     db: &State<PgPool>,
     auth: AuthGuard,
 ) -> Result<Json<ProfileResponse>, Status> {
-    // Get user details
-    let user = sqlx::query_as!(
-        User,
-        "SELECT id, username, password_hash, role, created_at, updated_at 
-         FROM users 
-         WHERE id = $1",
-        auth.claims.sub.parse::<i32>().unwrap_or(0)
+    let person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
+
+    // Get person details
+    let person = sqlx::query_as::<_, Person>(
+        "SELECT id, first_name, last_name, email, phone,
+                username, password_hash, role,
+                clearance_level, department, position,
+                deleted_at, created_at, updated_at 
+         FROM person 
+         WHERE id = $1 AND deleted_at IS NULL"
     )
+    .bind(person_id)
     .fetch_optional(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?
     .ok_or(Status::NotFound)?;
 
     Ok(Json(ProfileResponse {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
+        id: person.id,
+        username: person.username,
+        role: person.role,
+        first_name: person.first_name,
+        last_name: person.last_name,
+        email: person.email,
+        phone: person.phone,
+        clearance_level: person.clearance_level,
+        department: person.department,
+        position: person.position,
+        created_at: person.created_at,
+        updated_at: person.updated_at,
     }))
 }
 
@@ -86,23 +105,26 @@ pub async fn change_password(
     // Validate input
     request.validate().map_err(|_| Status::BadRequest)?;
 
-    let user_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
+    let person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
 
-    // Get current user
-    let user = sqlx::query_as!(
-        User,
+    // Get current person (must have password_hash - i.e., be a user)
+    let person_auth = sqlx::query_as::<_, PersonAuth>(
         "SELECT id, username, password_hash, role, created_at, updated_at 
-         FROM users 
-         WHERE id = $1",
-        user_id
+         FROM person 
+         WHERE id = $1 AND password_hash IS NOT NULL"
     )
+    .bind(person_id)
     .fetch_optional(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?
     .ok_or(Status::NotFound)?;
 
+    // Verify password_hash exists
+    let password_hash = person_auth.password_hash.as_ref()
+        .ok_or(Status::InternalServerError)?;
+
     // Verify old password
-    let is_valid = bcrypt::verify(&request.old_password, &user.password_hash)
+    let is_valid = bcrypt::verify(&request.old_password, password_hash)
         .map_err(|_| Status::InternalServerError)?;
 
     if !is_valid {
@@ -113,12 +135,12 @@ pub async fn change_password(
     let new_hash = bcrypt::hash(&request.new_password, bcrypt::DEFAULT_COST)
         .map_err(|_| Status::InternalServerError)?;
 
-    // Update password
-    sqlx::query!(
-        "UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2",
-        new_hash,
-        user_id
+    // Update password in person table
+    sqlx::query(
+        "UPDATE person SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2"
     )
+    .bind(&new_hash)
+    .bind(person_id)
     .execute(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?;

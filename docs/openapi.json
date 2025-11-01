@@ -3,7 +3,7 @@
   "info": {
     "title": "Janus 2.0 Security Clearance API",
     "version": "2.0.0",
-    "description": "API for managing personnel, vendors, and three-tier access control in high-security environments",
+    "description": "API for managing personnel, organizations, and three-tier access control in high-security environments",
     "contact": {
       "name": "Janus Development Team"
     }
@@ -139,14 +139,14 @@
         }
       }
     },
-    "/vendors": {
+    "/organizations": {
       "get": {
-        "summary": "List all vendors",
-        "tags": ["Vendors"]
+        "summary": "List all organizations",
+        "tags": ["Organizations"]
       },
       "post": {
-        "summary": "Create new vendor",
-        "tags": ["Vendors"]
+        "summary": "Create new organization",
+        "tags": ["Organizations"]
       }
     },
     "/access/computer": {

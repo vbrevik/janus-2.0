@@ -44,7 +44,7 @@ Based on git status and codebase analysis:
 **MVP 1 Week 2 - Frontend (In Progress)**:
 - ✅ Audit log viewer (completed)
 - ⏳ Personnel UI enhancements
-- ⏳ Vendor UI enhancements
+- ⏳ Organization UI enhancements
 - ⏳ Date range filters for audit
 
 **Future MVP 2**:

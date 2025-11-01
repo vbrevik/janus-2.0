@@ -56,7 +56,7 @@ VALUES ('newuser', 'bcrypt_hashed_password', 'operator');
 
 **Roles Available**:
 - `admin` - Full system access
-- `manager` - Personnel and vendor management
+- `manager` - Personnel and organization management
 - `operator` - Read-only access to most features
 - `viewer` - View only access
 
@@ -191,7 +191,7 @@ All services running:
 - API Response: < 5ms average
 - Health Check: 0.8ms
 - Personnel List: 2.7ms
-- Vendor List: 4.5ms
+- Organization List: 4.5ms
 
 ### Load Capacity
 

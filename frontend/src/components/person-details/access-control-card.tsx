@@ -1,14 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { usePersonnelAccess } from '@/hooks/use-access'
+import { usePersonAccess } from '@/hooks/use-access'
+import type { ComputerAccess, DataAccess, PhysicalAccess } from '@/types/access'
 
 interface AccessControlCardProps {
-  personnelId: number
+  personId: number
 }
 
-export function AccessControlCard({ personnelId }: AccessControlCardProps) {
-  const { data: access } = usePersonnelAccess(personnelId)
+export function AccessControlCard({ personId }: AccessControlCardProps) {
+  const { data: access } = usePersonAccess(personId) // Changed from usePersonnelAccess
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-'
@@ -46,7 +47,7 @@ export function AccessControlCard({ personnelId }: AccessControlCardProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {access.computer_access.map((acc) => (
+                    {access.computer_access.map((acc: ComputerAccess) => (
                       <TableRow key={acc.id}>
                         <TableCell className="py-1 text-xs">{acc.system_name}</TableCell>
                         <TableCell className="py-1">
@@ -81,7 +82,7 @@ export function AccessControlCard({ personnelId }: AccessControlCardProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {access.data_access.map((acc) => (
+                    {access.data_access.map((acc: DataAccess) => (
                       <TableRow key={acc.id}>
                         <TableCell className="py-1 text-xs">{acc.data_classification}</TableCell>
                         <TableCell className="py-1">
@@ -115,7 +116,7 @@ export function AccessControlCard({ personnelId }: AccessControlCardProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {access.physical_access.map((acc) => (
+                    {access.physical_access.map((acc: PhysicalAccess) => (
                       <TableRow key={acc.id}>
                         <TableCell className="py-1 text-xs">{acc.zone_name}</TableCell>
                         <TableCell className="py-1">

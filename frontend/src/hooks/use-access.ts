@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api';
 import type { 
-  PersonnelAccess,
+  PersonAccess, // Changed from PersonnelAccess
   CreateComputerAccessRequest,
   CreateDataAccessRequest,
   CreatePhysicalAccessRequest,
@@ -22,7 +22,7 @@ export function useGrantComputerAccess() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personnel-access'] });
+      queryClient.invalidateQueries({ queryKey: ['person-access'] }); // Changed from personnel-access
     },
   });
 }
@@ -40,7 +40,7 @@ export function useGrantDataAccess() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personnel-access'] });
+      queryClient.invalidateQueries({ queryKey: ['person-access'] }); // Changed from personnel-access
     },
   });
 }
@@ -58,19 +58,20 @@ export function useGrantPhysicalAccess() {
       return response.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personnel-access'] });
+      queryClient.invalidateQueries({ queryKey: ['person-access'] }); // Changed from personnel-access
     },
   });
 }
 
-// List all access for personnel
-export function usePersonnelAccess(personnelId: number) {
+// List all access for person
+export function usePersonAccess(personId: number) { // Changed from usePersonnelAccess and personId
   return useQuery({
-    queryKey: ['personnel-access', personnelId],
+    queryKey: ['person-access', personId], // Changed from personnel-access
     queryFn: async () => {
-      return apiFetch<PersonnelAccess>(`/personnel/${personnelId}/access`);
+      const response = await apiFetch<ApiResponse<PersonAccess>>(`/api/persons/${personId}/access`); // Changed endpoint
+      return response.data;
     },
-    enabled: personnelId > 0,
+    enabled: personId > 0,
   });
 }
 
@@ -85,7 +86,7 @@ export function useRevokeAccess() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['personnel-access'] });
+      queryClient.invalidateQueries({ queryKey: ['person-access'] }); // Changed from personnel-access
     },
   });
 }

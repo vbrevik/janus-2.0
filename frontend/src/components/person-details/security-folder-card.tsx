@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { apiFetch } from '@/lib/api'
 import { useNDAList, useCreateNDA } from '@/hooks/use-nda'
+import type { NDA } from '@/types/nda'
 import { Folder, FileText, FileSearch, CheckCircle2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 type DocumentReference = {
   id: number
-  personnel_id: number
+  person_id: number
   title: string
   document_type: string
   description?: string | null
@@ -17,8 +18,8 @@ type DocumentReference = {
   status: string
 }
 
-export function SecurityFolderCard({ personnelId }: { personnelId: number }) {
-  const { data: ndas, isLoading: ndasLoading } = useNDAList({ personnel_id: personnelId })
+export function SecurityFolderCard({ personId }: { personId: number }) {
+  const { data: ndas, isLoading: ndasLoading } = useNDAList({ person_id: personId })
   const [documents, setDocuments] = useState<DocumentReference[] | null>(null)
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const createNDA = useCreateNDA()
@@ -27,7 +28,7 @@ export function SecurityFolderCard({ personnelId }: { personnelId: number }) {
     const load = async () => {
       setDocumentsLoading(true)
       try {
-        const params = new URLSearchParams({ personnel_id: String(personnelId) })
+        const params = new URLSearchParams({ person_id: String(personId) })
         const res = await apiFetch<{ data: DocumentReference[] }>(`/document-references?${params.toString()}`)
         setDocuments(res.data || [])
       } catch {
@@ -37,12 +38,12 @@ export function SecurityFolderCard({ personnelId }: { personnelId: number }) {
       }
     }
     load()
-  }, [personnelId])
+  }, [personId])
 
   const formatDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString() : undefined)
 
-  const pendingNDAs = (ndas || []).filter(n => n.status === 'PENDING' || n.status === 'ACTIVE')
-  const signedNDAs = (ndas || []).filter(n => n.status === 'SIGNED')
+  const pendingNDAs = (ndas || []).filter((n: NDA) => n.status === 'PENDING' || n.status === 'ACTIVE')
+  const signedNDAs = (ndas || []).filter((n: NDA) => n.status === 'SIGNED')
 
   return (
     <Card>
@@ -58,7 +59,7 @@ export function SecurityFolderCard({ personnelId }: { personnelId: number }) {
               try {
                 const today = new Date().toISOString().slice(0, 10)
                 await createNDA.mutateAsync({
-                  personnel_id: personnelId,
+                  person_id: personId,
                   title: `NDA ${today}`,
                   content: 'Please review and sign this Non-Disclosure Agreement.',
                   version: '1.0',
@@ -85,7 +86,7 @@ export function SecurityFolderCard({ personnelId }: { personnelId: number }) {
               <div>
                 <h3 className="text-sm font-semibold mb-2 text-muted-foreground">Pending Documents</h3>
                 <div className="space-y-2">
-                  {pendingNDAs.map(nda => (
+                  {pendingNDAs.map((nda: NDA) => (
                     <div key={nda.id} className="flex items-center justify-between p-3 rounded-md border bg-card">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-primary" />
@@ -106,7 +107,7 @@ export function SecurityFolderCard({ personnelId }: { personnelId: number }) {
               <div>
                 <h3 className="text-sm font-semibold mb-2 text-muted-foreground">Signed Documents</h3>
                 <div className="space-y-2">
-                  {signedNDAs.map(nda => (
+                  {signedNDAs.map((nda: NDA) => (
                     <div key={nda.id} className="flex items-center justify-between p-3 rounded-md border bg-card">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-green-600" />

@@ -6,14 +6,14 @@ import type { ApiResponse } from '@/types/api';
 // Query Keys
 export const ndaKeys = {
   all: ['nda'] as const,
-  list: (filters?: { personnel_id?: number; status?: string }) => [...ndaKeys.all, 'list', filters] as const,
+  list: (filters?: { person_id?: number; status?: string; email?: string }) => [...ndaKeys.all, 'list', filters] as const,
   detail: (id: number) => [...ndaKeys.all, id] as const,
 };
 
 // List NDAs
-export function useNDAList(filters?: { personnel_id?: number; status?: string; email?: string }) {
+export function useNDAList(filters?: { person_id?: number; status?: string; email?: string }) {
   const params = new URLSearchParams();
-  if (filters?.personnel_id) params.append('personnel_id', String(filters.personnel_id));
+  if (filters?.person_id) params.append('person_id', String(filters.person_id)); // Changed from person_id
   if (filters?.status) params.append('status', filters.status);
   if (filters?.email) params.append('email', filters.email);
   
@@ -21,11 +21,15 @@ export function useNDAList(filters?: { personnel_id?: number; status?: string; e
     queryKey: ndaKeys.list(filters),
     queryFn: async () => {
       const queryString = params.toString();
-      const url = queryString ? `/nda?${queryString}` : '/nda';
-      const response = await apiFetch<ApiResponse<NDA[]>>(url);
-      return response.data;
+      const url = queryString ? `/api/nda?${queryString}` : '/api/nda';
+      const response = await apiFetch<NDA[] | ApiResponse<NDA[]>>(url);
+      // Handle both array and ApiResponse formats
+      if (Array.isArray(response)) {
+        return response;
+      }
+      return (response as ApiResponse<NDA[]>).data || [];
     },
-    enabled: filters !== undefined && (!!filters.personnel_id || !!filters.email), // Only run if we have a valid filter
+    enabled: filters === undefined || !!filters.person_id || !!filters.email, // Changed from person_id
   });
 }
 
@@ -34,7 +38,7 @@ export function useNDA(id: number) {
   return useQuery({
     queryKey: ndaKeys.detail(id),
     queryFn: async () => {
-      const response = await apiFetch<ApiResponse<NDA>>(`/nda/${id}`);
+      const response = await apiFetch<ApiResponse<NDA>>(`/api/nda/${id}`);
       return response.data;
     },
     enabled: id > 0,
@@ -47,7 +51,7 @@ export function useCreateNDA() {
 
   return useMutation({
     mutationFn: async (data: CreateNDARequest) => {
-      const response = await apiFetch<ApiResponse<NDA>>('/nda', {
+      const response = await apiFetch<ApiResponse<NDA>>('/api/nda', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -65,7 +69,7 @@ export function useSignNDA() {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: SignNDARequest }) => {
-      const response = await apiFetch<ApiResponse<NDA>>(`/nda/${id}/sign`, {
+      const response = await apiFetch<ApiResponse<NDA>>(`/api/nda/${id}/sign`, {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -84,7 +88,7 @@ export function useRejectNDA() {
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: RejectNDARequest }) => {
       // Handle both response formats for compatibility
-      const response = await apiFetch<ApiResponse<NDA> | { data: NDA }>(`/nda/${id}/reject`, {
+      const response = await apiFetch<ApiResponse<NDA> | { data: NDA }>(`/api/nda/${id}/reject`, {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -106,7 +110,7 @@ export function useDeleteNDA() {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      return await apiFetch<ApiResponse<string>>(`/nda/${id}`, {
+      return await apiFetch<ApiResponse<string>>(`/api/nda/${id}`, {
         method: 'DELETE',
       });
     },

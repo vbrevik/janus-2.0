@@ -2,7 +2,7 @@
 
 mod auth;
 mod person;
-mod vendors;
+mod organizations;
 mod vendor_relations;
 mod relations;
 mod access;

@@ -12,60 +12,58 @@ use s3::{Bucket, Region};
 use s3::creds::Credentials;
 
 /// List document references for a personnel
-#[get("/?<personnel_id>&<document_type>&<status>")]
+#[get("/?<person_id>&<document_type>&<status>")]
 pub async fn list_document_references(
     db: &State<PgPool>,
-    personnel_id: Option<i32>,
+    person_id: Option<i32>, // Changed from personnel_id
     document_type: Option<String>,
     status: Option<String>,
     _auth: AuthGuard,
 ) -> Result<Json<Vec<DocumentReference>>, Status> {
     // Query shape reference (intentionally unused): kept for documentation of selected columns
-    let _ = "SELECT id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE 1=1";
+    let _ = "SELECT id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE 1=1";
 
-    // Use query_as! macro which is easier to work with
-    let documents = if let Some(pid) = personnel_id {
-        // Clone to avoid move issues
+    // Use runtime queries since person table doesn't exist at compile time yet
+    let documents = if let Some(pid) = person_id {
         let doc_type_str = document_type.as_ref().map(|s| s.as_str());
         let status_str = status.as_ref().map(|s| s.as_str());
         
         if let (Some(t), Some(s)) = (doc_type_str, status_str) {
-            sqlx::query_as!(
-                DocumentReference,
-                "SELECT id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE personnel_id = $1 AND document_type = $2 AND status = $3 ORDER BY issued_date DESC NULLS LAST, created_at DESC",
-                pid, t, s
+            sqlx::query_as::<sqlx::Postgres, DocumentReference>(
+                "SELECT id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE person_id = $1 AND document_type = $2 AND status = $3 ORDER BY issued_date DESC NULLS LAST, created_at DESC"
             )
+            .bind(pid)
+            .bind(t)
+            .bind(s)
             .fetch_all(db.inner())
             .await
         } else if let Some(t) = doc_type_str {
-            sqlx::query_as!(
-                DocumentReference,
-                "SELECT id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE personnel_id = $1 AND document_type = $2 ORDER BY issued_date DESC NULLS LAST, created_at DESC",
-                pid, t
+            sqlx::query_as::<sqlx::Postgres, DocumentReference>(
+                "SELECT id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE person_id = $1 AND document_type = $2 ORDER BY issued_date DESC NULLS LAST, created_at DESC"
             )
+            .bind(pid)
+            .bind(t)
             .fetch_all(db.inner())
             .await
         } else if let Some(s) = status_str {
-            sqlx::query_as!(
-                DocumentReference,
-                "SELECT id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE personnel_id = $1 AND status = $2 ORDER BY issued_date DESC NULLS LAST, created_at DESC",
-                pid, s
+            sqlx::query_as::<sqlx::Postgres, DocumentReference>(
+                "SELECT id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE person_id = $1 AND status = $2 ORDER BY issued_date DESC NULLS LAST, created_at DESC"
             )
+            .bind(pid)
+            .bind(s)
             .fetch_all(db.inner())
             .await
         } else {
-            sqlx::query_as!(
-                DocumentReference,
-                "SELECT id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE personnel_id = $1 ORDER BY issued_date DESC NULLS LAST, created_at DESC",
-                pid
+            sqlx::query_as::<sqlx::Postgres, DocumentReference>(
+                "SELECT id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE person_id = $1 ORDER BY issued_date DESC NULLS LAST, created_at DESC"
             )
+            .bind(pid)
             .fetch_all(db.inner())
             .await
         }
     } else {
-        sqlx::query_as!(
-            DocumentReference,
-            "SELECT id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references ORDER BY issued_date DESC NULLS LAST, created_at DESC"
+        sqlx::query_as::<sqlx::Postgres, DocumentReference>(
+            "SELECT id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references ORDER BY issued_date DESC NULLS LAST, created_at DESC"
         )
         .fetch_all(db.inner())
         .await
@@ -85,21 +83,20 @@ pub async fn get_document_reference(
     id: i32,
     _auth: AuthGuard,
 ) -> Result<Json<DocumentReference>, Status> {
-    let doc = sqlx::query_as!(
-        DocumentReference,
+    let doc = sqlx::query_as::<sqlx::Postgres, DocumentReference>(
         r#"
-        SELECT id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at
+        SELECT id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at
         FROM document_references
         WHERE id = $1
-        "#,
-        id
+        "#
     )
+    .bind(id)
     .fetch_one(db.inner())
     .await
     .map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?;
+        eprintln!("Database error: {:?}", e);
+        Status::InternalServerError
+    })?;
 
     Ok(Json(doc))
 }
@@ -111,67 +108,9 @@ pub async fn create_document_reference(
     data: Json<CreateDocumentReferenceRequest>,
     auth: AuthGuard,
 ) -> Result<Json<DocumentReference>, Status> {
-    let user_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
-    
-    // Get personnel_id from user (similar to discussions)
-    let user = sqlx::query!(
-        "SELECT username FROM users WHERE id = $1",
-        user_id
-    )
-    .fetch_optional(db.inner())
-    .await
-    .map_err(|_| Status::InternalServerError)?
-    .ok_or(Status::NotFound)?;
-
-    // Find linked personnel by email matching username
-    // Try multiple matching strategies:
-    // 1. username% - matches if email starts with username (e.g., "johndoe" matches "johndoe@...")
-    // 2. username.% - matches if email starts with username followed by dot (e.g., "john" matches "john.doe@...")
-    // 3. If username is long (5+ chars), try splitting it and adding a dot (e.g., "johndoe" -> "john.doe")
-    
-    let pattern1 = format!("{}%", user.username);
-    let pattern2 = format!("{}.%", user.username);
-    
-    // Try splitting long usernames (assume compound like "johndoe" -> "john.doe")
-    let pattern3 = if user.username.len() >= 5 {
-        let mid = user.username.len() / 2;
-        Some(format!("{}.{}%", &user.username[..mid], &user.username[mid..]))
-    } else {
-        None
-    };
-    
-    let personnel_id = if let Some(p3) = pattern3 {
-        sqlx::query_scalar!(
-            "SELECT id FROM personnel WHERE email LIKE $1 OR email LIKE $2 OR email LIKE $3 LIMIT 1",
-            pattern1,
-            pattern2,
-            p3
-        )
-        .fetch_optional(db.inner())
-        .await
-        .map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?
-    } else {
-        sqlx::query_scalar!(
-            "SELECT id FROM personnel WHERE email LIKE $1 OR email LIKE $2 LIMIT 1",
-            pattern1,
-            pattern2
-        )
-        .fetch_optional(db.inner())
-        .await
-        .map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?
-    };
-
-    // If personnel not found, require personnel_id to be found - this is expected behavior for self-reporting
-    let personnel_id = personnel_id.ok_or_else(|| {
-        eprintln!("Personnel not found for user: {}", user.username);
-        Status::NotFound
-    })?;
+    let person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
+    // The authenticated user's person_id is already in auth.claims.sub
+    // No need to look up - the person_id is the authenticated person
     let document_type = data.document_type.clone().unwrap_or_else(|| "security_brief".to_string());
 
     let issued_date = match &data.issued_date {
@@ -179,28 +118,27 @@ pub async fn create_document_reference(
         None => None,
     };
 
-    let doc = sqlx::query_as!(
-        DocumentReference,
+    let doc = sqlx::query_as::<sqlx::Postgres, DocumentReference>(
         r#"
-        INSERT INTO document_references (personnel_id, title, document_type, description, issued_date, location, self_reported_by, notes)
+        INSERT INTO document_references (person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, notes)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at
-        "#,
-        personnel_id,
-        data.title,
-        document_type,
-        data.description,
-        issued_date,
-        data.location,
-        user_id,
-        data.notes
+        RETURNING id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at
+        "#
     )
+    .bind(person_id)
+    .bind(&data.title)
+    .bind(&document_type)
+    .bind(data.description.as_deref())
+    .bind(issued_date)
+    .bind(data.location.as_deref())
+    .bind(person_id) // self_reported_by_person_id is the same as person_id
+    .bind(data.notes.as_deref())
     .fetch_one(db.inner())
     .await
     .map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?;
+        eprintln!("Database error: {:?}", e);
+        Status::InternalServerError
+    })?;
 
     Ok(Json(doc))
 }
@@ -213,36 +151,38 @@ pub async fn update_document_reference(
     data: Json<UpdateDocumentReferenceRequest>,
     _auth: AuthGuard,
 ) -> Result<Json<DocumentReference>, Status> {
-    let doc = sqlx::query_as!(
-        DocumentReference,
+    let issued_date_opt = data.issued_date.as_ref()
+        .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
+
+    let doc = sqlx::query_as::<sqlx::Postgres, DocumentReference>(
         r#"
         UPDATE document_references
         SET title = COALESCE($1, title),
             document_type = COALESCE($2, document_type),
             description = COALESCE($3, description),
-            issued_date = COALESCE($4::date, issued_date),
+            issued_date = COALESCE($4, issued_date),
             location = COALESCE($5, location),
             status = COALESCE($6, status),
             notes = COALESCE($7, notes),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $8
-        RETURNING id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at
-        "#,
-        data.title.as_ref(),
-        data.document_type.as_ref(),
-        data.description.as_ref(),
-        data.issued_date.as_ref().and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok()),
-        data.location.as_ref(),
-        data.status.as_ref(),
-        data.notes.as_ref(),
-        id
+        RETURNING id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at
+        "#
     )
+    .bind(data.title.as_deref())
+    .bind(data.document_type.as_deref())
+    .bind(data.description.as_deref())
+    .bind(issued_date_opt)
+    .bind(data.location.as_deref())
+    .bind(data.status.as_deref())
+    .bind(data.notes.as_deref())
+    .bind(id)
     .fetch_one(db.inner())
     .await
     .map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?;
+        eprintln!("Database error: {:?}", e);
+        Status::InternalServerError
+    })?;
 
     Ok(Json(doc))
 }
@@ -301,8 +241,7 @@ pub async fn upload_document_attachment(
     let path = format!("s3://{}/{}", bucket_name, key);
 
     // Update document reference in database
-    let doc = sqlx::query_as!(
-        DocumentReference,
+    let doc = sqlx::query_as::<sqlx::Postgres, DocumentReference>(
         r#"
         UPDATE document_references
         SET attachment_path = $1,
@@ -310,19 +249,19 @@ pub async fn upload_document_attachment(
             attachment_original_name = $3,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $4
-        RETURNING id, personnel_id, title, document_type, description, issued_date, location, self_reported_by, self_reported_at, verified_by, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at
-        "#,
-        path,
-        data.mime_type,
-        data.filename,
-        id
+        RETURNING id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at
+        "#
     )
+    .bind(&path)
+    .bind(&data.mime_type)
+    .bind(&data.filename)
+    .bind(id)
     .fetch_one(db.inner())
     .await
     .map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?;
+        eprintln!("Database error: {:?}", e);
+        Status::InternalServerError
+    })?;
 
     Ok(Json(doc))
 }
@@ -334,7 +273,8 @@ pub async fn delete_document_reference(
     id: i32,
     _auth: AuthGuard,
 ) -> Result<Json<&'static str>, Status> {
-    sqlx::query!("DELETE FROM document_references WHERE id = $1", id)
+    sqlx::query("DELETE FROM document_references WHERE id = $1")
+        .bind(id)
         .execute(db.inner())
         .await
     .map_err(|e| {

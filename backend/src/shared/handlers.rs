@@ -9,8 +9,8 @@ use crate::auth::middleware::AuthGuard;
 
 #[derive(Serialize)]
 pub struct DashboardStats {
-    pub total_personnel: i64,
-    pub total_vendors: i64,
+    pub total_persons: i64,
+    pub total_organizations: i64,
     pub total_access_grants: i64,
     pub active_access_grants: i64,
     pub recent_audit_logs: i64, // Last 24 hours
@@ -21,18 +21,18 @@ pub async fn get_stats(
     db: &State<PgPool>,
     _auth: AuthGuard,
 ) -> Result<Json<ApiResponse<DashboardStats>>, Status> {
-    // Get total personnel
-    let total_personnel: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM personnel WHERE deleted_at IS NULL"
+    // Get total persons
+    let total_persons: i64 = sqlx::query_scalar!(
+        "SELECT COUNT(*) FROM person WHERE deleted_at IS NULL"
     )
     .fetch_one(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?
     .unwrap_or(0);
 
-    // Get total vendors
-    let total_vendors: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM vendors WHERE deleted_at IS NULL"
+    // Get total organizations
+    let total_organizations: i64 = sqlx::query_scalar!(
+        "SELECT COUNT(*) FROM organizations WHERE deleted_at IS NULL"
     )
     .fetch_one(db.inner())
     .await
@@ -79,8 +79,8 @@ pub async fn get_stats(
     .unwrap_or(0);
 
     let stats = DashboardStats {
-        total_personnel,
-        total_vendors,
+        total_persons,
+        total_organizations,
         total_access_grants,
         active_access_grants,
         recent_audit_logs,

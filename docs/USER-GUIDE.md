@@ -20,8 +20,8 @@
 
 After logging in, you'll see the main navigation:
 
-- **Personnel** - Manage personnel records
-- **Vendors** - Manage vendor organizations
+- **Personnel** - Manage person records
+- **Organizations** - Manage organization organizations
 - **Access Control** - Grant/revoke access permissions
 - **Audit Logs** - View system activity logs
 - **Logout** - Sign out of the system
@@ -33,7 +33,7 @@ After logging in, you'll see the main navigation:
 ### Viewing Personnel
 
 1. Click **Personnel** in the navigation
-2. You'll see a table with all personnel records
+2. You'll see a table with all person records
 3. Use pagination to navigate through pages
 
 ### Creating Personnel
@@ -48,7 +48,7 @@ After logging in, you'll see the main navigation:
    - Department (required)
    - Position (required)
 3. Click **Create**
-4. The new personnel record will appear in the table
+4. The new person record will appear in the table
 
 ### Editing Personnel
 
@@ -66,16 +66,16 @@ After logging in, you'll see the main navigation:
 
 ---
 
-## Managing Vendors
+## Managing Organizations
 
-### Viewing Vendors
+### Viewing Organizations
 
-1. Click **Vendors** in the navigation
-2. You'll see a table with all vendor organizations
+1. Click **Organizations** in the navigation
+2. You'll see a table with all organization organizations
 
-### Creating Vendors
+### Creating Organizations
 
-1. Click **Add Vendor** button
+1. Click **Add Organization** button
 2. Fill in the form:
    - Company Name (required)
    - Contact Name (required)
@@ -85,16 +85,16 @@ After logging in, you'll see the main navigation:
    - Contract Number (required, unique)
 3. Click **Create**
 
-### Editing Vendors
+### Editing Organizations
 
-1. Find the vendor in the table
+1. Find the organization in the table
 2. Click **Edit** button
 2. Modify the information
 3. Click **Save Changes**
 
-### Deleting Vendors
+### Deleting Organizations
 
-1. Find the vendor in the table
+1. Find the organization in the table
 2. Click **Delete** button
 3. Confirm the deletion
 
@@ -169,7 +169,7 @@ For questions or issues:
 
 1. **Always log out** when finished
 2. **Keep credentials secure** - never share passwords
-3. **Update information regularly** - keep personnel records current
+3. **Update information regularly** - keep person records current
 4. **Verify clearance levels** before granting access
 5. **Document access grants** - use expiration dates
 

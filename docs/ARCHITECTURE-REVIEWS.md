@@ -12,7 +12,7 @@ Janus 2.0 has **three separate frontend applications**:
 
 1. **`frontend/`** (Admin) - Port 15510
    - Full CRUD for system administrators
-   - Features: Personnel, Vendors, Access Control, Info Systems, NDAs, Audit, Roles & Permissions
+   - Features: Personnel, Organizations, Access Control, Info Systems, NDAs, Audit, Roles & Permissions
 
 2. **`enduser-frontend/`** (End User) - Port 15514
    - Task management for end users
@@ -20,7 +20,7 @@ Janus 2.0 has **three separate frontend applications**:
 
 3. **`official-frontend/`** (Official) - Port 15515
    - Read-only lookup for official entities
-   - Features: Personnel lookup, Vendor verification
+   - Features: Personnel lookup, Organization verification
 
 All three connect to the **same backend** (port 15520) and **same database** (PostgreSQL).
 

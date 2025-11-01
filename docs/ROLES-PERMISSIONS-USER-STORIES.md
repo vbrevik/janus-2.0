@@ -204,7 +204,7 @@ WHERE permissions are sorted alphabetically by key
 
 **Acceptance Criteria:**
 - Returns all available permissions in the system
-- Includes default permissions: audit.read, audit.write, personnel.read, personnel.write, vendors.read, vendors.write
+- Includes default permissions: audit.read, audit.write, personnel.read, personnel.write, organizations.read, organizations.write
 - Response format: `{id, key, description}`
 
 ### US-009: Get Permissions for a Role
@@ -337,8 +337,8 @@ WHERE duplicate seeding is prevented (ON CONFLICT DO NOTHING)
 - `audit.write` - Write audit entries programmatically
 - `personnel.read` - Read personnel
 - `personnel.write` - Write personnel
-- `vendors.read` - Read vendors
-- `vendors.write` - Write vendors
+- `organizations.read` - Read organizations
+- `organizations.write` - Write organizations
 
 **EARS Format:**
 ```
@@ -353,9 +353,9 @@ WHERE duplicate seeding is prevented (ON CONFLICT DO NOTHING)
 **THE SYSTEM SHALL** assign default permissions to roles:
 
 - **Admin**: All permissions (full access)
-- **Manager**: audit.read, personnel.read, personnel.write, vendors.read, vendors.write
-- **Operator**: personnel.read, vendors.read
-- **Viewer**: personnel.read, vendors.read
+- **Manager**: audit.read, personnel.read, personnel.write, organizations.read, organizations.write
+- **Operator**: personnel.read, organizations.read
+- **Viewer**: personnel.read, organizations.read
 
 **EARS Format:**
 ```

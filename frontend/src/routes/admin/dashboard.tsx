@@ -123,7 +123,7 @@ function Dashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <a href="/admin/personnel" className="flex items-center gap-2 text-sm hover:text-primary">
+                      <a href="/admin/person" className="flex items-center gap-2 text-sm hover:text-primary">
                         <Users className="h-4 w-4" />
                         Manage Personnel
                       </a>

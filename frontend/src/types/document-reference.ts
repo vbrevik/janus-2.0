@@ -1,6 +1,6 @@
 export interface DocumentReference {
   id: number
-  personnel_id: number
+  person_id: number // Changed from person_id
   document_type: string
   document_number: string | null
   issued_by: string | null
@@ -14,9 +14,10 @@ export interface DocumentReference {
   title?: string
   description?: string | null
   location?: string | null
-  self_reported_by?: number
+  issued_date?: string | null // ISO date string
+  self_reported_by_person_id?: number // Changed from self_reported_by
   self_reported_at?: string
-  verified_by?: number | null
+  verified_by_person_id?: number | null // Changed from verified_by
   verified_at?: string | null
   status?: 'PENDING' | 'VERIFIED' | 'REJECTED'
   notes?: string | null
@@ -26,12 +27,13 @@ export interface DocumentReference {
 }
 
 export interface CreateDocumentReferenceRequest {
-  personnel_id: number
-  document_type: string
-  document_number?: string
-  issued_by?: string
-  issued_at?: string
-  expires_at?: string
+  title: string
+  document_type?: string // Defaults to 'security_brief'
+  description?: string | null
+  issued_date?: string | null // ISO date string YYYY-MM-DD
+  location?: string | null
+  notes?: string | null
+  // person_id is derived from authenticated user, not required in request
 }
 
 export interface UpdateDocumentReferenceRequest {

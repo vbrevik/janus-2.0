@@ -35,7 +35,7 @@ frontend/
 │   │   └── protected-route.tsx
 │   ├── hooks/            # Custom React hooks
 │   │   ├── use-personnel.ts
-│   │   ├── use-vendors.ts
+│   │   ├── use-organizations.ts
 │   │   └── ...
 │   ├── contexts/         # React contexts
 │   │   └── auth-context.tsx
@@ -44,7 +44,7 @@ frontend/
 │   │   └── utils.ts
 │   └── types/            # TypeScript type definitions
 │       ├── personnel.ts
-│       ├── vendor.ts
+│       ├── organization.ts
 │       └── ...
 ├── public/               # Static assets
 ├── e2e/                  # Playwright E2E tests
@@ -60,11 +60,11 @@ Janus 2.0 has a **single unified frontend application** with role-based routing:
 **`frontend/`** (Unified) - Port 15510
 - **Admin Routes** (`/admin/*`): Full CRUD for administrators
   - All management features
-  - Personnel, vendors, access control, audit logs, etc.
+  - Personnel, organizations, access control, audit logs, etc.
 - **EndUser Routes** (`/enduser/*`): Task management for end users
   - NDA signing, document references, discussions
 - **Official Routes** (`/official/*`): Read-only lookup for official entities
-  - Personnel lookup, vendor lookup
+  - Personnel lookup, organization lookup
 
 **Route Protection**: All routes are protected by role-based guards (`ProtectedRoute` component)
 **Shared Backend**: Connects to same backend API (port 15520)

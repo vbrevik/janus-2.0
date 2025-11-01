@@ -8,10 +8,10 @@ export type AccessStatus = 'ACTIVE' | 'REVOKED' | 'EXPIRED';
 
 export interface ComputerAccess {
   id: number;
-  personnel_id: number;
+  person_id: number; // Changed from person_id
   system_name: string;
   access_level: AccessLevel;
-  granted_by: number;
+  granted_by_person_id: number; // Changed from granted_by
   granted_at: string;
   expires_at: string | null;
   status: AccessStatus;
@@ -21,10 +21,10 @@ export interface ComputerAccess {
 
 export interface DataAccess {
   id: number;
-  personnel_id: number;
+  person_id: number; // Changed from person_id
   data_classification: DataClassification;
   access_level: 'READ' | 'WRITE' | 'DELETE';
-  granted_by: number;
+  granted_by_person_id: number; // Changed from granted_by
   granted_at: string;
   expires_at: string | null;
   status: AccessStatus;
@@ -34,39 +34,39 @@ export interface DataAccess {
 
 export interface PhysicalAccess {
   id: number;
-  personnel_id: number;
+  person_id: number; // Changed from person_id
   zone_name: string;
   access_level: PhysicalAccessLevel;
   valid_from: string;
   valid_until: string | null;
-  granted_by: number;
+  granted_by_person_id: number; // Changed from granted_by
   status: AccessStatus;
   created_at: string;
   updated_at: string;
 }
 
-export interface PersonnelAccess {
+export interface PersonAccess {
   computer_access: ComputerAccess[];
   data_access: DataAccess[];
   physical_access: PhysicalAccess[];
 }
 
 export interface CreateComputerAccessRequest {
-  personnel_id: number;
+  person_id: number; // Changed from person_id
   system_name: string;
   access_level: AccessLevel;
   expires_at?: string;
 }
 
 export interface CreateDataAccessRequest {
-  personnel_id: number;
+  person_id: number; // Changed from person_id
   data_classification: DataClassification;
   access_level: 'READ' | 'WRITE' | 'DELETE';
   expires_at?: string;
 }
 
 export interface CreatePhysicalAccessRequest {
-  personnel_id: number;
+  person_id: number; // Changed from person_id
   zone_name: string;
   access_level: PhysicalAccessLevel;
   valid_until?: string;

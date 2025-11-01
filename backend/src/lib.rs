@@ -5,7 +5,7 @@
 
 pub mod auth;
 pub mod person;
-pub mod vendors;
+pub mod organizations;
 pub mod vendor_relations;
 pub mod relations;
 pub mod access;

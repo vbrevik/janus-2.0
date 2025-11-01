@@ -6,15 +6,15 @@ use validator::Validate;
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct DocumentReference {
     pub id: i32,
-    pub personnel_id: i32,
+    pub person_id: i32, // Changed from personnel_id
     pub title: String,
     pub document_type: String, // security_brief, briefing, report, certification, other
     pub description: Option<String>,
     pub issued_date: Option<NaiveDate>,
     pub location: Option<String>,
-    pub self_reported_by: i32,
+    pub self_reported_by_person_id: i32, // Changed from self_reported_by
     pub self_reported_at: NaiveDateTime,
-    pub verified_by: Option<i32>,
+    pub verified_by_person_id: Option<i32>, // Changed from verified_by
     pub verified_at: Option<NaiveDateTime>,
     pub status: String, // PENDING, VERIFIED, REJECTED
     pub notes: Option<String>,

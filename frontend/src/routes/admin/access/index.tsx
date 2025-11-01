@@ -9,11 +9,12 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { X } from 'lucide-react'
 import { useGrantComputerAccess, useGrantDataAccess, useGrantPhysicalAccess } from '@/hooks/use-access'
-import { usePersonnelList } from '@/hooks/use-personnel'
+import { usePersonList } from '@/hooks/use-person'
 import { useInfoSystemsList } from '@/hooks/use-info-systems'
 import { Computer, Database, Key } from 'lucide-react'
 import type { CreateComputerAccessRequest, CreateDataAccessRequest, CreatePhysicalAccessRequest } from '@/types/access'
 import type { InfoSystem } from '@/types/info-system'
+import type { Person } from '@/types/person'
 
 export const Route = createFileRoute('/admin/access/')({
   component: AccessControl,
@@ -22,9 +23,9 @@ export const Route = createFileRoute('/admin/access/')({
 type AccessType = 'computer' | 'data' | 'physical'
 
 function AccessControl() {
-  const [selectedPersonnelId, setSelectedPersonnelId] = useState<number>(0)
+  const [selectedPersonId, setSelectedPersonId] = useState<number>(0)
   const [openSection, setOpenSection] = useState<AccessType | null>(null)
-  const { data: personnelPage } = usePersonnelList(1, 100)
+  const { data: personPage } = usePersonList(1, 100) // Changed from personnelPage
   
   const grantComputerAccess = useGrantComputerAccess()
   const grantDataAccess = useGrantDataAccess()
@@ -60,12 +61,12 @@ function AccessControl() {
             </CardHeader>
             <CardContent>
               <Label htmlFor="personnel">Personnel</Label>
-              <Select value={selectedPersonnelId > 0 ? String(selectedPersonnelId) : ''} onValueChange={(v) => setSelectedPersonnelId(parseInt(v))}>
+              <Select value={selectedPersonId > 0 ? String(selectedPersonId) : ''} onValueChange={(v) => setSelectedPersonId(parseInt(v))}>
                 <SelectTrigger id="personnel">
                   <SelectValue placeholder="Choose personnel" />
                 </SelectTrigger>
                 <SelectContent>
-                  {personnelPage?.items.map((p) => (
+                  {personPage?.items.map((p: Person) => (
                     <SelectItem key={p.id} value={String(p.id)}>
                       {p.first_name} {p.last_name} (#{p.id})
                     </SelectItem>
@@ -91,7 +92,7 @@ function AccessControl() {
                 {openSection === 'computer' ? (
                   <div className="space-y-4">
                     <ComputerAccessForm 
-                      personnelId={selectedPersonnelId}
+                      personId={selectedPersonId}
                       onSubmit={(data) => handleSubmit('computer', data)}
                       isLoading={grantComputerAccess.isPending}
                     />
@@ -122,7 +123,7 @@ function AccessControl() {
                 {openSection === 'data' ? (
                   <div className="space-y-4">
                     <DataAccessForm 
-                      personnelId={selectedPersonnelId}
+                      personId={selectedPersonId}
                       onSubmit={(data) => handleSubmit('data', data)}
                       isLoading={grantDataAccess.isPending}
                     />
@@ -153,7 +154,7 @@ function AccessControl() {
                 {openSection === 'physical' ? (
                   <div className="space-y-4">
                     <PhysicalAccessForm 
-                      personnelId={selectedPersonnelId}
+                      personId={selectedPersonId}
                       onSubmit={(data) => handleSubmit('physical', data)}
                       isLoading={grantPhysicalAccess.isPending}
                     />
@@ -176,8 +177,8 @@ function AccessControl() {
 }
 
 // Computer Access Form Component
-function ComputerAccessForm({ personnelId, onSubmit, isLoading }: { 
-  personnelId: number
+function ComputerAccessForm({ personId, onSubmit, isLoading }: { 
+  personId: number
   onSubmit: (data: CreateComputerAccessRequest) => void
   isLoading: boolean 
 }) {
@@ -189,7 +190,7 @@ function ComputerAccessForm({ personnelId, onSubmit, isLoading }: {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit({
-      personnel_id: personnelId,
+      person_id: personId,
       system_name: systemName,
       access_level: accessLevel,
       expires_at: expiresAt || undefined,
@@ -246,8 +247,8 @@ function ComputerAccessForm({ personnelId, onSubmit, isLoading }: {
 }
 
 // Data Access Form Component
-function DataAccessForm({ personnelId, onSubmit, isLoading }: { 
-  personnelId: number
+function DataAccessForm({ personId, onSubmit, isLoading }: { 
+  personId: number
   onSubmit: (data: CreateDataAccessRequest) => void
   isLoading: boolean 
 }) {
@@ -258,7 +259,7 @@ function DataAccessForm({ personnelId, onSubmit, isLoading }: {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit({
-      personnel_id: personnelId,
+      person_id: personId,
       data_classification: classification,
       access_level: accessLevel,
       expires_at: expiresAt || undefined,
@@ -314,8 +315,8 @@ function DataAccessForm({ personnelId, onSubmit, isLoading }: {
 }
 
 // Physical Access Form Component
-function PhysicalAccessForm({ personnelId, onSubmit, isLoading }: { 
-  personnelId: number
+function PhysicalAccessForm({ personId, onSubmit, isLoading }: { 
+  personId: number
   onSubmit: (data: CreatePhysicalAccessRequest) => void
   isLoading: boolean 
 }) {
@@ -326,7 +327,7 @@ function PhysicalAccessForm({ personnelId, onSubmit, isLoading }: {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSubmit({
-      personnel_id: personnelId,
+      person_id: personId,
       zone_name: zoneName,
       access_level: accessLevel,
       valid_until: validUntil || undefined,

@@ -7,21 +7,22 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { usePersonnelList } from '@/hooks/use-personnel'
-import { usePersonnelAccess } from '@/hooks/use-access'
+import { usePersonList } from '@/hooks/use-person'
+import { usePersonAccess } from '@/hooks/use-access' // Changed from usePersonnelAccess
 import { Computer, Database, Key, Search } from 'lucide-react'
+import type { Person } from '@/types/person'
 
 export const Route = createFileRoute('/admin/access/view')({
   component: AccessView,
 })
 
 function AccessView() {
-  const [selectedPersonnelId, setSelectedPersonnelId] = useState<number>(0)
-  const { data: personnelPage } = usePersonnelList(1, 100)
-  const { data: accessData, isLoading } = usePersonnelAccess(selectedPersonnelId)
+  const [selectedPersonId, setSelectedPersonId] = useState<number>(0)
+  const { data: personPage } = usePersonList(1, 100) // Changed from personnelPage
+  const { data: accessData, isLoading } = usePersonAccess(selectedPersonId) // Changed from usePersonnelAccess
 
   const handleSearch = () => {
-    // Access data will automatically load when selectedPersonnelId changes
+    // Access data will automatically load when selectedPersonId changes
   }
 
   return (
@@ -40,14 +41,14 @@ function AccessView() {
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="personnel-select">Personnel</Label>
                   <Select 
-                    value={selectedPersonnelId > 0 ? String(selectedPersonnelId) : ''} 
-                    onValueChange={(v) => setSelectedPersonnelId(parseInt(v))}
+                    value={selectedPersonId > 0 ? String(selectedPersonId) : ''} 
+                    onValueChange={(v) => setSelectedPersonId(parseInt(v))}
                   >
                     <SelectTrigger id="personnel-select">
                       <SelectValue placeholder="Choose personnel..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {personnelPage?.items.map((p) => (
+                      {personPage?.items.map((p: Person) => (
                         <SelectItem key={p.id} value={String(p.id)}>
                           {p.first_name} {p.last_name} (#{p.id})
                         </SelectItem>
@@ -56,7 +57,7 @@ function AccessView() {
                   </Select>
                 </div>
                 <div className="flex items-end">
-                  <Button onClick={handleSearch} disabled={!selectedPersonnelId}>
+                  <Button onClick={handleSearch} disabled={!selectedPersonId}>
                     <Search className="h-4 w-4 mr-2" />
                     View Access
                   </Button>
@@ -66,7 +67,7 @@ function AccessView() {
           </Card>
 
           {/* Access Details */}
-          {selectedPersonnelId > 0 && (
+          {selectedPersonId > 0 && (
             <>
               {isLoading ? (
                 <Card>

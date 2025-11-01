@@ -9,23 +9,25 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { usePersonnel } from '@/hooks/use-personnel'
+import { usePerson } from '@/hooks/use-person'
 import { useCreateVendorRelation, useDeleteVendorRelation } from '@/hooks/use-vendor-relations'
-import { useVendorList } from '@/hooks/use-vendors'
+import { useOrganizationList } from '@/hooks/use-organizations'
 import { useNDAList, useCreateNDA } from '@/hooks/use-nda'
 import { ArrowLeft, Trash2, Plus, FileText, Send } from 'lucide-react'
 import type { RelationType } from '@/types/vendor-relation'
+import type { Person } from '@/types/person'
+import type { NDA } from '@/types/nda'
 
-export const Route = createFileRoute('/personnel/$personnelId')({
+export const Route = createFileRoute('/person/$personId')({
   component: PersonnelDetails,
 })
 
 function PersonnelDetails() {
-  const { personnelId } = Route.useParams()
-  const personnelIdNum = parseInt(personnelId)
+  const { personId } = Route.useParams()
+  const personIdNum = parseInt(personId)
   const [activeTab, setActiveTab] = useState<'details' | 'vendor-relations' | 'ndas'>('details')
 
-  const { data: personnel, isLoading: personnelLoading } = usePersonnel(personnelIdNum)
+  const { data: person, isLoading: personLoading } = usePerson(personIdNum) // Changed from usePersonnel/personnel
   
   // Vendor relations will be fetched in the tab component
   
@@ -34,22 +36,26 @@ function PersonnelDetails() {
       <Layout>
         <div className="space-y-6">
           {/* Back Button */}
-          <Link to="/personnel">
+          <Link to="/person">
             <Button variant="ghost" className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" /> Back to Personnel
             </Button>
           </Link>
 
-          {personnelLoading ? (
+          {personLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : personnel ? (
+          ) : person ? (
             <>
               {/* Header */}
               <div>
-                <h1 className="text-3xl font-bold">{personnel.first_name} {personnel.last_name}</h1>
-                <p className="text-muted-foreground">{personnel.email}</p>
+                <h1 className="text-3xl font-bold">
+                  {person.first_name && person.last_name 
+                    ? `${person.first_name} ${person.last_name}`
+                    : person.username || person.email || 'Unnamed Person'}
+                </h1>
+                <p className="text-muted-foreground">{person.email || person.username || 'No contact info'}</p>
               </div>
 
               {/* Tabs */}
@@ -83,17 +89,21 @@ function PersonnelDetails() {
               </div>
 
               {/* Tab Content */}
-              {activeTab === 'details' && <DetailsTab personnel={personnel} />}
+              {activeTab === 'details' && <DetailsTab person={person} />}
               {activeTab === 'vendor-relations' && (
-                <VendorRelationsTab personnelId={personnelIdNum} personnelName={`${personnel.first_name} ${personnel.last_name}`} />
+                <VendorRelationsTab personId={personIdNum} personName={
+                  person.first_name && person.last_name 
+                    ? `${person.first_name} ${person.last_name}` 
+                    : person.username || person.email || `Person #${person.id}`
+                } />
               )}
               {activeTab === 'ndas' && (
-                <NDATab personnelId={personnelIdNum} />
+                <NDATab personId={personIdNum} />
               )}
             </>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              Personnel not found
+              Person not found
             </div>
           )}
         </div>
@@ -102,7 +112,7 @@ function PersonnelDetails() {
   )
 }
 
-function DetailsTab({ personnel }: { personnel: any }) {
+function DetailsTab({ person }: { person: Person }) {
   return (
     <Card>
       <CardHeader>
@@ -112,31 +122,39 @@ function DetailsTab({ personnel }: { personnel: any }) {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label>First Name</Label>
-            <p className="text-sm font-medium">{personnel.first_name}</p>
+            <p className="text-sm font-medium">{person.first_name || 'N/A'}</p>
           </div>
           <div>
             <Label>Last Name</Label>
-            <p className="text-sm font-medium">{personnel.last_name}</p>
+            <p className="text-sm font-medium">{person.last_name || 'N/A'}</p>
           </div>
           <div>
             <Label>Email</Label>
-            <p className="text-sm font-medium">{personnel.email}</p>
+            <p className="text-sm font-medium">{person.email || 'N/A'}</p>
           </div>
           <div>
             <Label>Phone</Label>
-            <p className="text-sm font-medium">{personnel.phone || 'N/A'}</p>
+            <p className="text-sm font-medium">{person.phone || 'N/A'}</p>
+          </div>
+          <div>
+            <Label>Username</Label>
+            <p className="text-sm font-medium">{person.username || 'N/A'}</p>
+          </div>
+          <div>
+            <Label>Role</Label>
+            <p className="text-sm font-medium">{person.role || 'N/A'}</p>
           </div>
           <div>
             <Label>Department</Label>
-            <p className="text-sm font-medium">{personnel.department || 'N/A'}</p>
+            <p className="text-sm font-medium">{person.department || 'N/A'}</p>
           </div>
           <div>
             <Label>Position</Label>
-            <p className="text-sm font-medium">{personnel.position || 'N/A'}</p>
+            <p className="text-sm font-medium">{person.position || 'N/A'}</p>
           </div>
           <div>
             <Label>Clearance Level</Label>
-            <Badge>{personnel.clearance_level}</Badge>
+            <Badge>{person.clearance_level || 'UNCLASSIFIED'}</Badge>
           </div>
         </div>
       </CardContent>
@@ -144,7 +162,7 @@ function DetailsTab({ personnel }: { personnel: any }) {
   )
 }
 
-function VendorRelationsTab({ personnelId, personnelName }: { personnelId: number; personnelName: string }) {
+function VendorRelationsTab({ personId, personName }: { personId: number; personName: string }) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [selectedVendor, setSelectedVendor] = useState<number>(0)
   const [relationType, setRelationType] = useState<RelationType>('employee')
@@ -152,12 +170,12 @@ function VendorRelationsTab({ personnelId, personnelName }: { personnelId: numbe
   const [validUntil, setValidUntil] = useState('')
   const [notes, setNotes] = useState('')
   
-  const { data: vendors } = useVendorList(1, 100)
+  const { data: organizations } = useOrganizationList(1, 100) // Changed from useVendorList/vendors
   const createRelation = useCreateVendorRelation()
   const deleteRelation = useDeleteVendorRelation()
   
   // Get relations - for now, we'll need to fetch from each vendor
-  // TODO: Implement a backend endpoint to get relations by personnel_id
+  // TODO: Implement a backend endpoint to get relations by person_id
   const personnelRelations: any[] = []
 
   const handleCreateRelation = async () => {
@@ -169,7 +187,7 @@ function VendorRelationsTab({ personnelId, personnelName }: { personnelId: numbe
     try {
       await createRelation.mutateAsync({
         vendor_id: selectedVendor,
-        related_personnel_id: personnelId,
+        related_person_id: personId,
         relation_type: relationType,
         valid_from: validFrom || undefined,
         valid_until: validUntil || undefined,
@@ -202,7 +220,7 @@ function VendorRelationsTab({ personnelId, personnelName }: { personnelId: numbe
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Vendor Relations for {personnelName}</CardTitle>
+            <CardTitle>Organization Relations for {personName}</CardTitle>
             <Button onClick={() => setShowAddForm(!showAddForm)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Vendor Relation
@@ -221,7 +239,7 @@ function VendorRelationsTab({ personnelId, personnelName }: { personnelId: numbe
                       <SelectValue placeholder="Select vendor" />
                     </SelectTrigger>
                     <SelectContent>
-                      {vendors?.items.map((v) => (
+                      {organizations?.items.map((v) => (
                         <SelectItem key={v.id} value={String(v.id)}>
                           {v.company_name}
                         </SelectItem>
@@ -299,7 +317,7 @@ function VendorRelationsTab({ personnelId, personnelName }: { personnelId: numbe
   )
 }
 
-function NDATab({ personnelId }: { personnelId: number }) {
+function NDATab({ personId }: { personId: number }) {
   const [showSendDialog, setShowSendDialog] = useState(false)
   const [newNDA, setNewNDA] = useState({
     title: '',
@@ -309,8 +327,8 @@ function NDATab({ personnelId }: { personnelId: number }) {
     sent_by_vendor_id: '',
   })
   
-  const { data: ndas, isLoading, refetch } = useNDAList({ personnel_id: personnelId })
-  const { data: vendors } = useVendorList(1, 100)
+  const { data: ndas, isLoading, refetch } = useNDAList({ person_id: personId })
+  const { data: organizations } = useOrganizationList(1, 100) // Changed from useVendorList/vendors
   const createNDA = useCreateNDA()
   
   const handleSendNDA = async () => {
@@ -321,7 +339,7 @@ function NDATab({ personnelId }: { personnelId: number }) {
     
     try {
       await createNDA.mutateAsync({
-        personnel_id: personnelId,
+        person_id: personId,
         title: newNDA.title,
         content: newNDA.content,
         version: newNDA.version || undefined,
@@ -381,7 +399,7 @@ function NDATab({ personnelId }: { personnelId: number }) {
             </div>
           ) : ndas && ndas.length > 0 ? (
             <div className="space-y-3">
-              {ndas.map((nda) => (
+              {ndas.map((nda: NDA) => (
                 <Card key={nda.id}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -461,7 +479,7 @@ function NDATab({ personnelId }: { personnelId: number }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">None</SelectItem>
-                  {vendors?.items.map((v) => (
+                  {organizations?.items.map((v) => (
                     <SelectItem key={v.id} value={String(v.id)}>
                       {v.company_name}
                     </SelectItem>

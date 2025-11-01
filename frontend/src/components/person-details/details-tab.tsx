@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useUpdatePersonnel } from '@/hooks/use-personnel'
+import { useUpdatePerson } from '@/hooks/use-person'
 import { Edit2, Check, X } from 'lucide-react'
 
 interface DetailsTabProps {
@@ -21,7 +21,7 @@ export function DetailsTab({ personnel }: DetailsTabProps) {
     department: personnel.department || '',
     position: personnel.position || '',
   })
-  const updateMutation = useUpdatePersonnel(personnel.id)
+  const updateMutation = useUpdatePerson(personnel.id) // Changed from useUpdatePersonnel
 
   const handleSave = async () => {
     try {

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ProtectedRoute } from '@/components/protected-route'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Layout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,47 +8,47 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useVendor, useUpdateVendor } from '@/hooks/use-vendors'
-import { useVendorRelations, useCreateRelation, useDeleteRelation, useEntityHierarchy } from '@/hooks/use-relations'
-import { usePersonnelList } from '@/hooks/use-personnel'
-import { useVendorList } from '@/hooks/use-vendors'
+import { useOrganization, useUpdateOrganization } from '@/hooks/use-organizations'
+import { useOrganizationRelations, useCreateRelation, useDeleteRelation, useEntityHierarchy } from '@/hooks/use-relations'
+import { usePersonList } from '@/hooks/use-person'
+import { useOrganizationList } from '@/hooks/use-organizations'
 import { ArrowLeft, Trash2, Plus } from 'lucide-react'
 import type { RelationType } from '@/types/relation'
 
-export const Route = createFileRoute('/vendors/$vendorId')({
-  component: VendorDetails,
+export const Route = createFileRoute('/admin/organizations/$vendorId')({
+  component: OrganizationDetails,
 })
 
-function VendorDetails() {
-  const { vendorId } = Route.useParams()
-  const vendorIdNum = parseInt(vendorId)
+function OrganizationDetails() {
+  const { vendorId } = Route.useParams() // Route uses $vendorId
+  const organizationIdNum = parseInt(vendorId)
   const [activeTab, setActiveTab] = useState<'details' | 'relations'>('details')
 
-  const { data: vendor, isLoading: vendorLoading } = useVendor(vendorIdNum)
-  const { data: relations, isLoading: relationsLoading } = useVendorRelations(vendorIdNum)
-  const { data: hierarchy } = useEntityHierarchy('vendor', vendorIdNum)
+  const { data: organization, isLoading: organizationLoading } = useOrganization(organizationIdNum)
+  const { data: relations, isLoading: relationsLoading } = useOrganizationRelations(organizationIdNum)
+  const { data: hierarchy } = useEntityHierarchy('organization', organizationIdNum)
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={['admin']}>
       <Layout>
         <div className="space-y-6">
           {/* Back Button */}
-          <Link to="/vendors">
+          <Link to="/organizations">
             <Button variant="ghost" className="mb-4">
-              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Vendors
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Organizations
             </Button>
           </Link>
 
-          {vendorLoading ? (
+          {organizationLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : vendor ? (
+          ) : organization ? (
             <>
               {/* Header */}
               <div>
-                <h1 className="text-3xl font-bold">{vendor.company_name}</h1>
-                <p className="text-muted-foreground">Vendor Management</p>
+                <h1 className="text-3xl font-bold">{organization.company_name}</h1>
+                <p className="text-muted-foreground">Organization Management</p>
               </div>
 
               {/* Tabs */}
@@ -71,12 +71,12 @@ function VendorDetails() {
 
               {/* Tab Content */}
               {activeTab === 'details' && (
-                <DetailsTab vendor={vendor} />
+                <DetailsTab organization={organization} />
               )}
 
               {activeTab === 'relations' && (
                 <RelationsTab
-                  vendorId={vendorIdNum}
+                  organizationId={organizationIdNum}
                   relations={relations}
                   hierarchy={hierarchy}
                   isLoading={relationsLoading}
@@ -86,7 +86,7 @@ function VendorDetails() {
           ) : (
             <Card>
               <CardContent className="py-12">
-                <p className="text-center text-muted-foreground">Vendor not found</p>
+                <p className="text-center text-muted-foreground">Organization not found</p>
               </CardContent>
             </Card>
           )}
@@ -96,16 +96,16 @@ function VendorDetails() {
   )
 }
 
-function DetailsTab({ vendor }: { vendor: any }) {
+function DetailsTab({ organization }: { organization: any }) {
   const [editing, setEditing] = useState(false)
-  const updateMutation = useUpdateVendor(vendor.id)
+  const updateMutation = useUpdateOrganization(organization.id)
   const [form, setForm] = useState({
-    company_name: vendor.company_name,
-    contact_name: vendor.contact_name,
-    contact_email: vendor.contact_email,
-    contact_phone: vendor.contact_phone || '',
-    contract_number: vendor.contract_number,
-    clearance_level: vendor.clearance_level,
+    company_name: organization.company_name,
+    contact_name: organization.contact_name,
+    contact_email: organization.contact_email,
+    contact_phone: organization.contact_phone || '',
+    contract_number: organization.contract_number,
+    clearance_level: organization.clearance_level,
   })
 
   const handleSave = async () => {
@@ -201,29 +201,29 @@ function DetailsTab({ vendor }: { vendor: any }) {
             <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
           </>
         ) : (
-          <Button onClick={() => setEditing(true)}>Edit Vendor</Button>
+          <Button onClick={() => setEditing(true)}>Edit Organization</Button>
         )}
       </div>
     </div>
   )
 }
 
-function RelationsTab({ vendorId, relations, isLoading }: { 
-  vendorId: number
+function RelationsTab({ organizationId, relations, isLoading }: { 
+  organizationId: number
   relations: any[] | undefined
   hierarchy: any[] | undefined
   isLoading: boolean
 }) {
   const [showAddForm, setShowAddForm] = useState(false)
-  const { data: personnelPage } = usePersonnelList(1, 100)
-  const { data: vendorsPage } = useVendorList(1, 100)
+  const { data: personPage } = usePersonList(1, 100) // Changed from personnelPage/usePersonnelList
+  const { data: organizationsPage } = useOrganizationList(1, 100)
   const createMutation = useCreateRelation()
   const deleteMutation = useDeleteRelation()
 
   const [form, setForm] = useState<{
     relation_type: RelationType | ''
-    related_vendor_id?: number
-    related_personnel_id?: number
+    related_organization_id?: number
+    related_person_id?: number
     notes?: string
   }>({
     relation_type: '',
@@ -235,17 +235,17 @@ function RelationsTab({ vendorId, relations, isLoading }: {
     if (!form.relation_type) return
     
     // Determine related entity based on which field is filled
-    const relatedEntityType = form.related_vendor_id ? 'vendor' : 'personnel'
-    const relatedEntityId = form.related_vendor_id || form.related_personnel_id
+    const relatedEntityType = form.related_organization_id ? 'organization' : 'person' // Changed from personnel
+    const relatedEntityId = form.related_organization_id || form.related_person_id
     
     if (!relatedEntityId) {
-      alert('Please select either a vendor or personnel')
+      alert('Please select either an organization or person')
       return
     }
     
     await createMutation.mutateAsync({
-      entity_type: 'vendor',
-      entity_id: vendorId,
+      entity_type: 'organization',
+      entity_id: organizationId,
       related_entity_type: relatedEntityType,
       related_entity_id: relatedEntityId,
       relation_type: form.relation_type as RelationType,
@@ -267,7 +267,7 @@ function RelationsTab({ vendorId, relations, isLoading }: {
     <div className="space-y-6">
       {/* Add Relation Button */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Vendor Relations</h2>
+        <h2 className="text-xl font-semibold">Organization Relations</h2>
         <Button onClick={() => setShowAddForm(true)}>
           <Plus className="h-4 w-4 mr-2" /> Add Relation
         </Button>
@@ -286,7 +286,7 @@ function RelationsTab({ vendorId, relations, isLoading }: {
                 <Select value={form.relation_type} onValueChange={(v) => setForm({ ...form, relation_type: v as RelationType })}>
                   <SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="sub_vendor">Sub-Vendor</SelectItem>
+                    <SelectItem value="sub_organization">Sub-Organization</SelectItem>
                     <SelectItem value="employee">Employee</SelectItem>
                     <SelectItem value="consultant">Consultant</SelectItem>
                     <SelectItem value="partner">Partner</SelectItem>
@@ -297,11 +297,11 @@ function RelationsTab({ vendorId, relations, isLoading }: {
 
               {(form.relation_type === 'sub_vendor' || form.relation_type === 'partner' || form.relation_type === 'subcontractor') && (
                 <div>
-                  <Label>Related Vendor</Label>
-                  <Select value={form.related_vendor_id?.toString() || ''} onValueChange={(v) => setForm({ ...form, related_vendor_id: parseInt(v) })}>
-                    <SelectTrigger><SelectValue placeholder="Select vendor..." /></SelectTrigger>
+                  <Label>Related Organization</Label>
+                  <Select value={form.related_organization_id?.toString() || ''} onValueChange={(v) => setForm({ ...form, related_organization_id: parseInt(v) })}>
+                    <SelectTrigger><SelectValue placeholder="Select organization..." /></SelectTrigger>
                     <SelectContent>
-                      {vendorsPage?.items.map((v) => (
+                      {organizationsPage?.items.map((v) => (
                         <SelectItem key={v.id} value={v.id.toString()}>{v.company_name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -311,12 +311,16 @@ function RelationsTab({ vendorId, relations, isLoading }: {
 
               {(form.relation_type === 'employee' || form.relation_type === 'consultant') && (
                 <div>
-                  <Label>Personnel</Label>
-                  <Select value={form.related_personnel_id?.toString() || ''} onValueChange={(v) => setForm({ ...form, related_personnel_id: parseInt(v) })}>
-                    <SelectTrigger><SelectValue placeholder="Select personnel..." /></SelectTrigger>
+                  <Label>Person</Label>
+                  <Select value={form.related_person_id?.toString() || ''} onValueChange={(v) => setForm({ ...form, related_person_id: parseInt(v) })}>
+                    <SelectTrigger><SelectValue placeholder="Select person..." /></SelectTrigger>
                     <SelectContent>
-                      {personnelPage?.items.map((p) => (
-                        <SelectItem key={p.id} value={p.id.toString()}>{p.first_name} {p.last_name}</SelectItem>
+                      {personPage?.items.map((p) => (
+                        <SelectItem key={p.id} value={p.id.toString()}>
+                          {p.first_name && p.last_name 
+                            ? `${p.first_name} ${p.last_name}`
+                            : p.username || p.email || `Person #${p.id}`}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -347,7 +351,7 @@ function RelationsTab({ vendorId, relations, isLoading }: {
                   <div className="space-y-2">
                     <Badge>{relation.relation_type}</Badge>
                     <p className="text-sm font-medium">
-                      {relation.related_entity_type === 'vendor' ? 'Vendor: ' : 'Personnel: '}
+                      {relation.related_entity_type === 'organization' ? 'Organization: ' : 'Person: '}
                       {relation.related_entity_name || `ID: ${relation.related_entity_id}`}
                     </p>
                     {relation.valid_from && (

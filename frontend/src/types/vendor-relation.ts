@@ -4,7 +4,7 @@ export interface VendorRelation {
   id: number;
   vendor_id: number;
   related_vendor_id: number | null;
-  related_personnel_id: number | null;
+  related_person_id: number | null;
   relation_type: RelationType;
   notes: string | null;
   valid_from: string;
@@ -17,7 +17,7 @@ export interface CreateVendorRelationRequest {
   vendor_id: number;
   relation_type: RelationType;
   related_vendor_id?: number;
-  related_personnel_id?: number;
+  related_person_id?: number;
   notes?: string;
   valid_from?: string; // YYYY-MM-DD format
   valid_until?: string; // YYYY-MM-DD format
@@ -26,7 +26,7 @@ export interface CreateVendorRelationRequest {
 export interface UpdateVendorRelationRequest {
   relation_type?: RelationType;
   related_vendor_id?: number;
-  related_personnel_id?: number;
+  related_person_id?: number;
   notes?: string;
   valid_from?: string;
   valid_until?: string;

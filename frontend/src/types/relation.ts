@@ -1,23 +1,32 @@
-// Unified relations types - supports personnel-personnel, personnel-vendor, vendor-vendor
+// Unified relations types - supports person-person, person-organization, organization-organization
 
-export type EntityType = 'personnel' | 'vendor';
+export type EntityType = 'person' | 'organization'; // Changed from 'personnel' | 'vendor'
 
 export type RelationType = 
-  // Vendor -> Vendor
+  // Organization -> Organization
   | 'sub_vendor' 
   | 'subcontractor'
-  // Vendor -> Personnel or Personnel -> Vendor
+  // Organization -> Person or Person -> Organization
   | 'employee' 
   | 'consultant' 
   | 'partner'
-  // Personnel -> Personnel
+  // Person -> Person (Schema.org based + organizational)
+  // Organizational/Professional Relations
   | 'manager'
   | 'supervisor'
   | 'subordinate'
   | 'reports_to'
-  | 'colleague'
+  | 'colleague'      // Schema.org: colleague
   | 'peer'
-  | 'team_member';
+  | 'team_member'
+  // Schema.org Personal Relations
+  | 'knows'          // Schema.org: knows (generic bi-directional social or work relation)
+  | 'related_to'     // Schema.org: relatedTo (generic familial relation)
+  | 'parent'         // Schema.org: parent
+  | 'child'          // Schema.org: child/children
+  | 'sibling'        // Schema.org: sibling
+  | 'spouse'         // Schema.org: spouse
+  | 'follows';       // Schema.org: follows (uni-directional social relation)
 
 export interface Relation {
   id: number;

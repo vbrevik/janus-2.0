@@ -6,16 +6,16 @@ use validator::Validate;
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Discussion {
     pub id: i32,
-    pub personnel_id: i32,
+    pub person_id: i32, // Changed from personnel_id
     pub subject: String,
     pub message: String,
     pub r#type: String, // discussion, report, request
     pub status: String, // OPEN, IN_PROGRESS, RESOLVED, CLOSED
     pub priority: String, // LOW, NORMAL, HIGH, URGENT
-    pub created_by: i32,
-    pub assigned_to: Option<i32>,
+    pub created_by_person_id: i32, // Changed from created_by
+    pub assigned_to_person_id: Option<i32>, // Changed from assigned_to
     pub resolved_at: Option<NaiveDateTime>,
-    pub resolved_by: Option<i32>,
+    pub resolved_by_person_id: Option<i32>, // Changed from resolved_by
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }
@@ -25,7 +25,7 @@ pub struct DiscussionReply {
     pub id: i32,
     pub discussion_id: i32,
     pub message: String,
-    pub created_by: i32,
+    pub created_by_person_id: i32, // Changed from created_by
     pub created_at: NaiveDateTime,
     pub updated_at: NaiveDateTime,
 }

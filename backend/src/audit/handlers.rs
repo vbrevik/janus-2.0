@@ -61,7 +61,7 @@ pub async fn list_audit_logs(
 
     // Build select query  
     let mut select_query = String::from(
-        "SELECT id, user_id, username, action, resource_type, resource_id, details, ip_address, user_agent, created_at FROM audit_log WHERE 1=1"
+        "SELECT id, person_id, username, action, resource_type, resource_id, details, ip_address, user_agent, created_at FROM audit_log WHERE 1=1"
     );
     
     let mut select_param_count = 1;
@@ -118,23 +118,22 @@ pub async fn create_audit_log(
     log_request: &CreateAuditLogRequest,
     db: &PgPool,
 ) -> Result<AuditLog, sqlx::Error> {
-    sqlx::query_as!(
-        AuditLog,
+    sqlx::query_as::<sqlx::Postgres, AuditLog>(
         r#"
         INSERT INTO audit_log 
-        (user_id, username, action, resource_type, resource_id, details, ip_address, user_agent)
+        (person_id, username, action, resource_type, resource_id, details, ip_address, user_agent)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id, user_id, username, action, resource_type, resource_id, details, ip_address, user_agent, created_at
-        "#,
-        log_request.user_id,
-        log_request.username,
-        log_request.action,
-        log_request.resource_type,
-        log_request.resource_id,
-        log_request.details,
-        log_request.ip_address,
-        log_request.user_agent
+        RETURNING id, person_id, username, action, resource_type, resource_id, details, ip_address, user_agent, created_at
+        "#
     )
+    .bind(log_request.person_id)
+    .bind(&log_request.username)
+    .bind(&log_request.action)
+    .bind(&log_request.resource_type)
+    .bind(log_request.resource_id)
+    .bind(log_request.details.as_deref())
+    .bind(log_request.ip_address.as_deref())
+    .bind(log_request.user_agent.as_deref())
     .fetch_one(db)
     .await
 }

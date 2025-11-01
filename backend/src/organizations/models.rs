@@ -1,67 +1,66 @@
-// Personnel data models
+// Organization data models
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
-pub struct Personnel {
+pub struct Organization {
     pub id: i32,
-    pub first_name: String,
-    pub last_name: String,
-    pub email: String,
-    pub phone: Option<String>,
+    pub company_name: String,
+    pub contact_name: String,
+    pub contact_email: String,
+    pub contact_phone: Option<String>,
     pub clearance_level: String,
-    pub department: String,
-    pub position: String,
+    pub contract_number: String,
+    pub department: Option<String>,
     pub deleted_at: Option<chrono::NaiveDateTime>,
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
-pub struct CreatePersonnelRequest {
-    #[validate(length(min = 1, max = 100))]
-    pub first_name: String,
+pub struct CreateOrganizationRequest {
+    #[validate(length(min = 1, max = 200))]
+    pub company_name: String,
     
     #[validate(length(min = 1, max = 100))]
-    pub last_name: String,
+    pub contact_name: String,
     
     #[validate(email)]
-    pub email: String,
+    pub contact_email: String,
     
     #[validate(length(max = 20))]
-    pub phone: Option<String>,
+    pub contact_phone: Option<String>,
     
     #[validate(length(min = 1, max = 50))]
     pub clearance_level: String,
     
     #[validate(length(min = 1, max = 100))]
-    pub department: String,
+    pub contract_number: String,
     
-    #[validate(length(min = 1, max = 100))]
-    pub position: String,
+    #[validate(length(max = 100))]
+    pub department: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
-pub struct UpdatePersonnelRequest {
-    #[validate(length(min = 1, max = 100))]
-    pub first_name: Option<String>,
+pub struct UpdateOrganizationRequest {
+    #[validate(length(min = 1, max = 200))]
+    pub company_name: Option<String>,
     
     #[validate(length(min = 1, max = 100))]
-    pub last_name: Option<String>,
+    pub contact_name: Option<String>,
     
     #[validate(email)]
-    pub email: Option<String>,
+    pub contact_email: Option<String>,
     
     #[validate(length(max = 20))]
-    pub phone: Option<String>,
+    pub contact_phone: Option<String>,
     
     #[validate(length(min = 1, max = 50))]
     pub clearance_level: Option<String>,
     
     #[validate(length(min = 1, max = 100))]
-    pub department: Option<String>,
+    pub contract_number: Option<String>,
     
-    #[validate(length(min = 1, max = 100))]
-    pub position: Option<String>,
+    #[validate(length(max = 100))]
+    pub department: Option<String>,
 }
-

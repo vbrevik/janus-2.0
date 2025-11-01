@@ -9,15 +9,15 @@ This document provides a **high-level overview** of Janus 2.0, its purpose, goal
 ## 1. **What is Janus 2.0?**
 
 ### 1.1 Elevator Pitch
-**Janus 2.0** is a **simple, fast, and secure** personnel and access control management system for high-security, air-gapped environments.
+**Janus 2.0** is a **simple, fast, and secure** person and access control management system for high-security, air-gapped environments.
 
 ### 1.2 Core Purpose
-Manage **personnel records**, **vendor relationships**, and **three-tier access control** (Computer, Data, Physical) with complete audit trails and compliance reporting.
+Manage **person records**, **organization relationships**, and **three-tier access control** (Computer, Data, Physical) with complete audit trails and compliance reporting.
 
 ### 1.3 Target Environment
 - **Air-gapped networks** (no internet connectivity)
 - **High-security facilities** (government, defense, classified)
-- **100-1000 personnel**
+- **100-1000 persons**
 - **Strict compliance** requirements (audit trails, reporting)
 
 ---
@@ -176,12 +176,12 @@ Janus 2.0 is a **complete rewrite** focused on **simplicity**:
 - CRUD operations (Create, Read, Update, Delete)
 - Clearance level tracking (NONE, CONFIDENTIAL, SECRET, TOP_SECRET)
 - Department and position tracking
-- Vendor assignment
+- Organization assignment
 
-✅ **Vendor Management**
+✅ **Organization Management**
 - CRUD operations
-- Vendor hierarchy (parent-child relationships)
-- Vendor types (CONTRACTOR, SUPPLIER, PARTNER, INTERNAL)
+- Organization hierarchy (parent-child relationships)
+- Organization types (CONTRACTOR, SUPPLIER, PARTNER, INTERNAL)
 
 ✅ **Basic Access Control**
 - Role-based permissions
@@ -213,7 +213,7 @@ Janus 2.0 is a **complete rewrite** focused on **simplicity**:
 - 7-year retention
 
 ✅ **Compliance Reporting**
-- Active personnel by clearance level
+- Active persons by clearance level
 - Expiring clearances (30-day alerts)
 - Access grants by user
 - Security incidents report
@@ -251,7 +251,7 @@ Janus 2.0 is a **complete rewrite** focused on **simplicity**:
 **Reason**: **Focus on core features first**.
 
 Complete one MVP at a time:
-1. **MVP 1**: Auth + Personnel + Vendors + Basic RBAC
+1. **MVP 1**: Auth + Personnel + Organizations + Basic RBAC
 2. **MVP 2**: Three-tier access control + Audit
 3. **MVP 3**: (Future) Advanced features
 
@@ -290,7 +290,7 @@ Janus 2.0 is successful when:
 Janus 2.0 is successful when:
 
 ✅ **Usability**
-- Users can manage personnel in < 5 minutes of training
+- Users can manage persons in < 5 minutes of training
 - All critical workflows complete in < 3 clicks
 - 95% of tasks completable without documentation
 
@@ -311,7 +311,7 @@ Janus 2.0 is successful when:
 ### 8.1 Primary Users
 
 **Security Administrators**
-- Manage personnel records
+- Manage person records
 - Grant and revoke access
 - Generate compliance reports
 - Monitor security incidents
@@ -420,7 +420,7 @@ Janus 2.0 is successful when:
 ### 11.1 Phase 1: MVP 1 (Weeks 1-2)
 - ✅ Authentication (login, JWT, RBAC)
 - ✅ Personnel CRUD
-- ✅ Vendor CRUD
+- ✅ Organization CRUD
 - ✅ Basic dashboard
 - ✅ 100% test coverage
 

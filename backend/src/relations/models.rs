@@ -6,16 +6,16 @@ use validator::Validate;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "entity_type", rename_all = "lowercase")]
 pub enum EntityType {
-    Personnel,
-    Vendor,
+    Person, // Changed from Personnel
+    Organization,
 }
 
 #[derive(Debug, Serialize, Deserialize, FromRow)]
 pub struct Relation {
     pub id: i32,
-    pub entity_type: String, // 'personnel' or 'vendor'
+    pub entity_type: String, // 'person' or 'organization'
     pub entity_id: i32,
-    pub related_entity_type: String, // 'personnel' or 'vendor'
+    pub related_entity_type: String, // 'person' or 'organization'
     pub related_entity_id: i32,
     pub relation_type: String, // sub_vendor, employee, consultant, etc.
     pub notes: Option<String>,
@@ -27,9 +27,9 @@ pub struct Relation {
 
 #[derive(Debug, Serialize, Deserialize, Validate)]
 pub struct CreateRelationRequest {
-    pub entity_type: String, // 'personnel' or 'vendor'
+    pub entity_type: String, // 'person' or 'organization'
     pub entity_id: i32,
-    pub related_entity_type: String, // 'personnel' or 'vendor'
+    pub related_entity_type: String, // 'person' or 'organization'
     pub related_entity_id: i32,
     #[validate(length(min = 1))]
     pub relation_type: String,

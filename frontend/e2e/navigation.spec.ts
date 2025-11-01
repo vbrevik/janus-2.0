@@ -18,10 +18,10 @@ test.describe('Navigation', () => {
     // Start at personnel
     await expect(page).toHaveURL('/personnel')
     
-    // Navigate to vendors
-    await page.getByRole('link', { name: /vendors/i }).click()
-    await expect(page).toHaveURL('/vendors')
-    await expect(page.getByRole('heading', { name: /vendor management/i })).toBeVisible()
+    // Navigate to organizations
+    await page.getByRole('link', { name: /organizations/i }).click()
+    await expect(page).toHaveURL('/organizations')
+    await expect(page.getByRole('heading', { name: /organization management/i })).toBeVisible()
     
     // Navigate to access control
     await page.getByRole('link', { name: /access control/i }).click()
@@ -46,14 +46,14 @@ test.describe('Navigation', () => {
     const personnelLink = page.getByRole('link', { name: /^personnel$/i })
     await expect(personnelLink).toBeVisible()
     
-    // Navigate to vendors
-    await page.getByRole('link', { name: /^vendors$/i }).click()
-    await page.waitForURL('/vendors')
+    // Navigate to organizations
+    await page.getByRole('link', { name: /^organizations$/i }).click()
+    await page.waitForURL('/organizations')
     
-    // Vendors link should be visible and page should be at vendors
-    const vendorsLink = page.getByRole('link', { name: /^vendors$/i })
-    await expect(vendorsLink).toBeVisible()
-    await expect(page).toHaveURL('/vendors')
+    // Organizations link should be visible and page should be at organizations
+    const organizationsLink = page.getByRole('link', { name: /^organizations$/i })
+    await expect(organizationsLink).toBeVisible()
+    await expect(page).toHaveURL('/organizations')
   })
 
   test('should show user info in header', async ({ page }) => {

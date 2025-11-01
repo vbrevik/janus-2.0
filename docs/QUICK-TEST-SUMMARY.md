@@ -17,10 +17,10 @@
    - Pagination
    - Clearance level management
 
-3. **Vendor Management**
+3. **Organization Management**
    - CRUD operations
-   - Vendor hierarchy (parent-child relationships)
-   - Vendor relations management
+   - Organization hierarchy (parent-child relationships)
+   - Organization relations management
 
 4. **Roles & Permissions** ⭐ **NEW**
    - Create, edit, delete roles
@@ -173,7 +173,7 @@ cd enduser-frontend && npm run dev
 |---------|---------|----------|-----------|--------|
 | Authentication | ✅ | ✅ | ✅ | Complete |
 | Personnel CRUD | ✅ | ✅ | ✅ | Complete |
-| Vendor CRUD | ✅ | ✅ | ✅ | Complete |
+| Organization CRUD | ✅ | ✅ | ✅ | Complete |
 | Roles & Permissions | ✅ | ✅ | ✅ | Complete |
 | Access Control | ✅ | ✅ | ✅ | Complete |
 | Audit Logs | ✅ | ✅ | ✅ | Complete |
@@ -193,7 +193,7 @@ cd enduser-frontend && npm run dev
    ```
 
 2. **Manual Smoke Test**:
-   - Test each major feature (Personnel, Vendors, Roles, Access)
+   - Test each major feature (Personnel, Organizations, Roles, Access)
    - Verify permission enforcement
    - Test end-user portal
 

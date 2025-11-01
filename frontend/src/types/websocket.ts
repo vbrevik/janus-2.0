@@ -20,7 +20,7 @@ export interface NewDiscussionWebSocket {
   type: 'discussion'
   discussion_id: number
   subject: string
-  personnel_id: number
+  person_id: number
   created_by: number
   created_at: string
 }

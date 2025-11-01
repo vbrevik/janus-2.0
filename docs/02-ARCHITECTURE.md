@@ -104,7 +104,7 @@ backend/
 │   │   ├── models.rs        # Data models
 │   │   └── queries.rs       # SQL queries
 │   │
-│   ├── vendors/             # Vendor module
+│   ├── organizations/             # Organization module
 │   │   ├── mod.rs
 │   │   ├── handlers.rs
 │   │   ├── models.rs
@@ -169,7 +169,7 @@ pub async fn get_personnel(
         Personnel,
         r#"
         SELECT id, first_name, last_name, email, phone, 
-               clearance_level, department, position, vendor_id,
+               clearance_level, department, position, organization_id,
                created_at, updated_at, deleted_at
         FROM personnel
         WHERE id = $1 AND deleted_at IS NULL
@@ -199,7 +199,7 @@ pub async fn list_personnel(
         Personnel,
         r#"
         SELECT id, first_name, last_name, email, phone,
-               clearance_level, department, position, vendor_id,
+               clearance_level, department, position, organization_id,
                created_at, updated_at, deleted_at
         FROM personnel
         WHERE deleted_at IS NULL
@@ -231,10 +231,10 @@ pub async fn create_personnel(
         r#"
         INSERT INTO personnel 
         (first_name, last_name, email, phone, clearance_level, 
-         department, position, vendor_id)
+         department, position, organization_id)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING id, first_name, last_name, email, phone,
-                  clearance_level, department, position, vendor_id,
+                  clearance_level, department, position, organization_id,
                   created_at, updated_at, deleted_at
         "#,
         data.first_name,
@@ -244,7 +244,7 @@ pub async fn create_personnel(
         data.clearance_level,
         data.department,
         data.position,
-        data.vendor_id
+        data.organization_id
     )
     .fetch_one(db.inner())
     .await?;
@@ -402,7 +402,7 @@ CREATE TABLE personnel (
     clearance_level VARCHAR(50) NOT NULL,
     department VARCHAR(100),
     position VARCHAR(100),
-    vendor_id UUID REFERENCES vendors(id),
+    organization_id UUID REFERENCES organizations(id),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
@@ -411,7 +411,7 @@ CREATE TABLE personnel (
 -- Indexes for performance
 CREATE INDEX idx_personnel_email ON personnel(email) WHERE deleted_at IS NULL;
 CREATE INDEX idx_personnel_clearance ON personnel(clearance_level) WHERE deleted_at IS NULL;
-CREATE INDEX idx_personnel_vendor ON personnel(vendor_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_personnel_organization ON personnel(organization_id) WHERE deleted_at IS NULL;
 
 -- Trigger for updated_at
 CREATE OR REPLACE FUNCTION update_updated_at()
@@ -447,7 +447,7 @@ frontend/
 │   │   │   ├── index.tsx    # Personnel list
 │   │   │   ├── $id.tsx      # Personnel detail
 │   │   │   └── new.tsx      # Create personnel
-│   │   └── vendors/
+│   │   └── organizations/
 │   │       ├── index.tsx
 │   │       ├── $id.tsx
 │   │       └── new.tsx
@@ -654,15 +654,15 @@ Personnel (Core Entity)
 ├─ last_name
 ├─ email (UNIQUE)
 ├─ clearance_level
-├─ vendor_id (FK → Vendors)
+├─ organization_id (FK → Organizations)
 └─ timestamps, soft_delete
 
-Vendors (Organizations)
+Organizations (Organizations)
 ├─ id (UUID, PK)
 ├─ name (UNIQUE)
 ├─ type
 ├─ clearance_level
-├─ parent_vendor_id (FK → Vendors, for hierarchy)
+├─ parent_organization_id (FK → Organizations, for hierarchy)
 └─ timestamps, soft_delete
 
 Computer_Access (Access Control)
@@ -712,7 +712,7 @@ Audit_Log (Compliance)
 -- Personnel indexes (most queried)
 CREATE INDEX idx_personnel_email ON personnel(email) WHERE deleted_at IS NULL;
 CREATE INDEX idx_personnel_clearance ON personnel(clearance_level) WHERE deleted_at IS NULL;
-CREATE INDEX idx_personnel_vendor ON personnel(vendor_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_personnel_organization ON personnel(organization_id) WHERE deleted_at IS NULL;
 
 -- Access control indexes
 CREATE INDEX idx_computer_access_personnel ON computer_access(personnel_id) WHERE status = 'ACTIVE';

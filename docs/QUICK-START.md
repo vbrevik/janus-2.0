@@ -12,7 +12,7 @@ This is the **fastest path** to understanding and implementing Janus 2.0.
 
 **Core Features**:
 - Personnel management with clearance levels
-- Vendor management with hierarchies
+- Organization management with hierarchies
 - Three-tier access control (Computer, Data, Physical)
 - Complete audit trail
 
@@ -121,7 +121,7 @@ janus-2.0/
 │   │   ├── main.rs         # Entry point
 │   │   ├── auth/           # Authentication
 │   │   ├── personnel/      # Personnel CRUD
-│   │   ├── vendors/        # Vendor CRUD
+│   │   ├── organizations/        # Organization CRUD
 │   │   ├── access/         # Access control
 │   │   └── shared/         # Utilities
 │   ├── migrations/         # SQL migrations
@@ -161,13 +161,13 @@ sqlx database create
 **Week 1**: Backend
 - Auth (JWT, bcrypt)
 - Personnel CRUD
-- Vendor CRUD
+- Organization CRUD
 - Tests (100% coverage)
 
 **Week 2**: Frontend
 - Login page
 - Personnel UI (list, create, edit)
-- Vendor UI
+- Organization UI
 - E2E tests
 
 ### Phase 2: MVP 2 (2 weeks)
@@ -349,7 +349,7 @@ Based on Janus 1.0 experience:
 MVP 1 is **complete** when:
 - [ ] User can login (JWT auth)
 - [ ] User can CRUD personnel
-- [ ] User can CRUD vendors
+- [ ] User can CRUD organizations
 - [ ] All API tests pass (100%)
 - [ ] All E2E tests pass
 - [ ] API responds < 50ms (p95)
@@ -408,7 +408,7 @@ MVP 1 is **complete** when:
 
 **Timeline**: 6-8 weeks total
 - Week 0: Setup
-- Weeks 1-2: MVP 1 (Auth + Personnel + Vendors)
+- Weeks 1-2: MVP 1 (Auth + Personnel + Organizations)
 - Weeks 3-4: MVP 2 (Three-tier access + Audit)
 - Weeks 5-6: Polish + Deploy
 

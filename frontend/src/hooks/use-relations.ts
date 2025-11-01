@@ -14,10 +14,12 @@ export const relationKeys = {
   all: ['relations'] as const,
   entity: (entityType: EntityType, entityId: number, direction?: string) => 
     [...relationKeys.all, entityType, entityId, direction || 'outgoing'] as const,
+  person: (personId: number, direction?: string) => 
+    relationKeys.entity('person', personId, direction),
   personnel: (personnelId: number, direction?: string) => 
-    relationKeys.entity('personnel', personnelId, direction),
-  vendor: (vendorId: number, direction?: string) => 
-    relationKeys.entity('vendor', vendorId, direction),
+    relationKeys.entity('person', personnelId, direction), // Alias for backward compatibility
+  organization: (organizationId: number, direction?: string) => 
+    relationKeys.entity('organization', organizationId, direction), // Changed from vendor
   hierarchy: (entityType: EntityType, entityId: number, relationType?: string) =>
     [...relationKeys.all, 'hierarchy', entityType, entityId, relationType] as const,
 };
@@ -42,20 +44,20 @@ export function useRelations(
   });
 }
 
-// List personnel relations (convenience wrapper)
-export function usePersonnelRelations(
-  personnelId: number,
+// List person relations (convenience wrapper)
+export function usePersonRelations(
+  personId: number, // Changed from personId
   options?: { enabled?: boolean; direction?: 'outgoing' | 'incoming' | 'both' }
 ) {
-  return useRelations('personnel', personnelId, options);
+  return useRelations('person', personId, options); // Changed from 'personnel'
 }
 
-// List vendor relations (convenience wrapper)
-export function useVendorRelations(
-  vendorId: number,
+// List organization relations (convenience wrapper)
+export function useOrganizationRelations(
+  organizationId: number, // Changed from vendorId
   options?: { enabled?: boolean; direction?: 'outgoing' | 'incoming' | 'both' }
 ) {
-  return useRelations('vendor', vendorId, options);
+  return useRelations('organization', organizationId, options); // Changed from 'vendor'
 }
 
 // Get entity hierarchy (recursive relations)

@@ -27,8 +27,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // Define navigation items by role
   const adminNavItems: NavItem[] = [
     { to: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { to: '/admin/personnel', label: 'Personnel', icon: <Users className="h-4 w-4" /> },
-    { to: '/admin/vendors', label: 'Vendors', icon: <Building2 className="h-4 w-4" /> },
+    { to: '/admin/person', label: 'Personnel', icon: <Users className="h-4 w-4" /> },
+    { to: '/admin/organizations', label: 'Organizations', icon: <Building2 className="h-4 w-4" /> },
     { to: '/admin/info-systems', label: 'Info Systems', icon: <Server className="h-4 w-4" /> },
     { to: '/admin/access', label: 'Access Control', icon: <Key className="h-4 w-4" /> },
     { to: '/admin/ndas', label: 'NDAs', icon: <FileText className="h-4 w-4" /> },
@@ -43,8 +43,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const officialNavItems: NavItem[] = [
     { to: '/official/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { to: '/official/personnel', label: 'Personnel Lookup', icon: <Users className="h-4 w-4" /> },
-    { to: '/official/vendors', label: 'Vendor Lookup', icon: <Building2 className="h-4 w-4" /> },
+    { to: '/official/person', label: 'Personnel Lookup', icon: <Users className="h-4 w-4" /> },
+    { to: '/official/organizations', label: 'Organization Lookup', icon: <Building2 className="h-4 w-4" /> },
   ]
 
   // Get navigation items based on user role

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ProtectedRoute } from '@/components/protected-route'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Layout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,40 +16,40 @@ import {
 } from '@/components/ui/table'
 import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import {
-  usePersonnelList,
-  useCreatePersonnel,
-  useUpdatePersonnel,
-  useDeletePersonnel,
-} from '@/hooks/use-personnel'
+  usePersonList,
+  useCreatePerson,
+  useUpdatePerson,
+  useDeletePerson,
+} from '@/hooks/use-person'
 import { Link } from '@tanstack/react-router'
-import type { Personnel, ClearanceLevel, CreatePersonnelRequest } from '@/types/personnel'
+import type { Person, ClearanceLevel, CreatePersonRequest } from '@/types/person'
 
-export const Route = createFileRoute('/personnel/')({
-  component: PersonnelList,
+export const Route = createFileRoute('/admin/person/')({
+  component: PersonList,
 })
 
-function PersonnelList() {
+function PersonList() {
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const perPage = 10
 
-  const { data, isLoading, error } = usePersonnelList(page, perPage)
+  const { data, isLoading, error } = usePersonList(page, perPage)
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={['admin']}>
       <Layout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold">Personnel Management</h1>
+              <h1 className="text-3xl font-bold">Person Management</h1>
               <p className="text-muted-foreground mt-1">
-                Manage personnel and their security clearances
+                Manage persons, users, and their security clearances
               </p>
             </div>
             <Button onClick={() => setShowCreate((v) => !v)}>
               <Plus className="h-4 w-4 mr-2" />
-              {showCreate ? 'Hide New Row' : 'Add Personnel'}
+              {showCreate ? 'Hide New Row' : 'Add Person'}
             </Button>
           </div>
 
@@ -62,7 +62,7 @@ function PersonnelList() {
 
           {error && (
             <div className="bg-destructive/10 text-destructive p-4 rounded-md">
-              Error loading personnel: {error.message}
+              Error loading persons: {error.message}
             </div>
           )}
 
@@ -82,17 +82,17 @@ function PersonnelList() {
                   </TableHeader>
                   <TableBody>
                     {showCreate && (
-                      <CreatePersonnelRow onDone={() => setShowCreate(false)} />
+                      <CreatePersonRow onDone={() => setShowCreate(false)} />
                     )}
                     {data.items.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          No personnel found. Create your first entry!
+                          No persons found. Create your first entry!
                         </TableCell>
                       </TableRow>
                     ) : (
                       data.items.map((person) => (
-                        <PersonnelRow key={person.id} person={person} />
+                        <PersonRow key={person.id} person={person} />
                       ))
                     )}
                   </TableBody>
@@ -139,19 +139,19 @@ function PersonnelList() {
   )
 }
 
-function PersonnelRow({ person }: { person: Personnel }) {
+function PersonRow({ person }: { person: Person }) {
   const [editing, setEditing] = useState(false)
-  const updateMutation = useUpdatePersonnel(person.id)
-  const deleteMutation = useDeletePersonnel()
+  const updateMutation = useUpdatePerson(person.id)
+  const deleteMutation = useDeletePerson()
 
   const [form, setForm] = useState({
-    first_name: person.first_name,
-    last_name: person.last_name,
-    email: person.email,
+    first_name: person.first_name || '',
+    last_name: person.last_name || '',
+    email: person.email || '',
     phone: person.phone || '',
-    department: person.department,
-    position: person.position,
-    clearance_level: person.clearance_level as ClearanceLevel,
+    department: person.department || '',
+    position: person.position || '',
+    clearance_level: person.clearance_level || 'UNCLASSIFIED' as ClearanceLevel,
   })
 
   const onSave = async () => {
@@ -180,8 +180,10 @@ function PersonnelRow({ person }: { person: Personnel }) {
             <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
           </div>
         ) : (
-          <Link to="/personnel/$personnelId" params={{ personnelId: person.id.toString() }} className="hover:underline flex items-center gap-2">
-            {person.first_name} {person.last_name}
+          <Link to="/admin/person/$personId" params={{ personId: person.id.toString() }} className="hover:underline flex items-center gap-2">
+            {person.first_name && person.last_name 
+              ? `${person.first_name} ${person.last_name}`
+              : person.username || person.email || `Person #${person.id}`}
             <ExternalLink className="h-3 w-3 opacity-50" />
           </Link>
         )}
@@ -190,41 +192,41 @@ function PersonnelRow({ person }: { person: Personnel }) {
         {editing ? (
           <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         ) : (
-          person.email
+          person.email || 'N/A'
         )}
       </TableCell>
       <TableCell>
         {editing ? (
           <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
         ) : (
-          person.department
+          person.department || 'N/A'
         )}
       </TableCell>
       <TableCell>
         {editing ? (
           <Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
         ) : (
-          person.position
+          person.position || 'N/A'
         )}
       </TableCell>
       <TableCell>
         {editing ? (
           <Select
-            value={form.clearance_level}
+            value={form.clearance_level || 'UNCLASSIFIED'}
             onValueChange={(v) => setForm({ ...form, clearance_level: v as ClearanceLevel })}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="NONE">None</SelectItem>
+              <SelectItem value="UNCLASSIFIED">Unclassified</SelectItem>
               <SelectItem value="CONFIDENTIAL">Confidential</SelectItem>
               <SelectItem value="SECRET">Secret</SelectItem>
               <SelectItem value="TOP_SECRET">Top Secret</SelectItem>
             </SelectContent>
           </Select>
         ) : (
-          <ClearanceBadge level={person.clearance_level} />
+          <ClearanceBadge level={person.clearance_level || 'UNCLASSIFIED'} />
         )}
       </TableCell>
       <TableCell className="text-right">
@@ -252,16 +254,16 @@ function PersonnelRow({ person }: { person: Personnel }) {
   )
 }
 
-function CreatePersonnelRow({ onDone }: { onDone: () => void }) {
-  const createMutation = useCreatePersonnel()
-  const [form, setForm] = useState<CreatePersonnelRequest>({
+function CreatePersonRow({ onDone }: { onDone: () => void }) {
+  const createMutation = useCreatePerson()
+  const [form, setForm] = useState<CreatePersonRequest>({
     first_name: '',
     last_name: '',
     email: '',
     phone: '',
     department: '',
     position: '',
-    clearance_level: 'NONE' as ClearanceLevel,
+    clearance_level: 'UNCLASSIFIED' as ClearanceLevel,
   })
 
   const onCreate = async () => {
@@ -277,7 +279,7 @@ function CreatePersonnelRow({ onDone }: { onDone: () => void }) {
       phone: '',
       department: '',
       position: '',
-      clearance_level: 'NONE' as ClearanceLevel,
+      clearance_level: 'UNCLASSIFIED' as ClearanceLevel,
     })
   }
 
@@ -285,26 +287,26 @@ function CreatePersonnelRow({ onDone }: { onDone: () => void }) {
     <TableRow className="bg-accent/30">
       <TableCell className="font-medium">
         <div className="grid grid-cols-2 gap-2">
-          <Input placeholder="First name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
-          <Input placeholder="Last name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+          <Input placeholder="First name" value={form.first_name || ''} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+          <Input placeholder="Last name" value={form.last_name || ''} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
         </div>
       </TableCell>
       <TableCell>
-        <Input type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        <Input type="email" placeholder="Email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
       </TableCell>
       <TableCell>
-        <Input placeholder="Department" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
+        <Input placeholder="Department" value={form.department || ''} onChange={(e) => setForm({ ...form, department: e.target.value })} />
       </TableCell>
       <TableCell>
-        <Input placeholder="Position" value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
+        <Input placeholder="Position" value={form.position || ''} onChange={(e) => setForm({ ...form, position: e.target.value })} />
       </TableCell>
       <TableCell>
-        <Select value={form.clearance_level} onValueChange={(v) => setForm({ ...form, clearance_level: v as ClearanceLevel })}>
+        <Select value={form.clearance_level || 'UNCLASSIFIED'} onValueChange={(v) => setForm({ ...form, clearance_level: v as ClearanceLevel })}>
           <SelectTrigger>
             <SelectValue placeholder="Level" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="NONE">None</SelectItem>
+            <SelectItem value="UNCLASSIFIED">Unclassified</SelectItem>
             <SelectItem value="CONFIDENTIAL">Confidential</SelectItem>
             <SelectItem value="SECRET">Secret</SelectItem>
             <SelectItem value="TOP_SECRET">Top Secret</SelectItem>
@@ -327,7 +329,7 @@ function CreatePersonnelRow({ onDone }: { onDone: () => void }) {
 
 function ClearanceBadge({ level }: { level: ClearanceLevel }) {
   const variants: Record<ClearanceLevel, 'default' | 'secondary' | 'warning' | 'destructive'> = {
-    NONE: 'secondary',
+    UNCLASSIFIED: 'secondary',
     CONFIDENTIAL: 'default',
     SECRET: 'warning',
     TOP_SECRET: 'destructive',

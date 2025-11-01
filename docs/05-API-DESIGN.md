@@ -81,8 +81,8 @@ GET /api/<resource>?page=1&per_page=20
 - Core (health, stats)
 - Authentication
 - Personnel
-- Vendors
-- Vendor Relations
+- Organizations
+- Organization Relations
 - Access Control
 - Information Systems
 - Audit Logs
@@ -96,8 +96,8 @@ GET /api/<resource>?page=1&per_page=20
 ## Endpoint Conventions
 
 ### Resource Naming
-- Plural nouns: `/api/personnel`, `/api/vendors`
-- Lowercase with hyphens: `/api/info-systems`, `/api/vendor-relations`
+- Plural nouns: `/api/personnel`, `/api/organizations`
+- Lowercase with hyphens: `/api/info-systems`, `/api/organization-relations`
 
 ### Query Parameters
 - `page` - Page number (default: 1)

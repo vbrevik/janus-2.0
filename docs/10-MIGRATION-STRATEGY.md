@@ -23,7 +23,7 @@ This document outlines the migration strategy from Janus 1.0 to Janus 2.0.
 
 **Export all data from Janus 1.0**:
 - Personnel records
-- Vendor records
+- Organization records
 - Access grants
 - Audit logs
 - User accounts
@@ -38,7 +38,7 @@ This document outlines the migration strategy from Janus 1.0 to Janus 2.0.
 |-----------|-----------|-------|
 | `users` | `users` | Same structure |
 | `personnel` | `personnel` | Similar, some field changes |
-| `vendors` | `vendors` | Similar structure |
+| `organizations` | `organizations` | Similar structure |
 | `computer_access` | `computer_access` | Compatible |
 | `data_access` | `data_access` | Compatible |
 | `physical_access` | `physical_access` | Compatible |

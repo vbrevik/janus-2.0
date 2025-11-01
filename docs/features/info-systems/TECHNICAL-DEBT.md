@@ -156,7 +156,7 @@
 
 **Potential Relationships**:
 - Link to personnel (system administrators)
-- Link to vendors (system providers)
+- Link to organizations (system providers)
 - Link to access control (who has access)
 
 **Priority**: P4 - Future feature

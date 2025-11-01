@@ -9,23 +9,23 @@ use crate::audit::handlers::create_audit_log;
 use crate::audit::models::CreateAuditLogRequest;
 use crate::auth::middleware::AuthGuard;
 
-/// List NDAs for personnel or by user email
-#[get("/?<personnel_id>&<status>&<email>")]
+/// List NDAs for person or by person email
+#[get("/?<person_id>&<status>&<email>")]
 pub async fn list_ndas(
     db: &State<PgPool>,
-    personnel_id: Option<i32>,
+    person_id: Option<i32>, // Changed from personnel_id
     status: Option<String>,
     email: Option<String>,
     _auth: AuthGuard,
 ) -> Result<Json<Vec<NDA>>, Status> {
     let query_result = if let Some(e) = email {
-        // Join with personnel table to filter by email
+        // Join with person table to filter by email
         if let Some(s) = status {
             sqlx::query_as::<sqlx::Postgres, NDA>(
                 r#"
-                SELECT n.id, n.personnel_id, n.title, n.content, n.version, n.status, n.issued_by, n.issued_at, n.signed_at, n.expires_at, n.signature, n.rejection_reason, n.sent_by_vendor_id, n.sent_at, n.created_at, n.updated_at
+                SELECT n.id, n.person_id, n.title, n.content, n.version, n.status, n.issued_by_person_id, n.issued_at, n.signed_at, n.expires_at, n.signature, n.rejection_reason, n.sent_by_vendor_id, n.sent_at, n.created_at, n.updated_at
                 FROM nda n
-                JOIN personnel p ON n.personnel_id = p.id
+                JOIN person p ON n.person_id = p.id
                 WHERE p.email = $1 AND n.status = $2
                 ORDER BY n.created_at DESC
                 "#
@@ -37,9 +37,9 @@ pub async fn list_ndas(
         } else {
             sqlx::query_as::<sqlx::Postgres, NDA>(
                 r#"
-                SELECT n.id, n.personnel_id, n.title, n.content, n.version, n.status, n.issued_by, n.issued_at, n.signed_at, n.expires_at, n.signature, n.rejection_reason, n.sent_by_vendor_id, n.sent_at, n.created_at, n.updated_at
+                SELECT n.id, n.person_id, n.title, n.content, n.version, n.status, n.issued_by_person_id, n.issued_at, n.signed_at, n.expires_at, n.signature, n.rejection_reason, n.sent_by_vendor_id, n.sent_at, n.created_at, n.updated_at
                 FROM nda n
-                JOIN personnel p ON n.personnel_id = p.id
+                JOIN person p ON n.person_id = p.id
                 WHERE p.email = $1
                 ORDER BY n.created_at DESC
                 "#
@@ -48,10 +48,10 @@ pub async fn list_ndas(
             .fetch_all(db.inner())
             .await
         }
-    } else if let Some(pid) = personnel_id {
+    } else if let Some(pid) = person_id {
         if let Some(s) = status {
             sqlx::query_as::<sqlx::Postgres, NDA>(
-                "SELECT id, personnel_id, title, content, version, status, issued_by, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at FROM nda WHERE personnel_id = $1 AND status = $2 ORDER BY created_at DESC"
+                "SELECT id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at FROM nda WHERE person_id = $1 AND status = $2 ORDER BY created_at DESC"
             )
             .bind(pid)
             .bind(&s)
@@ -59,7 +59,7 @@ pub async fn list_ndas(
             .await
         } else {
             sqlx::query_as::<sqlx::Postgres, NDA>(
-                "SELECT id, personnel_id, title, content, version, status, issued_by, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at FROM nda WHERE personnel_id = $1 ORDER BY created_at DESC"
+                "SELECT id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at FROM nda WHERE person_id = $1 ORDER BY created_at DESC"
             )
             .bind(pid)
             .fetch_all(db.inner())
@@ -67,14 +67,14 @@ pub async fn list_ndas(
         }
     } else if let Some(s) = status {
         sqlx::query_as::<sqlx::Postgres, NDA>(
-            "SELECT id, personnel_id, title, content, version, status, issued_by, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at FROM nda WHERE status = $1 ORDER BY created_at DESC"
+            "SELECT id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at FROM nda WHERE status = $1 ORDER BY created_at DESC"
         )
         .bind(&s)
         .fetch_all(db.inner())
         .await
     } else {
         sqlx::query_as::<sqlx::Postgres, NDA>(
-            "SELECT id, personnel_id, title, content, version, status, issued_by, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at FROM nda ORDER BY created_at DESC"
+            "SELECT id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at FROM nda ORDER BY created_at DESC"
         )
         .fetch_all(db.inner())
         .await
@@ -91,15 +91,14 @@ pub async fn get_nda(
     id: i32,
     _auth: AuthGuard,
 ) -> Result<Json<NDA>, Status> {
-    let nda = sqlx::query_as!(
-        NDA,
+    let nda = sqlx::query_as::<sqlx::Postgres, NDA>(
         r#"
-        SELECT id, personnel_id, title, content, version, status, issued_by, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
+        SELECT id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
         FROM nda
         WHERE id = $1
-        "#,
-        id
+        "#
     )
+    .bind(id)
     .fetch_optional(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?
@@ -115,7 +114,7 @@ pub async fn create_nda(
     data: Json<CreateNDARequest>,
     auth: AuthGuard,
 ) -> Result<Json<NDA>, Status> {
-    let issued_by = auth.claims.sub.parse::<i32>().unwrap_or(0);
+    let issued_by_person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
     let version = data.version.clone().unwrap_or_else(|| "1.0".to_string());
 
     let expires_at = match &data.expires_at {
@@ -125,34 +124,33 @@ pub async fn create_nda(
         None => None,
     };
 
-    let nda = sqlx::query_as!(
-        NDA,
+    let nda = sqlx::query_as::<sqlx::Postgres, NDA>(
         r#"
-        INSERT INTO nda (personnel_id, title, content, version, status, issued_by, expires_at, sent_by_vendor_id, sent_at)
+        INSERT INTO nda (person_id, title, content, version, status, issued_by_person_id, expires_at, sent_by_vendor_id, sent_at)
         VALUES ($1, $2, $3, $4, 'PENDING', $5, $6, $7, $8)
-        RETURNING id, personnel_id, title, content, version, status, issued_by, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
-        "#,
-        data.personnel_id,
-        data.title,
-        data.content,
-        version,
-        issued_by,
-        expires_at,
-        data.sent_by_vendor_id,
-        Some(Utc::now().naive_utc())
+        RETURNING id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
+        "#
     )
+    .bind(data.person_id)
+    .bind(&data.title)
+    .bind(&data.content)
+    .bind(&version)
+    .bind(issued_by_person_id)
+    .bind(expires_at)
+    .bind(data.sent_by_vendor_id)
+    .bind(Some(Utc::now().naive_utc()))
     .fetch_one(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?;
 
     // Audit: NDA_SENT
     let _ = create_audit_log(&CreateAuditLogRequest {
-        user_id: Some(issued_by as i32),
+        person_id: Some(issued_by_person_id), // Changed from user_id
         username: "system".to_string(),
         action: "NDA_SENT".to_string(),
         resource_type: "nda".to_string(),
         resource_id: Some(nda.id),
-        details: Some(format!("NDA '{}' sent to personnel_id={}", nda.title, nda.personnel_id)),
+        details: Some(format!("NDA '{}' sent to person_id={}", nda.title, nda.person_id)),
         ip_address: None,
         user_agent: None,
     }, db.inner()).await;
@@ -170,8 +168,7 @@ pub async fn sign_nda(
 ) -> Result<Json<NDA>, Status> {
     let now = Utc::now().naive_utc();
 
-    let nda = sqlx::query_as!(
-        NDA,
+    let nda = sqlx::query_as::<sqlx::Postgres, NDA>(
         r#"
         UPDATE nda
         SET status = 'SIGNED',
@@ -179,12 +176,12 @@ pub async fn sign_nda(
             signature = $2,
             updated_at = $1
         WHERE id = $3 AND status IN ('PENDING', 'ACTIVE')
-        RETURNING id, personnel_id, title, content, version, status, issued_by, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
-        "#,
-        now,
-        data.signature,
-        id
+        RETURNING id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
+        "#
     )
+    .bind(now)
+    .bind(&data.signature)
+    .bind(id)
     .fetch_optional(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?
@@ -192,7 +189,7 @@ pub async fn sign_nda(
 
     // Audit: NDA_SIGNED
     let _ = create_audit_log(&CreateAuditLogRequest {
-        user_id: auth.claims.sub.parse::<i32>().ok(),
+        person_id: auth.claims.sub.parse::<i32>().ok(), // Changed from user_id
         username: auth.claims.sub.clone(),
         action: "NDA_SIGNED".to_string(),
         resource_type: "nda".to_string(),
@@ -215,20 +212,19 @@ pub async fn reject_nda(
 ) -> Result<Json<NDA>, Status> {
     let now = Utc::now().naive_utc();
 
-    let nda = sqlx::query_as!(
-        NDA,
+    let nda = sqlx::query_as::<sqlx::Postgres, NDA>(
         r#"
         UPDATE nda
         SET status = 'REVOKED',
             rejection_reason = $1,
             updated_at = $2
         WHERE id = $3 AND status IN ('PENDING', 'ACTIVE')
-        RETURNING id, personnel_id, title, content, version, status, issued_by, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
-        "#,
-        data.reason,
-        now,
-        id
+        RETURNING id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
+        "#
     )
+    .bind(&data.reason)
+    .bind(now)
+    .bind(id)
     .fetch_optional(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?
@@ -236,7 +232,7 @@ pub async fn reject_nda(
 
     // Audit: NDA_REJECTED
     let _ = create_audit_log(&CreateAuditLogRequest {
-        user_id: auth.claims.sub.parse::<i32>().ok(),
+        person_id: auth.claims.sub.parse::<i32>().ok(), // Changed from user_id
         username: auth.claims.sub.clone(),
         action: "NDA_REJECTED".to_string(),
         resource_type: "nda".to_string(),
@@ -257,18 +253,17 @@ pub async fn update_nda_status(
     data: Json<UpdateNDARequest>,
     _auth: AuthGuard,
 ) -> Result<Json<NDA>, Status> {
-    let nda = sqlx::query_as!(
-        NDA,
+    let nda = sqlx::query_as::<sqlx::Postgres, NDA>(
         r#"
         UPDATE nda
         SET status = COALESCE($1, status),
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $2
-        RETURNING id, personnel_id, title, content, version, status, issued_by, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
-        "#,
-        data.status,
-        id
+        RETURNING id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
+        "#
     )
+    .bind(data.status.as_deref())
+    .bind(id)
     .fetch_optional(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?
@@ -284,7 +279,8 @@ pub async fn delete_nda(
     id: i32,
     _auth: AuthGuard,
 ) -> Result<Json<&'static str>, Status> {
-    sqlx::query!("UPDATE nda SET status = 'REVOKED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", id)
+    sqlx::query("UPDATE nda SET status = 'REVOKED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+        .bind(id)
         .execute(db.inner())
         .await
         .map_err(|_| Status::InternalServerError)?;

@@ -8,7 +8,7 @@ pub struct VendorRelation {
     pub id: i32,
     pub vendor_id: i32,
     pub related_vendor_id: Option<i32>,
-    pub related_personnel_id: Option<i32>,
+    pub related_person_id: Option<i32>, // Changed from related_personnel_id
     pub relation_type: String,
     pub notes: Option<String>,
     pub valid_from: NaiveDateTime,
@@ -23,7 +23,7 @@ pub struct CreateVendorRelationRequest {
     #[validate(length(min = 1))]
     pub relation_type: String, // sub_vendor, employee, consultant, partner, subcontractor
     pub related_vendor_id: Option<i32>,
-    pub related_personnel_id: Option<i32>,
+    pub related_person_id: Option<i32>, // Changed from related_personnel_id
     pub notes: Option<String>,
     pub valid_from: Option<String>, // ISO date string
     pub valid_until: Option<String>, // ISO date string

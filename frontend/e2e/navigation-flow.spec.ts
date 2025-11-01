@@ -38,9 +38,9 @@ test.describe('Admin Navigation Flow', () => {
     await page.click('text=Personnel')
     await expect(page).toHaveURL(/.*\/admin\/personnel/)
 
-    // Navigate to Vendors
-    await page.click('text=Vendors')
-    await expect(page).toHaveURL(/.*\/admin\/vendors/)
+    // Navigate to Organizations
+    await page.click('text=Organizations')
+    await expect(page).toHaveURL(/.*\/admin\/organizations/)
 
     // Navigate to Info Systems
     await page.click('text=Info Systems')

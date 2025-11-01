@@ -43,9 +43,9 @@ All tables follow these conventions:
 - `deleted_at` (TIMESTAMP, nullable) - soft delete
 - `created_at`, `updated_at` (TIMESTAMP)
 
-### Vendors
-**Purpose**: Vendor/contractor management  
-**Migration**: `20251026112330_create_vendors_table.sql`
+### Organizations
+**Purpose**: Organization/contractor management  
+**Migration**: `20251026112330_create_organizations_table.sql`
 
 **Fields**:
 - `id` (SERIAL PRIMARY KEY)
@@ -89,11 +89,11 @@ All tables follow these conventions:
 **Purpose**: Complete audit trail of all changes  
 **Fields**: `id`, `user_id`, `action`, `resource_type`, `resource_id`, `changes` (JSONB), `ip_address`, `user_agent`, `timestamp`
 
-### Vendor Relations
-**Migration**: `20251026195324_create_vendor_relations_table.sql`
+### Organization Relations
+**Migration**: `20251026195324_create_organization_relations_table.sql`
 
-**Purpose**: Vendor hierarchy (parent-child relationships)  
-**Fields**: `id`, `parent_vendor_id`, `child_vendor_id`, `relationship_type`, `start_date`, `end_date`, `created_at`, `updated_at`
+**Purpose**: Organization hierarchy (parent-child relationships)  
+**Fields**: `id`, `parent_organization_id`, `child_organization_id`, `relationship_type`, `start_date`, `end_date`, `created_at`, `updated_at`
 
 ### Information Systems
 **Migration**: `20251026140000_create_info_systems_table.sql`
@@ -114,7 +114,7 @@ All tables follow these conventions:
 **Migration**: `20250128000000_create_nda_table.sql` + updates
 
 **Purpose**: Non-disclosure agreement management  
-**Fields**: `id`, `personnel_id`, `title`, `content`, `status` (PENDING/SIGNED/REJECTED/EXPIRED), `issued_at`, `signed_at`, `expires_at`, `signature`, `rejection_reason`, `sent_by_vendor_id`, `sent_at`
+**Fields**: `id`, `personnel_id`, `title`, `content`, `status` (PENDING/SIGNED/REJECTED/EXPIRED), `issued_at`, `signed_at`, `expires_at`, `signature`, `rejection_reason`, `sent_by_organization_id`, `sent_at`
 
 ### Discussions
 **Migration**: `20250129000000_create_discussions_table.sql`
@@ -137,7 +137,7 @@ All tables follow these conventions:
 **Key Foreign Keys**:
 - All access tables → `personnel.id`
 - All access tables → `users.id` (granted_by)
-- `vendor_relations` → `vendors.id` (parent/child)
+- `organization_relations` → `organizations.id` (parent/child)
 - `nda`, `discussions`, `document_references` → `personnel.id`
 - `role_permissions` → `roles.id` and `permissions.id`
 

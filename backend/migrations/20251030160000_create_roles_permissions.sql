@@ -30,10 +30,10 @@ ON CONFLICT (name) DO NOTHING;
 
 -- Seed default permissions
 INSERT INTO permissions (key, description) VALUES
-('audit.read', 'Read audit logs'),
-('audit.write', 'Write audit entries programmatically'),
-('personnel.read', 'Read personnel'),
-('personnel.write', 'Write personnel'),
+    ('audit.read', 'Read audit logs'),
+    ('audit.write', 'Write audit entries programmatically'),
+    ('person.read', 'Read person records'),
+    ('person.write', 'Write person records'),
 ('vendors.read', 'Read vendors'),
 ('vendors.write', 'Write vendors'),
 ('roles.read', 'Read roles and permissions'),
@@ -49,21 +49,21 @@ ON CONFLICT DO NOTHING;
 -- Manager: read/write most business objects, read audit
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON p.key IN (
-  'audit.read','personnel.read','personnel.write','vendors.read','vendors.write'
+      'audit.read','person.read','person.write','organizations.read','organizations.write'
 ) WHERE r.name = 'manager'
 ON CONFLICT DO NOTHING;
 
 -- Operator: read personnel/vendors
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON p.key IN (
-  'personnel.read','vendors.read'
+      'person.read','organizations.read'
 ) WHERE r.name = 'operator'
 ON CONFLICT DO NOTHING;
 
 -- Viewer: read-only minimal
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p ON p.key IN (
-  'personnel.read','vendors.read'
+      'person.read','organizations.read'
 ) WHERE r.name = 'viewer'
 ON CONFLICT DO NOTHING;
 

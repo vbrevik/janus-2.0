@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { ProtectedRoute } from '@/components/protected-route'
 import { Layout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,40 +16,41 @@ import {
 } from '@/components/ui/table'
 import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, ExternalLink, ChevronDown } from 'lucide-react'
 import {
-  useVendorList,
-  useVendor,
-  useCreateVendor,
-  useUpdateVendor,
-  useDeleteVendor,
-} from '@/hooks/use-vendors'
-import { usePersonnelList } from '@/hooks/use-personnel'
-import { useVendorRelations } from '@/hooks/use-vendor-relations'
+  useOrganizationList,
+  useOrganization,
+  useCreateOrganization,
+  useUpdateOrganization,
+  useDeleteOrganization,
+} from '@/hooks/use-organizations'
+import { usePersonList } from '@/hooks/use-person'
+import { useOrganizationRelations } from '@/hooks/use-relations'
 import { Link } from '@tanstack/react-router'
-import type { Vendor, ClearanceLevel, CreateVendorRequest } from '@/types/vendor'
-import type { Personnel } from '@/types/personnel'
+import type { Organization, ClearanceLevel, CreateOrganizationRequest } from '@/types/organization'
+import type { Person } from '@/types/person'
+import type { RelationWithNames } from '@/types/relation'
 
-export const Route = createFileRoute('/admin/vendors/')({
-  component: VendorList,
+export const Route = createFileRoute('/organizations/')({
+  component: OrganizationList,
 })
 
-function VendorList() {
+function OrganizationList() {
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
-  const [topLevelOnly, setTopLevelOnly] = useState(true) // Default: show only top-level vendors
+  const [topLevelOnly, setTopLevelOnly] = useState(true) // Default: show only top-level organizations
   const perPage = 10
 
-  const { data, isLoading, error } = useVendorList(page, perPage, topLevelOnly)
+  const { data, isLoading, error } = useOrganizationList(page, perPage, topLevelOnly)
 
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute>
       <Layout>
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold">Vendor Management</h1>
+              <h1 className="text-3xl font-bold">Organization Management</h1>
               <p className="text-muted-foreground mt-1">
-                Manage vendors and their security clearances
+                Manage organizations and their security clearances
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -63,11 +64,11 @@ function VendorList() {
                 variant={!topLevelOnly ? "default" : "outline"}
                 onClick={() => setTopLevelOnly(false)}
               >
-                All Vendors
+                All Organizations
               </Button>
               <Button onClick={() => setShowCreate((v) => !v)}>
                 <Plus className="h-4 w-4 mr-2" />
-                {showCreate ? 'Hide New Row' : 'Add Vendor'}
+                {showCreate ? 'Hide New Row' : 'Add Organization'}
               </Button>
             </div>
           </div>
@@ -81,7 +82,7 @@ function VendorList() {
 
           {error && (
             <div className="bg-destructive/10 text-destructive p-4 rounded-md">
-              Error loading vendors: {error.message}
+              Error loading organizations: {error.message}
             </div>
           )}
 
@@ -102,16 +103,16 @@ function VendorList() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {showCreate && <CreateVendorRow onDone={() => setShowCreate(false)} />}
+                    {showCreate && <CreateOrganizationRow onDone={() => setShowCreate(false)} />}
                     {data.items.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                          No vendors found. Create your first entry!
+                          No organizations found. Create your first entry!
                         </TableCell>
                       </TableRow>
                     ) : (
-                      data.items.map((vendor) => (
-                        <VendorRow key={vendor.id} vendor={vendor} />
+                      data.items.map((organization) => (
+                        <OrganizationRow key={organization.id} organization={organization} />
                       ))
                     )}
                   </TableBody>
@@ -158,30 +159,30 @@ function VendorList() {
   )
 }
 
-function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
+function OrganizationRow({ organization, level = 0 }: { organization: Organization; level?: number }) {
   const [editing, setEditing] = useState(false)
   const [expanded, setExpanded] = useState(false)
-  const updateMutation = useUpdateVendor(vendor.id)
-  const deleteMutation = useDeleteVendor()
+  const updateMutation = useUpdateOrganization(organization.id)
+  const deleteMutation = useDeleteOrganization()
   
   // Lazy load relations only when expanded
-  const { data: relations } = useVendorRelations(vendor.id, { enabled: expanded })
+  const { data: relations } = useOrganizationRelations(organization.id, { enabled: expanded })
   
-  // Get sub-vendor IDs from relations
-  const subVendorIds = relations?.filter(r => 
-    r.relation_type === 'sub_vendor' && r.related_vendor_id
-  ).map(r => r.related_vendor_id!) || []
+  // Get sub-organization IDs from relations
+  const subOrganizationIds = relations?.filter((r: RelationWithNames) => 
+    r.relation_type === 'sub_vendor' && r.related_entity_type === 'organization'
+  ).map((r: RelationWithNames) => r.related_entity_id) || []
   
-  const hasSubVendors = subVendorIds.length > 0
+  const hasSubOrganizations = subOrganizationIds.length > 0
   
 
   const [form, setForm] = useState({
-    company_name: vendor.company_name,
-    contact_name: vendor.contact_name,
-    contact_email: vendor.contact_email,
-    contact_phone: vendor.contact_phone || '',
-    contract_number: vendor.contract_number,
-    clearance_level: vendor.clearance_level as ClearanceLevel,
+    company_name: organization.company_name,
+    contact_name: organization.contact_name,
+    contact_email: organization.contact_email,
+    contact_phone: organization.contact_phone || '',
+    contract_number: organization.contract_number,
+    clearance_level: organization.clearance_level as ClearanceLevel,
   })
 
   const onSave = async () => {
@@ -197,14 +198,14 @@ function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
   }
 
   const onDelete = async () => {
-    await deleteMutation.mutateAsync(vendor.id)
+    await deleteMutation.mutateAsync(organization.id)
   }
 
   return (
     <>
       <TableRow>
         <TableCell>
-          {hasSubVendors && (
+          {hasSubOrganizations && (
             <Button
               variant="ghost"
               size="sm"
@@ -224,8 +225,8 @@ function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
             {editing ? (
               <Input value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
             ) : (
-              <Link to="/admin/vendors/$vendorId" params={{ vendorId: vendor.id.toString() }} className="hover:underline flex items-center gap-2">
-                {vendor.company_name}
+              <Link to="/organizations/$organizationId" params={{ organizationId: organization.id.toString() }} className="hover:underline flex items-center gap-2">
+                {organization.company_name}
                 <ExternalLink className="h-3 w-3 opacity-50" />
               </Link>
             )}
@@ -235,28 +236,28 @@ function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
         {editing ? (
           <Input value={form.contact_name} onChange={(e) => setForm({ ...form, contact_name: e.target.value })} />
         ) : (
-          vendor.contact_name
+          organization.contact_name
         )}
       </TableCell>
       <TableCell>
         {editing ? (
           <Input type="email" value={form.contact_email} onChange={(e) => setForm({ ...form, contact_email: e.target.value })} />
         ) : (
-          vendor.contact_email
+          organization.contact_email
         )}
       </TableCell>
       <TableCell>
         {editing ? (
           <Input type="tel" value={form.contact_phone} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} />
         ) : (
-          vendor.contact_phone || '-'
+          organization.contact_phone || '-'
         )}
       </TableCell>
       <TableCell>
         {editing ? (
           <Input value={form.contract_number} onChange={(e) => setForm({ ...form, contract_number: e.target.value })} />
         ) : (
-          vendor.contract_number
+          organization.contract_number
         )}
       </TableCell>
       <TableCell>
@@ -273,7 +274,7 @@ function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
             </SelectContent>
           </Select>
         ) : (
-          <ClearanceBadge level={vendor.clearance_level} />
+          <ClearanceBadge level={organization.clearance_level} />
         )}
       </TableCell>
       <TableCell className="text-right">
@@ -299,22 +300,22 @@ function VendorRow({ vendor, level = 0 }: { vendor: Vendor; level?: number }) {
       </TableCell>
     </TableRow>
     
-    {/* Render sub-vendors when expanded */}
-    {expanded && hasSubVendors && subVendorIds.map((subId) => (
-      <SubVendorRow key={subId} vendorId={subId} level={level + 1} />
+    {/* Render sub-organizations when expanded */}
+    {expanded && hasSubOrganizations && subOrganizationIds.map((subId) => (
+      <SubOrganizationRow key={subId} organizationId={subId} level={level + 1} />
     ))}
     </>
   )
 }
 
-function SubVendorRow({ vendorId, level }: { vendorId: number; level: number }) {
-  const { data: vendor, isLoading } = useVendor(vendorId)
+function SubOrganizationRow({ organizationId, level }: { organizationId: number; level: number }) {
+  const { data: organization, isLoading } = useOrganization(organizationId)
   
-  if (isLoading || !vendor) {
+  if (isLoading || !organization) {
     return null
   }
   
-  return <VendorRow vendor={vendor} level={level} />
+  return <OrganizationRow organization={organization} level={level} />
 }
 
 function ClearanceBadge({ level }: { level: ClearanceLevel }) {
@@ -328,28 +329,30 @@ function ClearanceBadge({ level }: { level: ClearanceLevel }) {
   return <Badge variant={variants[level]}>{level}</Badge>
 }
 
-function CreateVendorRow({ onDone }: { onDone: () => void }) {
-  const createMutation = useCreateVendor()
-  const { data: personnelPage } = usePersonnelList(1, 100)
-  const [selectedPersonnelId, setSelectedPersonnelId] = useState<string>('')
-  const [form, setForm] = useState<CreateVendorRequest>({
+function CreateOrganizationRow({ onDone }: { onDone: () => void }) {
+  const createMutation = useCreateOrganization()
+  const { data: personPage } = usePersonList(1, 100) // Changed from personnelPage/usePersonnelList
+  const [selectedPersonId, setSelectedPersonId] = useState<string>('')
+  const [form, setForm] = useState<CreateOrganizationRequest>({
     company_name: '',
     contact_name: '',
     contact_email: '',
     contact_phone: '',
     contract_number: '',
-    clearance_level: 'NONE' as ClearanceLevel,
+    clearance_level: 'UNCLASSIFIED' as ClearanceLevel,
   })
 
-  const handlePersonnelChange = (personnelId: string) => {
-    setSelectedPersonnelId(personnelId)
-    const personnel = personnelPage?.items.find(p => p.id === parseInt(personnelId))
-    if (personnel) {
+  const handlePersonChange = (personId: string) => {
+    setSelectedPersonId(personId)
+    const person = personPage?.items.find(p => p.id === parseInt(personId)) // Changed from personnel
+    if (person) {
       setForm({
         ...form,
-        contact_name: `${personnel.first_name} ${personnel.last_name}`,
-        contact_email: personnel.email,
-        contact_phone: personnel.phone || '',
+        contact_name: person.first_name && person.last_name 
+          ? `${person.first_name} ${person.last_name}`
+          : person.username || person.email || `Person #${person.id}`,
+        contact_email: person.email || person.username || '',
+        contact_phone: person.phone || '',
       })
     }
   }
@@ -368,12 +371,12 @@ function CreateVendorRow({ onDone }: { onDone: () => void }) {
         <Input placeholder="Company name" value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
       </TableCell>
       <TableCell>
-        <Select value={selectedPersonnelId} onValueChange={handlePersonnelChange}>
+        <Select value={selectedPersonId} onValueChange={handlePersonChange}>
           <SelectTrigger>
             <SelectValue placeholder="Select contact..." />
           </SelectTrigger>
           <SelectContent>
-            {personnelPage?.items.map((person: Personnel) => (
+            {personPage?.items.map((person: Person) => (
               <SelectItem key={person.id} value={person.id.toString()}>
                 {person.first_name} {person.last_name}
               </SelectItem>
@@ -417,8 +420,8 @@ function CreateVendorRow({ onDone }: { onDone: () => void }) {
   )
 }
 
-// Inline editing replaces EditVendorDialog
+// Inline editing replaces EditOrganizationDialog
 
-// Delete handled inline in VendorRow
+// Delete handled inline in OrganizationRow
 
 // Removed old modal form; inline fields are used instead

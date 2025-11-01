@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
 pub struct AuditLog {
     pub id: i32,
-    pub user_id: Option<i32>,
+    pub person_id: Option<i32>, // Changed from user_id
     pub username: String,
     pub action: String,
     pub resource_type: String,
@@ -17,7 +17,7 @@ pub struct AuditLog {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateAuditLogRequest {
-    pub user_id: Option<i32>,
+    pub person_id: Option<i32>, // Changed from user_id
     pub username: String,
     pub action: String,
     pub resource_type: String,
@@ -29,7 +29,7 @@ pub struct CreateAuditLogRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AuditLogQuery {
-    pub user_id: Option<i32>,
+    pub person_id: Option<i32>, // Changed from user_id
     pub username: Option<String>,
     pub action: Option<String>,
     pub resource_type: Option<String>,

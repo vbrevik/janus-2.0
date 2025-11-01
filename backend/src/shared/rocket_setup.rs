@@ -6,7 +6,7 @@ use std::env;
 
 // Import all needed modules - these must be available when compiled as lib
 use crate::{
-    auth, audit, access, info_systems, person, roles, vendors, vendor_relations, relations,
+    auth, audit, access, info_systems, person, roles, organizations, vendor_relations, relations,
     discussions, document_references, nda, shared, messaging
 };
 
@@ -83,16 +83,6 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
             auth::handlers::get_profile,
             auth::handlers::change_password,
             shared::handlers::get_stats,
-            person::handlers::list_persons,
-            person::handlers::get_person,
-            person::handlers::create_person,
-            person::handlers::update_person,
-            person::handlers::delete_person,
-            vendors::handlers::list_vendors,
-            vendors::handlers::get_vendor,
-            vendors::handlers::create_vendor,
-            vendors::handlers::update_vendor,
-            vendors::handlers::delete_vendor,
             vendor_relations::handlers::list_vendor_relations,
             vendor_relations::handlers::create_vendor_relation,
             vendor_relations::handlers::get_vendor_hierarchy,
@@ -101,7 +91,7 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
             access::handlers::grant_computer_access,
             access::handlers::grant_data_access,
             access::handlers::grant_physical_access,
-            access::handlers::list_personnel_access,
+            access::handlers::list_person_access,
             access::handlers::revoke_access,
             info_systems::handlers::list_info_systems,
             info_systems::handlers::get_info_system,
@@ -110,6 +100,8 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
             info_systems::handlers::delete_info_system,
         ])
         .mount("/api/roles", roles::routes())
+        .mount("/api/person", person::routes())
+        .mount("/api/organizations", organizations::routes())
         .mount("/api/nda", nda::routes())
         .mount("/api/discussions", discussions::routes())
         .mount("/api/document-references", document_references::routes())

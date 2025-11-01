@@ -54,32 +54,64 @@ Unify `users` and `personnel` tables into a single `person` entity that can repr
 - [ ] Update `list_personnel_access` → `list_person_access`
 - [ ] Test access endpoints
 
-### Module 4: NDA Module ⏳
-- [ ] Update `nda/handlers.rs` to use `person_id`
-- [ ] Update queries to reference `person` table
+### Module 4: NDA Module ✅
+- [x] Update `nda/models.rs` to use `person_id` and `issued_by_person_id`
+- [x] Update `nda/handlers.rs` to use `person_id` in all queries
+- [x] Update queries to reference `person` table instead of `personnel`
+- [x] Update endpoint parameter from `personnel_id` to `person_id`
+- [x] **Compiles successfully** ✓
 
-### Module 5: Discussions Module ⏳
-- [ ] Update `discussions/handlers.rs` to use `person_id` and `*_person_id`
-- [ ] Update queries
+### Module 5: Discussions Module ✅
+- [x] Update `discussions/models.rs` to use `person_id` and `*_person_id`
+- [x] Update `discussions/handlers.rs` to use `person_id` in all queries
+- [x] Update endpoint parameter from `personnel_id` to `person_id`
+- [x] **Compiles successfully** ✓
 
-### Module 6: Document References Module ⏳
-- [ ] Update `document_references/handlers.rs`
-- [ ] Update email matching logic
+### Module 6: Document References Module ✅
+- [x] Update `document_references/models.rs` to use `person_id` and `*_person_id`
+- [x] Update `document_references/handlers.rs` queries
+- [x] Simplified email matching logic (auth.claims.sub already has person_id)
+- [x] **Compiles successfully** ✓
 
-### Module 7: Vendor Relations Module ⏳
-- [ ] Update `vendor_relations/handlers.rs` to use `related_person_id`
+### Module 7: Vendor Relations Module ✅
+- [x] Update `vendor_relations/models.rs` to use `related_person_id`
+- [x] Update `vendor_relations/handlers.rs` queries
+- [x] **Compiles successfully** ✓
 
-### Module 8: Audit Module ⏳
-- [ ] Update `audit/handlers.rs` to use `person_id`
+### Module 8: Audit Module ✅
+- [x] Update `audit/models.rs` to use `person_id` instead of `user_id`
+- [x] Update `audit/handlers.rs` queries to use `person_id`
+- [x] Update `create_audit_log` function
+- [x] **Compiles successfully** ✓
 
-### Module 9: Relations Module ⏳
-- [ ] Update `relations/handlers.rs` entity_type from 'personnel' to 'person'
+### Module 9: Relations Module ✅
+- [x] Update `relations/models.rs` EntityType enum from Personnel to Person
+- [x] Update `relations/handlers.rs` entity_type strings from 'personnel' to 'person'
+- [x] Update queries to use `person` table instead of `personnel`
+- [x] Update endpoint from `/personnel/<id>/relations` to `/persons/<id>/relations`
+- [x] Update function name from `list_personnel_relations` to `list_person_relations`
+- [x] **Compiles successfully** ✓
 
-### Module 10: Frontend ⏳
-- [ ] Update TypeScript types
-- [ ] Update routes
-- [ ] Update components
-- [ ] Update hooks
+### Module 10: Frontend ⏳ In Progress
+- [x] Update TypeScript types (person.ts created, all types updated)
+  - [x] `personnel.ts` → `person.ts` (created unified Person model)
+  - [x] `access.ts` (personnel_id → person_id, PersonnelAccess → PersonAccess)
+  - [x] `document-reference.ts` (personnel_id → person_id, self_reported_by → self_reported_by_person_id)
+  - [x] `discussion.ts` (personnel_id → person_id, created_by → created_by_person_id)
+  - [x] `nda.ts` (personnel_id → person_id, issued_by → issued_by_person_id)
+  - [x] `relation.ts` (personnel → person, vendor → organization)
+- [x] Update hooks (all hooks updated with new types and endpoints)
+  - [x] `use-access.ts` (usePersonnelAccess → usePersonAccess, endpoint updated)
+  - [x] `use-personnel.ts` → `use-person.ts` (created)
+  - [x] `use-document-references.ts` (personnel_id → person_id in filters)
+  - [x] `use-discussions.ts` (personnel_id → person_id in filters)
+  - [x] `use-nda.ts` (personnel_id → person_id in filters)
+  - [x] `use-relations.ts` (personnel → person, vendor → organization)
+- [ ] Update routes/components (partially done)
+  - [ ] `routes/personnel/*` → `routes/persons/*` (rename routes)
+  - [ ] Update components to use `usePerson*` hooks instead of `usePersonnel*`
+  - [ ] Update field references (personnelId → personId, etc.)
+  - [ ] Update dashboard references
 
 ---
 

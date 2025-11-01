@@ -10,7 +10,7 @@ use crate::auth::middleware::AuthGuard;
 use crate::shared::response::PaginatedResponse;
 use crate::shared::pagination::PaginationParams;
 
-#[get("/api/persons?<page>&<per_page>")]
+#[get("/api/person?<page>&<per_page>")]
 pub async fn list_persons(
     page: Option<i32>,
     per_page: Option<i32>,
@@ -69,7 +69,7 @@ pub async fn list_persons(
     }))
 }
 
-#[get("/api/persons/<id>")]
+#[get("/api/person/<id>")]
 pub async fn get_person(
     id: i32,
     db: &State<PgPool>,
@@ -94,7 +94,7 @@ pub async fn get_person(
     Ok(Json(person))
 }
 
-#[post("/api/persons", data = "<person_request>")]
+#[post("/api/person", data = "<person_request>")]
 pub async fn create_person(
     person_request: Json<CreatePersonRequest>,
     db: &State<PgPool>,
@@ -118,10 +118,10 @@ pub async fn create_person(
         }
     }
 
-    // Validate department exists in vendors if provided
+    // Validate department exists in organizations if provided
     if let Some(ref department) = person_request.department {
         let department_exists: bool = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM vendors WHERE department = $1 AND deleted_at IS NULL)"
+            "SELECT EXISTS(SELECT 1 FROM organizations WHERE department = $1 AND deleted_at IS NULL)"
         )
         .bind(department)
         .fetch_one(db.inner())
@@ -173,7 +173,7 @@ pub async fn create_person(
     Ok(Json(person))
 }
 
-#[put("/api/persons/<id>", data = "<person_request>")]
+#[put("/api/person/<id>", data = "<person_request>")]
 pub async fn update_person(
     id: i32,
     person_request: Json<UpdatePersonRequest>,
@@ -199,7 +199,7 @@ pub async fn update_person(
     // Validate department if it's being updated
     if let Some(ref department) = person_request.department {
         let department_exists: bool = sqlx::query_scalar::<_, bool>(
-            "SELECT EXISTS(SELECT 1 FROM vendors WHERE department = $1 AND deleted_at IS NULL)"
+            "SELECT EXISTS(SELECT 1 FROM organizations WHERE department = $1 AND deleted_at IS NULL)"
         )
         .bind(department)
         .fetch_one(db.inner())
@@ -315,7 +315,7 @@ pub async fn update_person(
     Ok(Json(person))
 }
 
-#[delete("/api/persons/<id>")]
+#[delete("/api/person/<id>")]
 pub async fn delete_person(
     id: i32,
     db: &State<PgPool>,

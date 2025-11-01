@@ -9,11 +9,11 @@ This document provides **complete, precise, AI-readable requirements** for imple
 ## 1. **System Overview**
 
 ### 1.1 Purpose
-Janus 2.0 is a **security clearance and personnel management system** for air-gapped, high-security environments.
+Janus 2.0 is a **security clearance and person management system** for air-gapped, high-security environments.
 
 ### 1.2 Core Functions
-1. **Personnel Management** - Track personnel records, clearances, and assignments
-2. **Vendor Management** - Manage vendor relationships and hierarchies
+1. **Person Management** - Track person records, clearances, and assignments
+2. **Organization Management** - Manage organization relationships and hierarchies
 3. **Access Control** - Role-based access with three-tier security (Computer, Data, Physical)
 4. **Audit & Compliance** - Complete audit trail and compliance reporting
 
@@ -57,7 +57,7 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
 
 **REQ-RBAC-002**: System MUST enforce role permissions
 - **Permissions**: CREATE, READ, UPDATE, DELETE, APPROVE, AUDIT
-- **Scope**: Per resource type (Personnel, Vendor, Access, System)
+- **Scope**: Per resource type (Person, Organization, Access, System)
 - **Enforcement**: At API level (not UI only)
 
 **REQ-RBAC-003**: System MUST support role assignment
@@ -65,10 +65,10 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
 - **Audit**: All role changes logged
 - **Validation**: Cannot remove last SYSTEM_ADMIN
 
-### 2.2 Personnel Management
+### 2.2 Person Management
 
-#### 2.2.1 Personnel CRUD Operations
-**REQ-PERS-001**: System MUST support creating personnel records
+#### 2.2.1 Person CRUD Operations
+**REQ-PERS-001**: System MUST support creating person records
 - **Required Fields**: 
   - `firstName` (string, 1-50 chars)
   - `lastName` (string, 1-50 chars)
@@ -80,24 +80,24 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
   - `department` (string, 1-100 chars)
   - `position` (string, 1-100 chars)
   - `startDate` (date, ISO 8601)
-  - `vendorId` (UUID, foreign key)
+  - `organizationId` (UUID, foreign key)
 - **Validation**: Email must be unique
-- **Permission**: Requires CREATE_PERSONNEL permission
+- **Permission**: Requires CREATE_PERSON permission
 
-**REQ-PERS-002**: System MUST support reading personnel records
+**REQ-PERS-002**: System MUST support reading person records
 - **Single**: GET `/api/personnel/{id}` returns full record
 - **List**: GET `/api/personnel` returns paginated list (default 50 per page)
-- **Filter**: Support filter by clearanceLevel, department, vendorId
+- **Filter**: Support filter by clearanceLevel, department, organizationId
 - **Search**: Support full-text search on name and email
 - **Permission**: Requires READ_PERSONNEL permission
 
-**REQ-PERS-003**: System MUST support updating personnel records
+**REQ-PERS-003**: System MUST support updating person records
 - **Endpoint**: PUT `/api/personnel/{id}`
 - **Validation**: Email must remain unique
 - **Audit**: Log all changes with old and new values
 - **Permission**: Requires UPDATE_PERSONNEL permission
 
-**REQ-PERS-004**: System MUST support deleting personnel records
+**REQ-PERS-004**: System MUST support deleting person records
 - **Type**: Soft delete (mark as deleted, don't physically delete)
 - **Cascade**: Revoke all access when deleted
 - **Audit**: Log deletion with reason
@@ -119,48 +119,48 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
 - **Warning**: Alert 30 days before expiry
 - **Action**: Auto-revoke access on expiry date
 
-### 2.3 Vendor Management
+### 2.3 Organization Management
 
-#### 2.3.1 Vendor CRUD Operations
-**REQ-VEND-001**: System MUST support creating vendor records
+#### 2.3.1 Organization CRUD Operations
+**REQ-VEND-001**: System MUST support creating organization records
 - **Required Fields**:
   - `name` (string, 1-100 chars, unique)
   - `type` (enum: CONTRACTOR, SUPPLIER, PARTNER, INTERNAL)
   - `clearanceLevel` (enum: NONE, CONFIDENTIAL, SECRET, TOP_SECRET)
 - **Optional Fields**:
-  - `parentVendorId` (UUID, foreign key - for hierarchy)
+  - `parentOrganizationId` (UUID, foreign key - for hierarchy)
   - `contactEmail` (string, valid email)
   - `contactPhone` (string, E.164 format)
   - `address` (string, 0-500 chars)
-- **Permission**: Requires CREATE_VENDOR permission
+- **Permission**: Requires CREATE_ORGANIZATION permission
 
-**REQ-VEND-002**: System MUST support reading vendor records
-- **Single**: GET `/api/vendors/{id}` returns full record with personnel count
-- **List**: GET `/api/vendors` returns paginated list
-- **Hierarchy**: GET `/api/vendors/{id}/children` returns child vendors
-- **Personnel**: GET `/api/vendors/{id}/personnel` returns assigned personnel
-- **Permission**: Requires READ_VENDOR permission
+**REQ-VEND-002**: System MUST support reading organization records
+- **Single**: GET `/api/organizations/{id}` returns full record with person count
+- **List**: GET `/api/organizations` returns paginated list
+- **Hierarchy**: GET `/api/organizations/{id}/children` returns child organizations
+- **Persons**: GET `/api/organizations/{id}/personnel` returns assigned persons
+- **Permission**: Requires READ_ORGANIZATION permission
 
-**REQ-VEND-003**: System MUST support updating vendor records
-- **Endpoint**: PUT `/api/vendors/{id}`
+**REQ-VEND-003**: System MUST support updating organization records
+- **Endpoint**: PUT `/api/organizations/{id}`
 - **Validation**: Name must remain unique
 - **Audit**: Log all changes
-- **Permission**: Requires UPDATE_VENDOR permission
+- **Permission**: Requires UPDATE_ORGANIZATION permission
 
-**REQ-VEND-004**: System MUST support deleting vendor records
-- **Type**: Soft delete if has associated personnel, hard delete if empty
-- **Validation**: Cannot delete if has child vendors
-- **Personnel**: Reassign personnel to null before deletion
-- **Permission**: Requires DELETE_VENDOR permission
+**REQ-VEND-004**: System MUST support deleting organization records
+- **Type**: Soft delete if has associated persons, hard delete if empty
+- **Validation**: Cannot delete if has child organizations
+- **Personnel**: Reassign persons to null before deletion
+- **Permission**: Requires DELETE_ORGANIZATION permission
 
-#### 2.3.2 Vendor Hierarchy
-**REQ-HIER-001**: System MUST support vendor hierarchies
+#### 2.3.2 Organization Hierarchy
+**REQ-HIER-001**: System MUST support organization hierarchies
 - **Structure**: Tree structure (parent-child relationships)
 - **Depth**: Maximum 5 levels deep
 - **Query**: Support recursive queries to get all descendants
 
 **REQ-HIER-002**: System MUST prevent circular hierarchies
-- **Validation**: Check parent chain before setting parentVendorId
+- **Validation**: Check parent chain before setting parentOrganizationId
 - **Error**: Return 400 Bad Request if circular reference detected
 
 ### 2.4 Three-Tier Access Control
@@ -229,7 +229,7 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
 - **Operations**: CREATE, UPDATE, DELETE on all entities
 - **Data Captured**:
   - `action` (string, operation name)
-  - `entityType` (string, e.g., "personnel", "vendor")
+  - `entityType` (string, e.g., "personnel", "organization")
   - `entityId` (UUID)
   - `userId` (UUID, who performed action)
   - `timestamp` (timestamp, ISO 8601)
@@ -246,7 +246,7 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
 #### 2.5.2 Compliance Reporting
 **REQ-COMP-001**: System MUST generate compliance reports
 - **Reports**:
-  - Active personnel by clearance level
+  - Active persons by clearance level
   - Expiring clearances (next 30 days)
   - Access grants by user
   - Security incidents (failed logins, permission denials)
@@ -428,7 +428,7 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
 - **Degradation**: Graceful degradation under load
 - **Monitoring**: Metrics for requests/sec, error rate, latency
 
-**REQ-SCALE-002**: Database MUST support 100,000+ personnel records
+**REQ-SCALE-002**: Database MUST support 100,000+ person records
 - **Performance**: Query performance does not degrade
 - **Indexes**: Properly indexed for large datasets
 - **Archival**: Strategy for archiving old records
@@ -545,7 +545,7 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
 
 **REQ-PRIV-002**: System MUST support data export
 - **Format**: JSON and CSV
-- **Scope**: Per personnel record
+- **Scope**: Per person record
 - **Permission**: EXPORT_DATA permission required
 
 ---
@@ -577,7 +577,7 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
 - **Journeys**:
   - Login → View Personnel → Logout
   - Create Personnel → Assign Clearance → Grant Access
-  - Create Vendor → Assign Personnel → View Hierarchy
+  - Create Organization → Assign Personnel → View Hierarchy
 - **Framework**: Playwright
 - **Execution**: `npm run test:e2e`
 
@@ -628,13 +628,13 @@ Janus 2.0 is a **security clearance and personnel management system** for air-ga
 
 ✅ **MVP 1 is complete when**:
 1. User can login with username/password
-2. User can view list of personnel (paginated)
-3. User can create new personnel record
-4. User can view personnel details
-5. User can update personnel record
+2. User can view list of persons (paginated)
+3. User can create new person record
+4. User can view person details
+5. User can update person record
 6. User can delete personnel record (soft delete)
-7. User can view list of vendors (paginated)
-8. User can create new vendor record
+7. User can view list of organizations (paginated)
+8. User can create new organization record
 9. All API endpoints respond in < 50ms (p95)
 10. All unit tests pass (80% coverage)
 11. All integration tests pass (100% endpoint coverage)
@@ -686,7 +686,7 @@ These features are **explicitly excluded** from initial release:
 
 ### 10.1 Priority Classification
 - **P0** (Must Have): All authentication, personnel CRUD, basic RBAC
-- **P1** (Should Have): Three-tier access, audit logging, vendors
+- **P1** (Should Have): Three-tier access, audit logging, organizations
 - **P2** (Nice to Have): Advanced reporting, analytics
 - **P3** (Future): AI, advanced workflows, integrations
 

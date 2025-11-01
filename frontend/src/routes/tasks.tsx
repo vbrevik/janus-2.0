@@ -9,6 +9,7 @@ import { useNDAList, useSignNDA } from '@/hooks/use-nda'
 import { useAuth } from '@/contexts/auth-context'
 import { apiFetch } from '@/lib/api'
 import { CheckCircle2, FileText, Clock } from 'lucide-react'
+import type { NDA } from '@/types/nda'
 
 export const Route = createFileRoute('/tasks')({
   component: TasksPage,
@@ -54,7 +55,7 @@ function TasksPage() {
   const [signingId, setSigningId] = useState<number | null>(null)
 
   // Filter for pending/active NDAs that need signing
-  const pendingNDAs = ndas?.filter(nda => nda.status === 'PENDING' || nda.status === 'ACTIVE') || []
+  const pendingNDAs = ndas?.filter((nda: NDA) => nda.status === 'PENDING' || nda.status === 'ACTIVE') || []
 
   const handleSign = async (ndaId: number) => {
     setSigningId(ndaId)
@@ -124,7 +125,7 @@ function TasksPage() {
             </Card>
           ) : (
             <div className="space-y-4">
-              {pendingNDAs.map((nda) => (
+              {pendingNDAs.map((nda: NDA) => (
                 <Card key={nda.id}>
                   <CardHeader>
                     <div className="flex items-center justify-between">
@@ -166,12 +167,12 @@ function TasksPage() {
           )}
 
           {/* Signed NDAs Section */}
-          {ndas && ndas.filter(nda => nda.status === 'SIGNED').length > 0 && (
+          {ndas && ndas.filter((nda: NDA) => nda.status === 'SIGNED').length > 0 && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Previously Signed</h2>
               {ndas
-                .filter(nda => nda.status === 'SIGNED')
-                .map((nda) => (
+                .filter((nda: NDA) => nda.status === 'SIGNED')
+                .map((nda: NDA) => (
                   <Card key={nda.id}>
                     <CardHeader>
                       <div className="flex items-center justify-between">

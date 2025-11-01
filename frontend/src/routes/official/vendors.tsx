@@ -8,17 +8,17 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useVendorList } from '@/hooks/use-vendors'
+import { useOrganizationList } from '@/hooks/use-organizations'
 import { Search } from 'lucide-react'
 
 export const Route = createFileRoute('/official/vendors')({
-  component: VendorsPage,
+  component: OrganizationsPage,
 })
 
-function VendorsPage() {
+function OrganizationsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [page] = useState(1)
-  const { data, isLoading } = useVendorList(page, 20)
+  const { data, isLoading } = useOrganizationList(page, 20)
 
   const clearances: Record<string, string> = {
     UNCLASSIFIED: 'bg-blue-100 text-blue-800',
@@ -27,15 +27,15 @@ function VendorsPage() {
     TOP_SECRET: 'bg-red-100 text-red-800',
   }
 
-  // Filter vendors by search term
-  const filteredVendors = data?.items.filter(vendor => {
+  // Filter organizations by search term
+  const filteredOrganizations = data?.items.filter(organization => {
     if (!searchTerm) return true
     const search = searchTerm.toLowerCase()
     return (
-      vendor.company_name.toLowerCase().includes(search) ||
-      vendor.contact_name.toLowerCase().includes(search) ||
-      vendor.contact_email.toLowerCase().includes(search) ||
-      vendor.contract_number.toLowerCase().includes(search)
+      organization.company_name.toLowerCase().includes(search) ||
+      organization.contact_name.toLowerCase().includes(search) ||
+      organization.contact_email.toLowerCase().includes(search) ||
+      organization.contract_number.toLowerCase().includes(search)
     )
   }) || []
 
@@ -44,13 +44,13 @@ function VendorsPage() {
       <Layout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">Vendor Lookup</h1>
-            <p className="text-muted-foreground">Search and verify vendor information</p>
+            <h1 className="text-3xl font-bold">Organization Lookup</h1>
+            <p className="text-muted-foreground">Search and verify organization information</p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>Search Vendors</CardTitle>
+              <CardTitle>Search Organizations</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-2">
@@ -81,11 +81,11 @@ function VendorsPage() {
             <Card>
               <CardHeader>
                 <CardTitle>
-                  Results ({filteredVendors.length} found)
+                  Results ({filteredOrganizations.length} found)
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {filteredVendors.length > 0 ? (
+                {filteredOrganizations.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -98,19 +98,19 @@ function VendorsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredVendors.map((vendor) => (
-                        <TableRow key={vendor.id}>
+                      {filteredOrganizations.map((organization) => (
+                        <TableRow key={organization.id}>
                           <TableCell className="font-medium">
-                            {vendor.company_name}
+                            {organization.company_name}
                           </TableCell>
-                          <TableCell>{vendor.contact_name}</TableCell>
-                          <TableCell>{vendor.contact_email}</TableCell>
+                          <TableCell>{organization.contact_name}</TableCell>
+                          <TableCell>{organization.contact_email}</TableCell>
                           <TableCell className="font-mono text-xs">
-                            {vendor.contract_number}
+                            {organization.contract_number}
                           </TableCell>
                           <TableCell>
-                            <Badge className={clearances[vendor.clearance_level] || ''}>
-                              {vendor.clearance_level}
+                            <Badge className={clearances[organization.clearance_level] || ''}>
+                              {organization.clearance_level}
                             </Badge>
                           </TableCell>
                           <TableCell>
@@ -124,7 +124,7 @@ function VendorsPage() {
                   </Table>
                 ) : (
                   <div className="text-center py-12 text-muted-foreground">
-                    <p>No vendors found. Try a different search term.</p>
+                    <p>No organizations found. Try a different search term.</p>
                   </div>
                 )}
               </CardContent>

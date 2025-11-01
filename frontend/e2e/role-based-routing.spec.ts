@@ -55,7 +55,7 @@ test.describe('Role-Based Route Guards', () => {
     // Should see admin navigation items
     await expect(page.getByText('Dashboard')).toBeVisible()
     await expect(page.getByText('Personnel')).toBeVisible()
-    await expect(page.getByText('Vendors')).toBeVisible()
+    await expect(page.getByText('Organizations')).toBeVisible()
     await expect(page.getByText('Info Systems')).toBeVisible()
     await expect(page.getByText('Access Control')).toBeVisible()
     await expect(page.getByText('NDAs')).toBeVisible()
@@ -73,8 +73,8 @@ test.describe('Role-Based Route Guards', () => {
     await expect(page).toHaveURL(/.*\/admin\/personnel/)
     await expect(page.getByText('Personnel Management')).toBeVisible()
 
-    await page.goto('http://localhost:5173/admin/vendors')
-    await expect(page).toHaveURL(/.*\/admin\/vendors/)
+    await page.goto('http://localhost:5173/admin/organizations')
+    await expect(page).toHaveURL(/.*\/admin\/organizations/)
   })
 
   test('Admin user cannot access enduser routes', async ({ page }) => {
@@ -137,7 +137,7 @@ test.describe('Navigation Display', () => {
     const navItems = [
       'Dashboard',
       'Personnel',
-      'Vendors',
+      'Organizations',
       'Info Systems',
       'Access Control',
       'NDAs',

@@ -384,7 +384,7 @@ Plus started:
 
 **Sequential MVPs**:
 1. **MVP 1** (Week 1-2): Auth + Personnel CRUD + Basic RBAC
-2. **MVP 2** (Week 3-4): Vendor Management + Advanced RBAC
+2. **MVP 2** (Week 3-4): Organization Management + Advanced RBAC
 3. **MVP 3** (Week 5-6): Three-Tier Access Control
 4. **MVP 4** (Week 7-8): Analytics & Reporting
 
