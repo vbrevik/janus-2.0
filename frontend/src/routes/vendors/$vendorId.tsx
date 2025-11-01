@@ -9,12 +9,11 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useVendor, useUpdateVendor } from '@/hooks/use-vendors'
-import { useVendorRelations, useCreateVendorRelation, useDeleteVendorRelation } from '@/hooks/use-vendor-relations'
+import { useVendorRelations, useCreateRelation, useDeleteRelation, useEntityHierarchy } from '@/hooks/use-relations'
 import { usePersonnelList } from '@/hooks/use-personnel'
 import { useVendorList } from '@/hooks/use-vendors'
-import { useVendorHierarchy } from '@/hooks/use-vendor-relations'
 import { ArrowLeft, Trash2, Plus } from 'lucide-react'
-import type { RelationType } from '@/types/vendor-relation'
+import type { RelationType } from '@/types/relation'
 
 export const Route = createFileRoute('/vendors/$vendorId')({
   component: VendorDetails,
@@ -27,7 +26,7 @@ function VendorDetails() {
 
   const { data: vendor, isLoading: vendorLoading } = useVendor(vendorIdNum)
   const { data: relations, isLoading: relationsLoading } = useVendorRelations(vendorIdNum)
-  const { data: hierarchy } = useVendorHierarchy(vendorIdNum)
+  const { data: hierarchy } = useEntityHierarchy('vendor', vendorIdNum)
 
   return (
     <ProtectedRoute>
@@ -218,8 +217,8 @@ function RelationsTab({ vendorId, relations, isLoading }: {
   const [showAddForm, setShowAddForm] = useState(false)
   const { data: personnelPage } = usePersonnelList(1, 100)
   const { data: vendorsPage } = useVendorList(1, 100)
-  const createMutation = useCreateVendorRelation()
-  const deleteMutation = useDeleteVendorRelation()
+  const createMutation = useCreateRelation()
+  const deleteMutation = useDeleteRelation()
 
   const [form, setForm] = useState<{
     relation_type: RelationType | ''
@@ -233,11 +232,23 @@ function RelationsTab({ vendorId, relations, isLoading }: {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!form.relation_type) return
+    
+    // Determine related entity based on which field is filled
+    const relatedEntityType = form.related_vendor_id ? 'vendor' : 'personnel'
+    const relatedEntityId = form.related_vendor_id || form.related_personnel_id
+    
+    if (!relatedEntityId) {
+      alert('Please select either a vendor or personnel')
+      return
+    }
+    
     await createMutation.mutateAsync({
-      vendor_id: vendorId,
+      entity_type: 'vendor',
+      entity_id: vendorId,
+      related_entity_type: relatedEntityType,
+      related_entity_id: relatedEntityId,
       relation_type: form.relation_type as RelationType,
-      related_vendor_id: form.related_vendor_id,
-      related_personnel_id: form.related_personnel_id,
       notes: form.notes,
     })
     setShowAddForm(false)
@@ -329,17 +340,21 @@ function RelationsTab({ vendorId, relations, isLoading }: {
       {/* Relations List */}
       {relations && relations.length > 0 ? (
         <div className="grid gap-4">
-          {relations.map((relation) => (
+          {relations.map((relation: any) => (
             <Card key={relation.id}>
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
                     <Badge>{relation.relation_type}</Badge>
-                    {relation.related_vendor_id && (
-                      <p className="text-sm">Vendor ID: {relation.related_vendor_id}</p>
-                    )}
-                    {relation.related_personnel_id && (
-                      <p className="text-sm">Personnel ID: {relation.related_personnel_id}</p>
+                    <p className="text-sm font-medium">
+                      {relation.related_entity_type === 'vendor' ? 'Vendor: ' : 'Personnel: '}
+                      {relation.related_entity_name || `ID: ${relation.related_entity_id}`}
+                    </p>
+                    {relation.valid_from && (
+                      <p className="text-xs text-muted-foreground">
+                        From: {new Date(relation.valid_from).toLocaleDateString()}
+                        {relation.valid_until && ` - Until: ${new Date(relation.valid_until).toLocaleDateString()}`}
+                      </p>
                     )}
                     {relation.notes && <p className="text-sm text-muted-foreground">{relation.notes}</p>}
                   </div>

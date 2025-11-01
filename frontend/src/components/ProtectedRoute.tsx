@@ -41,8 +41,8 @@ export function ProtectedRoute({
 
   // Redirect if user doesn't have required role
   if (!user || !allowedRoles.includes(user.role)) {
-    // Redirect to default route for user's role
-    const defaultRoute = redirectTo || getDefaultRoute(user.role)
+    // Redirect to default route for user's role (or specified redirect)
+    const defaultRoute = redirectTo || (user ? getDefaultRoute(user.role) : '/login')
     return <Navigate to={defaultRoute} />
   }
 

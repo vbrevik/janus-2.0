@@ -6,10 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useVendorRelations, useCreateVendorRelation, useDeleteVendorRelation } from '@/hooks/use-vendor-relations'
+import { usePersonnelRelations, useCreateRelation, useDeleteRelation } from '@/hooks/use-relations'
 import { useVendorList } from '@/hooks/use-vendors'
 import { Plus, Trash2 } from 'lucide-react'
-import type { RelationType } from '@/types/vendor-relation'
+import type { RelationType } from '@/types/relation'
 
 interface VendorRelationsTabProps {
   personnelId: number
@@ -25,16 +25,14 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
   const [notes, setNotes] = useState('')
   const [filterType, setFilterType] = useState<string>('all')
 
-  // TODO: Need backend endpoint to get relations by personnel_id
-  // For now, disable the query since we need vendorId for useVendorRelations
-  const { data: relations, isLoading, refetch } = useVendorRelations(0, { enabled: false })
+  // Get personnel relations (outgoing to vendors)
+  const { data: relations, isLoading, refetch } = usePersonnelRelations(personnelId, { direction: 'outgoing' })
   const { data: vendors } = useVendorList(1, 1000)
-  const createRelation = useCreateVendorRelation()
-  const deleteRelation = useDeleteVendorRelation()
+  const createRelation = useCreateRelation()
+  const deleteRelation = useDeleteRelation()
 
-  const getVendorName = (vendorId: number) => {
-    return vendors?.items.find(v => v.id === vendorId)?.company_name || `Vendor #${vendorId}`
-  }
+  // Filter relations to only show vendor relations (not personnel-personnel)
+  const vendorRelations = relations?.filter(rel => rel.related_entity_type === 'vendor') || []
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString()
@@ -46,16 +44,23 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
       consultant: 'Consultant',
       partner: 'Partner',
       subcontractor: 'Subcontractor',
-      sub_vendor: 'Sub-Vendor'
+      sub_vendor: 'Sub-Vendor',
+      manager: 'Manager',
+      supervisor: 'Supervisor',
+      subordinate: 'Subordinate',
+      reports_to: 'Reports To',
+      colleague: 'Colleague',
+      peer: 'Peer',
+      team_member: 'Team Member'
     }
     return labels[type] || type
   }
 
   // Filter relations based on selected filter type
-  const filteredRelations = relations?.filter((rel: any) => {
+  const filteredRelations = vendorRelations.filter(rel => {
     if (filterType === 'all') return true
     return rel.relation_type === filterType
-  }) || []
+  })
 
   const handleCreateRelation = async () => {
     if (!selectedVendor) {
@@ -65,8 +70,10 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
 
     try {
       await createRelation.mutateAsync({
-        vendor_id: selectedVendor,
-        related_personnel_id: personnelId,
+        entity_type: 'personnel',
+        entity_id: personnelId,
+        related_entity_type: 'vendor',
+        related_entity_id: selectedVendor,
         relation_type: relationType,
         valid_from: validFrom || undefined,
         valid_until: validUntil || undefined,
@@ -190,7 +197,7 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
             <div className="text-center py-4 text-muted-foreground text-xs">
               Loading...
             </div>
-          ) : !relations || relations.length === 0 ? (
+          ) : !vendorRelations || vendorRelations.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground text-xs">
               No vendor relations found. Click "Add" to create one.
             </div>
@@ -212,9 +219,9 @@ export function VendorRelationsTab({ personnelId }: VendorRelationsTabProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRelations.map((relation: any) => (
+                  {filteredRelations.map((relation) => (
                     <TableRow key={relation.id}>
-                      <TableCell className="py-2 text-xs font-medium">{getVendorName(relation.vendor_id)}</TableCell>
+                      <TableCell className="py-2 text-xs font-medium">{relation.related_entity_name}</TableCell>
                       <TableCell className="py-2">
                         <Badge variant="outline" className="text-[10px]">{getRelationTypeLabel(relation.relation_type)}</Badge>
                       </TableCell>
