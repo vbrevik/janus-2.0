@@ -1,6 +1,6 @@
-# Backend Completion Tasks
+# Backend and Frontend Completion Tasks
 
-This document tracks completion of backend features from worktrees.
+This document tracks completion of features from worktrees.
 
 ---
 
@@ -24,7 +24,7 @@ This document tracks completion of backend features from worktrees.
 
 ---
 
-## 📋 Discussions Backend - Complete
+## ✅ Discussions Backend - Complete
 
 **Worktree**: `../janus-2.0-worktrees/discussions-backend`  
 **Branch**: `feature/discussions-backend-complete`  
@@ -51,8 +51,40 @@ This document tracks completion of backend features from worktrees.
 
 ---
 
+## ✅ Roles Frontend - Complete
+
+**Worktree**: `../janus-2.0-worktrees/roles-frontend`  
+**Branch**: `feature/roles-frontend`  
+**Agent**: Full-Stack Developer  
+**Status**: ✅ Complete
+
+**Objective**: Build the Roles & Permissions management UI for the frontend.
+
+### Features Completed
+- ✅ Roles list page with CRUD operations
+- ✅ Create role functionality
+- ✅ Edit role functionality
+- ✅ Delete role functionality
+- ✅ Permission assignment UI
+- ✅ Integration with backend API
+
+### Acceptance Criteria
+- [x] All CRUD operations work (Create, Read, Update, Delete roles)
+- [x] Permission assignment UI works
+- [x] Proper permission checks (admin only)
+- [x] Follows patterns from personnel/vendor UI
+
+---
+
 ## 📝 Notes
 
-- Reference implementation: `backend/src/personnel/handlers.rs`
+- Reference implementation: `backend/src/personnel/handlers.rs` for backend patterns
+- Reference implementation: `frontend/src/routes/personnel/` for UI patterns
 - Auth pattern: Use Rocket's `State` with auth guard
 - Permission checks: Use `role_has_permission()` from `shared/rbac.rs`
+- API endpoints: `/api/roles`, `/api/roles/{id}`, `/api/roles/permissions`, etc.
+- User stories: See `docs/ROLES-PERMISSIONS-USER-STORIES.md`
+
+---
+
+**All merged features are now integrated into the main branch.**
