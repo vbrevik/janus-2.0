@@ -25,6 +25,10 @@ DEMO/MOCK: everything seeded and in-memory. Clearance is treated as an external,
 | 002 | hub-discovery-index | standard | Who-holds-what about a subject, no details | ✓ VALIDATED | hub, federation |
 | 003 | inter-entity-handshake | standard | Discover → request → holder's ABAC releases/withholds | ✓ VALIDATED | federation, abac |
 | 004 | role-sod | standard | Role-gated actions over one shared decision (SoD) | ✓ VALIDATED | rbac, sod |
+| 005 | interchange-contract | frontier | Two entities exchange only via a typed publish/discover/request-detail contract | ✓ VALIDATED | federation, contract |
+| 006 | attribute-trust | frontier | Holder verifies a signed attribute token before trusting; forged/over-claimed rejected | ✓ VALIDATED | trust, federation |
+| 007 | audit-reconstruction | integration | Append-only eval log reconstructs "who can access R now / as of T" | ✓ VALIDATED | audit, abac |
+| 008 | per-entity-policy | frontier | Each entity authors its own release policy; engine honors divergence | ✓ VALIDATED | policy, abac |
 
 ## Where the code lives
 

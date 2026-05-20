@@ -110,6 +110,34 @@ Full=CRUD · Edit=create/update · View=read · Approve=decision · Own/Self=sco
   narrow "canonical guard" scope. Treat as historical.
 - No Phase-1 `SPEC.md` was written (spec-phase was redirected into this model definition).
 
+## 12. Target Deployment Scenario (subscriber units)
+
+The concrete real-world units the hub must serve (future). Each is a subscriber entity with its own
+release policy (validated mechanism: spike 008).
+
+| Unit | Access profile | New model demands |
+|------|----------------|-------------------|
+| Military unit A | Broad access to most | Wide allow policy across domains |
+| Military unit B | Broad access to most | Wide allow policy across domains |
+| Intelligence | Read almost all; **its own data shielded from most users** | **Directional shielding** — intel-owned resources default-deny + explicit allow (asymmetric in vs out) |
+| Inventory / building / real-estate | Read all **infrastructure** | Domain-scoped read (physical/asset domain) |
+| Industry | **Shield business secrets**; detect **who leaks stock info** | Strict need-to-know compartments + **leak/anomaly detection** on the audit log (spike 007) |
+| Home guard | **Territorial** — "what happens in our turf" | **Location/territory** attribute scoping |
+
+**Cross-cutting — support obligations:** when a subunit is **deployed abroad**, other units have a
+*support obligation* to it → must gain access to that subunit's relevant records. A **dynamic,
+context-driven** grant.
+
+### New mechanisms beyond what spikes 001–008 proved
+- **Environment/context attributes:** location/territory, deployment status (home vs abroad).
+- **Obligation rule class:** deployment-driven, time-bounded access that turns on/off with context — not a static attribute or a stored grant. (Most novel; "might not work" risk — candidate spike.)
+- **Directional shielding:** resource-side default-deny with explicit allow (intel, industry secrets).
+- **Leak/anomaly detection:** monitoring layer over the audit log (industry stock-info leaks).
+
+These extend, not contradict, the validated model: units = per-entity policies (008); context attributes
+feed the ABAC engine (001); obligations are a new rule class; leak detection sits on the audit log (007).
+
 ---
 
 *Model defined 2026-05-20 via spec-phase interview, redirected from Phase 1 (canonical-guard).*
+*Target deployment scenario added 2026-05-20.*

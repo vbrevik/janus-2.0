@@ -332,7 +332,7 @@ Janus 2.0 is a security clearance and access-management system for tracking pers
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
 
-No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, `.github/skills/`, or `.codex/skills/` with a `SKILL.md` index file.
+- **Spike findings for janus-2.0** (implementation patterns, constraints, gotchas) → `Skill("spike-findings-janus-2.0")`
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->
