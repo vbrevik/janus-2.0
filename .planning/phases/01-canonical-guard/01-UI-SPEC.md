@@ -1,10 +1,11 @@
 ---
 phase: 1
 slug: canonical-guard
-status: draft
+status: approved
 shadcn_initialized: true
 preset: new-york / slate (existing — not modified this phase)
 created: 2026-05-20
+reviewed_at: 2026-05-20
 ---
 
 # Phase 1 — UI Design Contract
