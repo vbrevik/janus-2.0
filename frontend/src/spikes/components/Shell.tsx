@@ -8,6 +8,7 @@ import { Spike005Contract } from "./Spike005Contract";
 import { Spike006Trust } from "./Spike006Trust";
 import { Spike007Audit } from "./Spike007Audit";
 import { Spike008Policy } from "./Spike008Policy";
+import { Spike009Context } from "./Spike009Context";
 
 const TABS = [
   { id: "001", label: "001 · ABAC engine", el: <Spike001Abac /> },
@@ -18,6 +19,7 @@ const TABS = [
   { id: "006", label: "006 · Attr trust", el: <Spike006Trust /> },
   { id: "007", label: "007 · Audit", el: <Spike007Audit /> },
   { id: "008", label: "008 · Policy", el: <Spike008Policy /> },
+  { id: "009", label: "009 · Context", el: <Spike009Context /> },
 ] as const;
 
 export function Shell() {
