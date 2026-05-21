@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Authorization Hub (demo)
 status: planning
-last_updated: "2026-05-21T13:10:50.498Z"
+last_updated: "2026-05-21"
 last_activity: 2026-05-21
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,22 +17,23 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-20)
+See: .planning/PROJECT.md (updated 2026-05-21)
 
-**Core value:** Authorized staff can manage people, organizations, and access grants through one role-aware UI without exposing data to unauthorized users.
-**Current focus:** Phase 1 — Canonical Guard
+**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — proving the federated ABAC model before committing to a real build.
+**Current focus:** Phase 1 — Foundation (ready to plan)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 1 of 4 (Foundation)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-21 — Milestone v2.0 started
+Status: Ready to plan
+Last activity: 2026-05-21 — Roadmap created for v2.0 milestone
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-
 - Total plans completed: 0
 - Average duration: - min
 - Total execution time: 0 hours
@@ -44,7 +45,6 @@ Last activity: 2026-05-21 — Milestone v2.0 started
 | - | - | - | - |
 
 **Recent Trend:**
-
 - Last 5 plans: -
 - Trend: -
 
@@ -57,35 +57,30 @@ Last activity: 2026-05-21 — Milestone v2.0 started
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
-- First GSD milestone = finish Frontend Consolidation (the WIP refactor is entangled with duplicate routes/guards and broken tests)
-- Canonical guard = `ProtectedRoute.tsx` (PascalCase, `allowedRoles`); the lowercase variant has no role check
-- Security debt (backend RBAC/JWT/CORS/password_hash) parked for a dedicated next milestone
+- All 9 spikes VALIDATED (2026-05-20/21) — every mechanism in the 6-unit scenario proven
+- Demo is frontend-mock-first; no new Rust/backend work required for the demo phase
+- Spike code stays isolated in `frontend/src/spikes/` behind `/spikes.html` entry; no routeTree changes
+- Phase 3 depends on Phase 1 (not Phase 2) — Phases 2 and 3 can be planned in parallel
 
 ### Pending Todos
-
-[From .planning/todos/pending/ — ideas captured during sessions]
 
 None yet.
 
 ### Blockers/Concerns
 
-[Issues that affect future work]
-
-- Uncommitted WIP on branch `feature/frontend-consolidation`: partial route component-split (untracked `admin/dashboard/`, `admin/discussions/`, `admin/person/_component.tsx`), a WebSocket reconnect fix, and a fresh Vitest bootstrap (`test-setup.ts`, `vite.config.ts`, `use-websocket.test.ts`). Phase 1/2 must complete and commit this WIP rather than starting from scratch.
-- `routeTree.gen.ts` currently imports from untracked route dirs — those dirs must be committed before regenerating the tree (ROUTE-04).
+None for v2.0. (v1.0 WIP on `feature/frontend-consolidation` is superseded and archived.)
 
 ## Deferred Items
 
-Items acknowledged and carried forward from previous milestone close:
-
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Backend Security | SEC-01..05 (RBAC, JWT fallback, CORS, password_hash, audit coverage) | Deferred to next milestone | 2026-05-20 |
-| Backend Bugfixes | BUG-01 (/api/vendors relations 400), BUG-02 (person-relations endpoint) | Deferred to next milestone | 2026-05-20 |
-| UX Polish | Replace native `alert()` with toasts | Deferred | 2026-05-20 |
+| Stretch | AUDIT-03 leak/anomaly indicator | Future/stretch | 2026-05-21 |
+| Stretch | CTX-04 home guard territorial scoping | Future/stretch | 2026-05-21 |
+| Stretch | SCOPE-01 real data-level ownership scoping | Future/stretch | 2026-05-21 |
+| v1.0 cleanup | GUARD/ROUTE/TEST/CLEAN frontend-consolidation | Superseded/archived | 2026-05-21 |
 
 ## Session Continuity
 
-Last session: 2026-05-20T17:57:04.651Z
-Stopped at: Phase 1 UI-SPEC approved
-Resume file: .planning/phases/01-canonical-guard/01-UI-SPEC.md
+Last session: 2026-05-21
+Stopped at: Roadmap created — 4 phases, 21 requirements mapped
+Resume file: None — next step is `/gsd:plan-phase 1`
