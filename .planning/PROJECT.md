@@ -2,71 +2,93 @@
 
 ## What This Is
 
-Janus 2.0 is a security clearance and access-management system for tracking personnel, organizations, information systems, NDAs, and three-tier access grants (computer, data, physical) with audit logging and role-based dashboards. It is an internal admin tool: a Rust/Rocket REST API backed by PostgreSQL, with a React + TanStack SPA front end.
+Janus 2.0 is a **DEMO / MOCK of a federated authorization-exchange hub**. It explores a model where
+multiple entities (military units, intelligence, infrastructure, industry, home guard) share *authorization*
+information across three access domains — **computer, data, physical** — without exposing the underlying
+details. Access decisions are **pure-computed ABAC** (attribute-based, evaluated live, no stored grants),
+fully explainable and reconstructable from an append-only audit log. **Clearance is determined externally**
+and consumed as a read-only attribute.
+
+It originated as a security-clearance/access-management admin tool (Rust/Rocket + PostgreSQL backend,
+React + TanStack SPA). That codebase is the substrate; the v2.0 direction repurposes it to demonstrate the
+authorization-hub model. The hub demo is **frontend-mock-first** — external integrations are simulated.
+
+The design contract is `.planning/AUTH-MODEL.md`; the model was validated end-to-end by 9 spikes
+(`.planning/spikes/`, skill `spike-findings-janus-2.0`).
 
 ## Core Value
 
-Authorized staff can manage people, organizations, and their access grants through one role-aware UI without the data ever being exposed to or mutated by an unauthorized user.
+Multiple entities can **discover and exchange authorization information without exposing details**, with
+every access decision **computed live from attributes** and **fully explainable and auditable** — proving a
+federated ABAC model (and its 6-unit deployment scenario) before committing to a real build.
 
 ## Requirements
 
 ### Validated
 
-<!-- Inferred from existing code (brownfield). Shipped and relied upon. -->
+<!-- Mechanisms proven by spikes 001-009 (demo-level), plus the existing code substrate. -->
 
-- ✓ JWT auth: login, profile, password change (bcrypt) — existing
-- ✓ Person CRUD with pagination and soft delete — existing
-- ✓ Organization CRUD (renamed from vendors) — existing
-- ✓ Information Systems CRUD — existing
-- ✓ Three-tier access grants (computer/data/physical) + revoke — existing
-- ✓ Roles & permissions module with per-endpoint `role_has_permission()` checks — existing
-- ✓ NDA management with audit logging and S3/MinIO attachments — existing
-- ✓ Discussions + WebSocket messaging (separate WS server on :15540) — existing
-- ✓ Audit log query UI — existing
-- ✓ Role-based navigation and route guards (frontend) — existing
-- ✓ Consolidated single front end (replaced multiple older frontends) — existing
+- ✓ Pure-computed ABAC engine: per-domain tiers, deny overrides, explainable per-rule traces (spike 001)
+- ✓ Pointer-only discovery hub — "who knows what" without details (spike 002)
+- ✓ Inter-entity handshake — holder-gated detail release (spike 003)
+- ✓ Operating roles & separation of duties — 8 roles (spike 004)
+- ✓ Typed interchange contract between entities (spike 005)
+- ✓ Signed/verified attribute credentials — verify before trust (spike 006)
+- ✓ Audit reconstruction — replay log for point-in-time access (spike 007)
+- ✓ Per-entity policy divergence (spike 008)
+- ✓ Context access — deployment-driven support obligations + directional shielding (spike 009)
+- ✓ Existing substrate: JWT auth, Person/Org/InfoSystem CRUD, access grants, audit log, WebSocket, React/Vite/shadcn frontend
 
 ### Active
 
-<!-- This milestone: Frontend Consolidation (completion). -->
+<!-- This milestone: v2.0 Authorization Hub (demo). -->
 
-- [ ] Finish the in-progress route component-split: `admin/dashboard`, `admin/person`, `admin/discussions` become thin route wrappers that lazy-load `_component.tsx`, with `routeTree.gen.ts` regenerated and the build green
-- [ ] Collapse the two competing `ProtectedRoute` implementations into one (the PascalCase, `allowedRoles`-aware version)
-- [ ] Migrate all route files off the old `protected-route.tsx` (~15 files) and delete it
-- [ ] Remove duplicate non-admin/admin route file pairs (or parameterize a single shared route)
-- [ ] Repair the broken E2E suite: update `/personnel` URLs and "Personnel" text to current `/admin/person` routes/labels
-- [ ] Delete the stale `frontend/src/routes/admin/update_admin_routes.sh` migration script
+- [ ] ABAC engine integrated into a coherent demo app (not just isolated spikes)
+- [ ] Federation: pointer hub + typed contract + verified credentials + holder-gated release, wired together
+- [ ] Operating roles & SoD across the demo (8 roles, attribute-approval grants)
+- [ ] Audit: append-only log, point-in-time reconstruction, leak/anomaly detection (industry)
+- [ ] Context & policy: per-entity policies, deployment obligations, directional shielding, location/deployment attributes
+- [ ] The 6-unit deployment scenario instantiated end-to-end (2 military, intel, infra, industry, home guard)
 
 ### Out of Scope
 
-- Backend role-based authorization middleware — deferred to the Security milestone (backlog); large cross-cutting change, see Key Decisions
-- JWT secret hardcoded fallback, CORS allow-all, `password_hash` in API responses — deferred to the Security milestone (backlog)
-- Broken `/api/vendors/<id>/relations` endpoint and missing person-relations endpoint — backend bugs, deferred to a backend milestone
-- New product features — this milestone is consolidation/cleanup only, not feature work
-- httpOnly cookie auth migration — deferred (depends on backend auth changes)
+- **Real backend RBAC / authorization enforcement** — demo simulates it; production authz is a later, real build
+- **Real identity federation / IdP / asymmetric verifiable credentials + key distribution** — demo uses mock HMAC + a mock key registry
+- **Real inter-entity network transport** — simulated in-process via the typed contract
+- **Production persistence / hardening / scale** — demo is in-memory/seeded
+- **The abandoned v1.0 frontend-consolidation cleanup** (GUARD/ROUTE/TEST/CLEAN) — superseded by this pivot; archived in `.planning/archive/v1.0-frontend-consolidation/`
 
 ## Context
 
-- **Brownfield.** Full codebase map in `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS).
-- The current branch `feature/frontend-consolidation` has uncommitted WIP: the route component-split is partially done (untracked `admin/dashboard/_component.tsx`, `admin/person/_component.tsx`, `admin/discussions/index.tsx`) plus a WebSocket reconnect fix and a newly bootstrapped Vitest setup.
-- Recent history completed a personnel→person and vendors→organizations rename and removed the old frontends; the consolidation theme is ~80% done but trails duplicate components and broken tests.
-- `CONCERNS.md` documents significant security debt (no backend RBAC, JWT fallback, CORS allow-all, `password_hash` leak) and known backend bugs — intentionally parked for follow-on milestones.
+- **Pivot (2026-05-20/21).** The project sat dormant while real-world responsibilities clarified. The team's
+  scope is now *managing authorizations across three domains* and *exchanging auth info between entities* —
+  clearance determination belongs to external authorities. The v1.0 frontend-consolidation milestone (never
+  shipped) is superseded.
+- **DEMO / MOCK.** Goal is to demonstrate what works (and what doesn't) convincingly, not to ship production
+  security. Don't over-engineer hardening.
+- **Validated by spikes.** 9 spikes proved every mechanism in the 6-unit scenario; `.planning/AUTH-MODEL.md`
+  is the design contract; `spike-findings-janus-2.0` holds build blueprints.
+- **Brownfield substrate.** Codebase map in `.planning/codebase/`. The existing Rust/React app is the base.
 
 ## Constraints
 
-- **Tech stack**: Rust 1.87 + Rocket 0.5 + sqlx/PostgreSQL (backend); React 19 + TanStack Router/Query + Vite + shadcn/ui (frontend) — match existing patterns, do not introduce new frameworks.
-- **Routing**: TanStack file-based router; `routeTree.gen.ts` is generated — must be regenerated (not hand-edited) after route changes, and new route dirs committed before regen.
-- **Ports**: frontend 15510, backend 15520, postgres 15530, WebSocket 15540 (dev).
-- **Testing**: Vitest (unit, jsdom) + Playwright (e2e, must be excluded from the Vitest run).
-- **Security**: do not regress the role-aware UI guards while consolidating; the PascalCase `ProtectedRoute` with `allowedRoles` is the canonical one.
+- **DEMO/MOCK** — simulate external clearance feeds, identity federation, and inter-entity transport.
+- **Stack** — React 19 + TanStack + Vite + Tailwind + shadcn/ui (frontend); Rust 1.87 + Rocket + sqlx/Postgres
+  (backend substrate). Match existing patterns; no new frameworks.
+- **Spike code** lives in `frontend/src/spikes/` behind a dev-only `/spikes.html` entry (isolated from the
+  TanStack router; no `routeTree.gen.ts` changes).
+- **Pure-computed ABAC** — no stored grants; audit log is the system of record.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| First GSD milestone = finish Frontend Consolidation | The WIP refactor is entangled with duplicate routes/guards and broken tests; closing the whole theme prevents double-maintenance | — Pending |
-| Security debt parked for a dedicated next milestone | Backend RBAC/JWT/CORS/password_hash are cross-cutting and risky; bundling them would bloat this milestone | — Pending |
-| Canonical guard = `ProtectedRoute.tsx` (PascalCase, `allowedRoles`) | It enforces roles via `<Navigate>`; the lowercase variant has no role check and a stale `useEffect` pattern | — Pending |
+| Pivot to a federated ABAC authorization-hub demo (v2.0) | Real-world need clarified: manage authorizations + exchange between entities, clearance external | — Active |
+| DEMO/MOCK, not production | Prove the model and surface failure modes before a real build | — Active |
+| Supersede incomplete v1.0 frontend-consolidation | The pivot replaces the direction entirely; old artifacts archived, not deleted | — Done |
+| Pure-computed ABAC + append-only audit log | No stored grants; explainable decisions; reconstructable access | — Validated (spikes 001/007) |
+| Discovery without disclosure (pointer hub + handshake) | Entities share *that* they hold info, not the details; release is policy-gated | — Validated (spikes 002/003/005) |
+| Verify-before-trust on signed credentials | Cross-entity ABAC must not trust self-asserted attributes | — Validated (spike 006) |
 
 ## Evolution
 
@@ -86,4 +108,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-20 after initialization*
+*Last updated: 2026-05-21 — pivot to v2.0 Authorization Hub (demo)*

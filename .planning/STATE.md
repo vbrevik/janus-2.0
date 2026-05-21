@@ -1,13 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
+milestone: v2.0
+milestone_name: Authorization Hub (demo)
 status: planning
-stopped_at: Phase 1 context gathered
-last_updated: "2026-05-20T17:31:47.310Z"
-last_activity: 2026-05-20 — Roadmap created (4 coarse phases, 11/11 requirements mapped)
+last_updated: "2026-05-21T13:10:50.498Z"
+last_activity: 2026-05-21
 progress:
-  total_phases: 4
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -25,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-20)
 
 ## Current Position
 
-Phase: 1 of 4 (Canonical Guard)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-05-20 — Roadmap created (4 coarse phases, 11/11 requirements mapped)
-
-Progress: [░░░░░░░░░░] 0%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-21 — Milestone v2.0 started
 
 ## Performance Metrics
 
@@ -89,6 +86,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-20T17:31:47.250Z
-Stopped at: Phase 1 context gathered
-Resume file: .planning/phases/01-canonical-guard/01-CONTEXT.md
+Last session: 2026-05-20T17:57:04.651Z
+Stopped at: Phase 1 UI-SPEC approved
+Resume file: .planning/phases/01-canonical-guard/01-UI-SPEC.md
