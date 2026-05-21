@@ -1,10 +1,11 @@
 ---
 phase: 2
 slug: federation-hub
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "new-york / slate / cssVariables (existing components.json)"
 created: 2026-05-21
+reviewed_at: 2026-05-21
 inherits: 01-foundation/01-UI-SPEC.md
 ---
 
