@@ -68,7 +68,26 @@ Plans:
   3. Viewer sees that a request carrying a forged or untrusted-issuer credential is rejected and labelled `[MOCK]`; a valid signed credential passes verification and unlocks evaluation
   4. Viewer observes that a requester discovering a pointer cannot read the held details until the holder's own ABAC policy authorizes release
 
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Pure interchange helpers: demo/lib/contract.ts (computeDetailResponse, buildPublishEnvelope, buildDiscoverEnvelopes) + demo/lib/credential.ts (issueCredential, verifyCredential, ISSUER_KEYS, TRUSTED_ISSUERS) [FED-02, FED-03, FED-04]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — World-state federation extension: 6 new WorldState slices (fedCredentials, fedRunStage, fedTranscript, fedInbox, fedOutbox, fedVerifyResults), InboxEntry/OutboxEntry interfaces, 7 new Action types and reducer cases [FED-01, FED-02, FED-03, FED-04]
+
+**Wave 3** *(blocked on Wave 2 completion — plans 03/04/05 can run in parallel)*
+
+- [ ] 02-03-PLAN.md — DemoRoot view toggle + FederationHub scaffold with async credential bootstrap + HubDiscoveryPanel (FED-01 hub query with pointer list and "not stored" callout) [FED-01]
+- [ ] 02-04-PLAN.md — ExchangeTranscriptPanel (FED-02 four-step stage machine + async verify-before-trust RESPOND) + CredentialVerifyPanel (FED-03 side-by-side rogue/valid auto-verify) [FED-02, FED-03]
+- [ ] 02-05-PLAN.md — UnitConsolePanel (FED-04 per-unit holdings/inbox with DecisionTrace/outbox console for all 6 units) [FED-04]
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 02-06-PLAN.md — FederationHub final wiring (replace stubs, compose all 4 panels) + TypeScript + Vite production build gate [FED-01, FED-02, FED-03, FED-04]
+
 **UI hint**: yes
 
 ### Phase 3: Audit & Context
@@ -113,6 +132,6 @@ Phase 4 depends on both Phase 2 and Phase 3 completing.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-05-21 |
-| 2. Federation Hub | 0/? | Not started | - |
+| 2. Federation Hub | 0/6 | Not started | - |
 | 3. Audit & Context | 0/? | Not started | - |
 | 4. Demo Shell & Legibility | 0/? | Not started | - |
