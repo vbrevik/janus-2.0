@@ -19,7 +19,7 @@ cross-view consistency, enforces the legibility gate, and registers the entry in
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - Unified mock world-state, pure-computed ABAC engine, 8 operating roles, and persistent [DEMO/MOCK] banner
+- [x] **Phase 1: Foundation** - Unified mock world-state, pure-computed ABAC engine, 8 operating roles, and persistent [DEMO/MOCK] banner (completed 2026-05-21)
 - [ ] **Phase 2: Federation Hub** - Discovery-without-disclosure hub, typed interchange contract, verified signed credentials, holder-gated release, and entity console views
 - [ ] **Phase 3: Audit & Context** - Append-only event log with point-in-time reconstruction, per-entity policy divergence, support-obligation grants, and directional shielding
 - [ ] **Phase 4: Demo Shell & Legibility** - Composed coherent shell, cross-view consistency, plain-prose decision traces, and production build registration
@@ -52,7 +52,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-04-PLAN.md — Persistent [DEMO/MOCK] chrome + role switcher + Decision Explorer + final DemoRoot [ROLE-01, ROLE-02, ENGINE-01/02/03, MODEL-03]
+- [x] 01-04-PLAN.md — Persistent [DEMO/MOCK] chrome + role switcher + Decision Explorer + final DemoRoot [ROLE-01, ROLE-02, ENGINE-01/02/03, MODEL-03]
 
 **UI hint**: yes
 
@@ -112,7 +112,7 @@ Phase 4 depends on both Phase 2 and Phase 3 completing.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 3/4 | In Progress|  |
+| 1. Foundation | 4/4 | Complete   | 2026-05-21 |
 | 2. Federation Hub | 0/? | Not started | - |
 | 3. Audit & Context | 0/? | Not started | - |
 | 4. Demo Shell & Legibility | 0/? | Not started | - |
