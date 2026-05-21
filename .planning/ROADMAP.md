@@ -35,7 +35,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Viewer sees a live ALLOW/DENY decision for any subject/resource/domain triple, with a per-rule trace explaining which attribute passed or failed
   4. Viewer observes that a computer-tier failure and a clearance failure produce distinct explanations — domain tiers evaluate independently
   5. Viewer can switch to any of the 8 operating roles and observe that available actions change accordingly; Approver can grant/revoke attributes, Manager can only request, Security Officer can place holds
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 01-01-PLAN.md — Isolated demo island entry (demo.html + main.tsx + placeholder DemoRoot + Vite build input) [MODEL-03]
+- [ ] 01-02-PLAN.md — Frozen unified model + verbatim ABAC engine + rich 6-unit seed + ported tests [MODEL-01, ENGINE-01/02/03, ROLE-02]
+- [ ] 01-03-PLAN.md — Single shared world-state store (useReducer + split-context + 6 actions, event-sourced) [MODEL-02]
+- [ ] 01-04-PLAN.md — Persistent [DEMO/MOCK] chrome + role switcher + Decision Explorer + final DemoRoot [ROLE-01, ROLE-02, ENGINE-01/02/03, MODEL-03]
 **UI hint**: yes
 
 ### Phase 2: Federation Hub
@@ -85,7 +90,7 @@ Phase 4 depends on both Phase 2 and Phase 3 completing.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/? | Not started | - |
+| 1. Foundation | 0/4 | Planned | - |
 | 2. Federation Hub | 0/? | Not started | - |
 | 3. Audit & Context | 0/? | Not started | - |
 | 4. Demo Shell & Legibility | 0/? | Not started | - |
