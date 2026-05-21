@@ -1,10 +1,11 @@
 ---
 phase: 1
 slug: foundation
-status: draft
+status: approved
 shadcn_initialized: true
 preset: "new-york / slate / cssVariables (existing components.json)"
 created: 2026-05-21
+reviewed_at: 2026-05-21
 ---
 
 # Phase 1 — UI Design Contract
@@ -48,12 +49,13 @@ Exceptions (carried verbatim from the proven spike components — do not "tidy" 
 - Action-button vertical padding `py-1.5` = 6px (`Spike004Sod.tsx`).
 - `DecisionTrace` rule-row vertical gap `space-y-1.5` = 6px (`spikes/components/ui.tsx:95`).
 - Rationale: these sub-grid values keep ~30 subjects/resources (D-06 rich seed) scannable without burying the decision trace.
+- Guardrail: these three sub-grid values are the ONLY permitted off-grid spacing; any new spacing the executor adds MUST come from the 4/8/16/24/32/48/64 token set.
 
 ---
 
 ## Typography
 
-Three roles + display. Sizes map to Tailwind `text-xs/sm/lg/xl`, matching the spike substrate exactly. Two weights carry the design (`font-medium` 500 + `font-semibold` 600); `font-bold` 700 is reserved for the single ALLOW/DENY verdict line only.
+Three roles + display. Sizes map to Tailwind `text-xs/sm/lg/xl`, matching the spike substrate exactly. Carrying weights: 400 body / 500 medium-emphasis (`font-medium`) / 600 semibold-heading (`font-semibold`). Exception: 700 bold (`font-bold`) on the single ALLOW/DENY verdict line only — no other element uses 700.
 
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
@@ -135,11 +137,11 @@ No third-party registries declared. Registry vetting gate: not triggered.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: FLAG (non-blocking — weight count clarified)
+- [x] Dimension 5 Spacing: FLAG (non-blocking — off-grid exceptions justified + guardrailed)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved 2026-05-21 (gsd-ui-checker, ui_safety_gate=true) — 4 PASS / 2 FLAG, no blockers
