@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Authorization Hub (demo)
 status: executing
 stopped_at: Phase 1 UI-SPEC approved
-last_updated: "2026-05-21T18:19:22.139Z"
-last_activity: 2026-05-21 -- Phase 01 planning complete
+last_updated: "2026-05-21T18:21:43.068Z"
+last_activity: 2026-05-21 -- Phase 01 execution started
 progress:
   total_phases: 4
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — proving the federated ABAC model before committing to a real build.
-**Current focus:** Phase 1 — Foundation (ready to plan)
+**Current focus:** Phase 01 — foundation
 
 ## Current Position
 
-Phase: 1 of 4 (Foundation)
-Plan: —
-Status: Ready to execute
-Last activity: 2026-05-21 -- Phase 01 planning complete
+Phase: 01 (foundation) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 01
+Last activity: 2026-05-21 -- Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
