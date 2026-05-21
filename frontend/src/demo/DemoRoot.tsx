@@ -1,16 +1,22 @@
-// DemoRoot — placeholder root for the demo island (plan 01-01).
-// Plan 01-04 REPLACES this file with WorldProvider + DemoBanner + RoleSwitcherHeader + DecisionExplorer.
-// Router imports are excluded by construction — this chain is router-isolated (D-02).
+// DemoRoot — final composition of the Foundation demo island (plan 01-04).
+// WorldProvider wraps the whole tree; DemoBanner + RoleSwitcherHeader are SIBLINGS of
+// <main> (outside the swappable region) so a future swapped view can never omit them (R7).
+// Router-isolated by construction: imports no app router / generated route tree (D-02/R5).
+import { WorldProvider } from "./store/world-state";
+import { DemoBanner } from "./components/DemoBanner";
+import { RoleSwitcherHeader } from "./components/RoleSwitcherHeader";
+import { DecisionExplorer } from "./components/DecisionExplorer";
 
 export function DemoRoot() {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      <header className="sticky top-0 border-b border-slate-200 bg-amber-100 px-6 py-2 text-xs font-medium text-amber-900">
-        [DEMO / MOCK]
-      </header>
-      <main className="mx-auto max-w-5xl px-6 py-6">
-        Decision Explorer mounts here (01-04).
-      </main>
-    </div>
+    <WorldProvider>
+      <div className="min-h-screen bg-slate-50 text-slate-800">
+        <DemoBanner />
+        <RoleSwitcherHeader />
+        <main className="mx-auto max-w-5xl px-6 py-6">
+          <DecisionExplorer />
+        </main>
+      </div>
+    </WorldProvider>
   );
 }
