@@ -23,6 +23,16 @@
 - The wire contract (publish-pointer / discover / request-detail) and identity federation are NOT yet designed — AUTH-MODEL open questions #2 and #4. This blueprint proves the *flow*, not the protocol.
 - Demo simulates entities in-process; a real build needs an actual transport + per-entity policy authorship (open question #5).
 
+## Hardening: typed contract (005) + attribute trust (006)
+- **Contract (005, `sources/code/lib/contract.ts`):** entities exchange ONLY via typed envelopes
+  (`PUBLISH / DISCOVER / DISCOVER_RESULT / REQUEST_DETAIL / DETAIL_RESPONSE`) routed by a `Network`
+  that records a transcript. No direct cross-entity calls. This is the concrete shape of "the interface
+  others conform to". A real build swaps the in-process `Network` for a transport but keeps the envelopes.
+- **Trust (006, `sources/code/lib/credential.ts`):** the requester's attributes ride in a SIGNED
+  credential (HMAC-SHA256 via Web Crypto). The holder runs `verifyCredential` (signature + trusted-issuer
+  allowlist) BEFORE any ABAC evaluation. **Never evaluate ABAC on unverified claims.** Demo uses symmetric
+  HMAC + a mock key registry; a real build uses asymmetric/verifiable credentials + real key distribution.
+
 ## Origin
-Synthesized from spikes: 002, 003 (uses the 001 engine).
-Source files: `sources/code/components/Spike002Hub.tsx`, `Spike003Handshake.tsx`, `sources/code/lib/abac.ts` (`releaseRequirementFor`), `sources/002-hub-discovery-index/`, `sources/003-inter-entity-handshake/`.
+Synthesized from spikes: 002, 003, 005, 006 (use the 001 engine).
+Source files: `sources/code/lib/contract.ts`, `credential.ts`, `sources/code/components/Spike002Hub.tsx`, `Spike003Handshake.tsx`, `Spike005Contract.tsx`, `Spike006Trust.tsx`, `sources/00{2,3,5,6}-*/`.

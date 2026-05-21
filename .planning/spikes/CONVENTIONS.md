@@ -25,6 +25,10 @@ Patterns established across this spike session. New spikes follow these unless t
 - **Pure-computed ABAC** (`lib/abac.ts`): `evaluate(principal, requirement)` returns `{decision, rules[], overrides[], failed[]}`.
   Every rule emits a human-readable `detail` so any DENY is explainable.
 - **DecisionTrace** component renders a `Decision` consistently across spikes.
+- **Rule-effect modeling** (009): context rules carry an `effect` (`BASE` / `GRANT` / `DENY`) so additive grants (obligations) and subtractive denies (shielding) compose on a base decision — shield applied last.
+- **Typed contract over an in-process `Network`** (005): entities exchange only via envelopes + a transcript; swap the Network for real transport later, keep the envelopes.
+- **Verify-before-trust** (006): signed credentials via Web Crypto HMAC-SHA256; verify signature + trusted-issuer allowlist before any ABAC evaluation.
+- **Append-only event log as system-of-record** (007): reconstruct state/access by replay; never a stored grants table.
 - Isolation: spike code is excluded from the real router; it IS type-checked + linted by the app
   (kept clean so `npm run build` / `eslint .` stay green).
 

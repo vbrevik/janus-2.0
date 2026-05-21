@@ -32,8 +32,10 @@ Spike sessions wrapped: 2026-05-20
 | Area | Reference | Key Finding |
 |------|-----------|-------------|
 | ABAC engine | references/abac-engine.md | Pure-computed ABAC is explainable when each rule emits a trace; audit = an evaluation log |
-| Federation | references/federation.md | Pointer-only hub + holder-gated handshake = "discovery without disclosure" (the compelling property) |
+| Federation | references/federation.md | Pointer-only hub + holder-gated handshake = "discovery without disclosure"; exchange via typed contract; verify signed credentials before trusting |
 | Roles & SoD | references/roles-sod.md | 8 operating roles legible; deny overrides handle revocation under pure-ABAC; 3 scoped roles need data-level authz |
+| Audit | references/audit.md | Append-only log is the system of record; replay to answer "who can access, as of T"; home of leak detection |
+| Policy & Context | references/policy-and-context.md | Per-entity policy divergence; context-driven obligation grants (deployment) + directional shielding for the 6-unit scenario |
 
 ## Source Files
 
@@ -48,4 +50,9 @@ Original spike source preserved in `sources/` (`code/` = the working `frontend/s
 - 002-hub-discovery-index
 - 003-inter-entity-handshake
 - 004-role-sod
+- 005-interchange-contract
+- 006-attribute-trust
+- 007-audit-reconstruction
+- 008-per-entity-policy
+- 009-obligations-context
 </metadata>

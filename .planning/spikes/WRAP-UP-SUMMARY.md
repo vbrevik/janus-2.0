@@ -1,9 +1,10 @@
 # Spike Wrap-Up Summary
 
-**Date:** 2026-05-20
-**Spikes processed:** 4
-**Feature areas:** ABAC engine, Federation, Roles & SoD
+**Dates:** 2026-05-20 (001–004), 2026-05-21 (005–009 frontier round)
+**Spikes processed:** 9 (all VALIDATED)
+**Feature areas:** ABAC engine · Federation · Roles & SoD · Audit · Policy & Context
 **Skill output:** `./.claude/skills/spike-findings-janus-2.0/`
+**Tests:** 29/29 (`npx vitest run src/spikes/lib`)
 
 ## Processed Spikes
 | # | Name | Type | Verdict | Feature Area |
@@ -12,16 +13,22 @@
 | 002 | hub-discovery-index | standard | VALIDATED | Federation |
 | 003 | inter-entity-handshake | standard | VALIDATED | Federation |
 | 004 | role-sod | standard | VALIDATED | Roles & SoD |
+| 005 | interchange-contract | frontier | VALIDATED | Federation |
+| 006 | attribute-trust | frontier | VALIDATED | Federation |
+| 007 | audit-reconstruction | integration | VALIDATED | Audit |
+| 008 | per-entity-policy | frontier | VALIDATED | Policy & Context |
+| 009 | obligations-context | frontier | VALIDATED | Policy & Context |
 
 ## Key Findings
-- **Pure-computed ABAC is explainable** when every rule emits a human-readable trace (verified by vitest 6/6). The accepted cost: "who has access right now" must be reconstructed from an evaluation log — audit = the eval log, not a grants table.
-- **Per-domain tiers earn their keep** — "clearance OK, domain tier too low" is a distinct, visible failure reason. Don't collapse them into one ladder.
-- **Federation's value is the handshake, not the hub.** A pointer-only hub ("who knows what") only matters because the inter-entity handshake turns a pointer into holder-gated detail. "Discovery without disclosure" is the compelling, validated property.
-- **Deny overrides are essential** under pure-ABAC — with no stored grant to delete, revocation/holds must override an otherwise-ALLOW.
-- **8 operating roles are legible**, each with a distinct action set; strict-SoD Admin (no grant power) renders as a locked-out state. The 3 scoped roles (Manager/Sponsor/Subject) need data-level authz beyond flat role lists.
+- **Pure-computed ABAC is explainable** (per-rule trace); audit = the append-only evaluation log, not a grants table. Point-in-time access reconstructs by replay (007).
+- **Per-domain tiers** are worth modeling distinctly from clearance.
+- **Federation = discovery without disclosure:** pointer-only hub (002) + holder-gated handshake (003), exchanged via a typed contract (005), with attributes carried in **verified signed credentials** (006 — never evaluate ABAC on unverified claims).
+- **Deny overrides** handle revocation/holds under pure-ABAC.
+- **Per-entity policies diverge** (008) — the mechanism behind the 6 units' different access profiles.
+- **Context-driven access works** (009): deployment-driven **support-obligation grants** (turn on abroad, off at home) and **directional shielding** (protected intel/industry data denied unless allowlisted).
 
 ## Feasibility
-Model holds end-to-end as a demo — no "won't work" signal. Remaining unknowns are interface-shaped, not feasibility-shaped: the wire contract (publish/discover/request-detail), identity federation, and ABAC policy authorship (AUTH-MODEL open questions #2, #4, #5).
+Every part of the 6-unit deployment scenario (AUTH-MODEL §12) now has a validated mechanism. No "won't work" remains. The open work is real-build shaped: real transport for the contract, asymmetric/verifiable credentials + key distribution, a deployment feed with time-bounded obligation revocation, richer policy authoring, and leak/anomaly detection on the audit log.
 
 ## Next
-Re-scope the roadmap around the validated AUTH-MODEL (`/gsd:new-milestone`), or spike the open interface questions.
+Re-scope the roadmap around the validated AUTH-MODEL + 6-unit scenario (`/gsd:new-milestone`).
