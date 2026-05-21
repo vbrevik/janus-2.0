@@ -619,7 +619,7 @@ React 19 `StrictMode` double-invokes effects in development. The bootstrap `useE
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Which subject and requester unit to pre-select for FED-02 demo transcript**
    - What we know: `subj-2` (Sam Okafor, MILITARY_2) has pointers in both `MILITARY_2` (PHYSICAL) and `MILITARY_1` (DATA) — a cross-unit request is richer to demonstrate.
