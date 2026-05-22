@@ -81,7 +81,7 @@ Plans:
 **Wave 3** *(blocked on Wave 2 completion — plans 03/04/05 can run in parallel)*
 
 - [x] 02-03-PLAN.md — DemoRoot view toggle + FederationHub scaffold with async credential bootstrap + HubDiscoveryPanel (FED-01 hub query with pointer list and "not stored" callout) [FED-01]
-- [ ] 02-04-PLAN.md — ExchangeTranscriptPanel (FED-02 four-step stage machine + async verify-before-trust RESPOND) + CredentialVerifyPanel (FED-03 side-by-side rogue/valid auto-verify) [FED-02, FED-03]
+- [x] 02-04-PLAN.md — ExchangeTranscriptPanel (FED-02 four-step stage machine + async verify-before-trust RESPOND) + CredentialVerifyPanel (FED-03 side-by-side rogue/valid auto-verify) [FED-02, FED-03]
 - [ ] 02-05-PLAN.md — UnitConsolePanel (FED-04 per-unit holdings/inbox with DecisionTrace/outbox console for all 6 units) [FED-04]
 
 **Wave 4** *(blocked on Wave 3 completion)*
@@ -132,6 +132,6 @@ Phase 4 depends on both Phase 2 and Phase 3 completing.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-05-21 |
-| 2. Federation Hub | 3/6 | In Progress|  |
+| 2. Federation Hub | 4/6 | In Progress|  |
 | 3. Audit & Context | 0/? | Not started | - |
 | 4. Demo Shell & Legibility | 0/? | Not started | - |

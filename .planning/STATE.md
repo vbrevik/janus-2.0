@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Authorization Hub (demo)
 status: executing
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-05-22T05:19:18.024Z"
+last_updated: "2026-05-22T11:16:58.977Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 8
   percent: 25
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-21)
 ## Current Position
 
 Phase: 2 (Federation Hub) — EXECUTING
-Plan: 3 of 6
+Plan: 4 of 6
 Status: Ready to execute
 Last activity: 2026-05-22
 
-Progress: [██████░░░░] 60%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [██████░░░░] 60%
 *Updated after each plan completion*
 | Phase 02-federation-hub P01 | 8 | 2 tasks | 2 files |
 | Phase 02-federation-hub P02 | 15 | 1 tasks | 1 files |
+| Phase 02-federation-hub P04 | 15 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -68,6 +69,7 @@ Recent decisions affecting current work:
 - Phase 3 depends on Phase 1 (not Phase 2) — Phases 2 and 3 can be planned in parallel
 - [Phase ?]: Network class NOT ported (D2-02); pure functions only in contract.ts
 - [Phase ?]: ROGUE-ISSUER excluded from TRUSTED_ISSUERS; T-02-02 mitigated
+- [Phase ?]: verify-before-trust in ExchangeTranscriptPanel.handleRespond: verifyCredential first, Principal from claims only if valid===true (D2-10)
 
 ### Pending Todos
 
@@ -88,6 +90,6 @@ None for v2.0. (v1.0 WIP on `feature/frontend-consolidation` is superseded and a
 
 ## Session Continuity
 
-Last session: 2026-05-22T05:19:17.995Z
+Last session: 2026-05-22T11:16:44.809Z
 Stopped at: Phase 2 UI-SPEC approved
 Resume file: None
