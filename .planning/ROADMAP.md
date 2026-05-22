@@ -107,16 +107,16 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Lifted lib foundations: auditlog.ts + policy.ts + obligations.ts + tests + seed.ts extensions [AUDIT-01, AUDIT-02, CTX-01, CTX-02, CTX-03]
+- [x] 03-01-PLAN.md — Lifted lib foundations: auditlog.ts + policy.ts + obligations.ts + tests + seed.ts extensions [AUDIT-01, AUDIT-02, CTX-01, CTX-02, CTX-03]
 
 **Wave 2** *(blocked on Wave 1 completion — plans 02/03 can run in parallel)*
 
-- [ ] 03-02-PLAN.md — world-state INITIAL_EVENTS seed + AuditView.tsx (slider + event log + reconstructed state + who-can-access) [AUDIT-01, AUDIT-02]
-- [ ] 03-03-PLAN.md — ContextView.tsx (policy divergence + deployment toggle + directional shielding) [CTX-01, CTX-02, CTX-03]
+- [x] 03-02-PLAN.md — world-state INITIAL_EVENTS seed + AuditView.tsx (slider + event log + reconstructed state + who-can-access) [AUDIT-01, AUDIT-02]
+- [x] 03-03-PLAN.md — ContextView.tsx (policy divergence + deployment toggle + directional shielding) [CTX-01, CTX-02, CTX-03]
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 03-04-PLAN.md — DemoRoot.tsx 4-tab extension + full Vitest + Vite build gate [AUDIT-01, AUDIT-02, CTX-01, CTX-02, CTX-03]
+- [x] 03-04-PLAN.md — DemoRoot.tsx 4-tab extension + full Vitest + Vite build gate [AUDIT-01, AUDIT-02, CTX-01, CTX-02, CTX-03]
 
 **UI hint**: yes
 
