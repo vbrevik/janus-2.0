@@ -8,12 +8,14 @@ import { DemoBanner } from "./components/DemoBanner";
 import { RoleSwitcherHeader } from "./components/RoleSwitcherHeader";
 import { DecisionExplorer } from "./components/DecisionExplorer";
 import { FederationHub } from "./components/FederationHub";
+import { AuditView } from "./components/AuditView";
+import { ContextView } from "./components/ContextView";
 
-type ActiveView = "explorer" | "federation";
+type ActiveView = "decisions" | "federation" | "audit" | "context";
 
 export function DemoRoot() {
-  // Interim view toggle (D2-04) — throwaway; Phase 4 shell replaces this
-  const [activeView, setActiveView] = useState<ActiveView>("explorer");
+  // Interim view toggle (D2-04 / D3-09) — throwaway; Phase 4 shell replaces this
+  const [activeView, setActiveView] = useState<ActiveView>("decisions");
 
   return (
     <WorldProvider>
@@ -22,8 +24,8 @@ export function DemoRoot() {
         <RoleSwitcherHeader />
         <div className="mx-auto max-w-5xl px-6 py-2 flex gap-2">
           <button
-            className={`rounded px-3 py-1.5 text-sm ${activeView === "explorer" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
-            onClick={() => setActiveView("explorer")}
+            className={`rounded px-3 py-1.5 text-sm ${activeView === "decisions" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => setActiveView("decisions")}
           >
             Decision Explorer
           </button>
@@ -33,9 +35,24 @@ export function DemoRoot() {
           >
             Federation Hub
           </button>
+          <button
+            className={`rounded px-3 py-1.5 text-sm ${activeView === "audit" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => setActiveView("audit")}
+          >
+            Audit
+          </button>
+          <button
+            className={`rounded px-3 py-1.5 text-sm ${activeView === "context" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => setActiveView("context")}
+          >
+            Context
+          </button>
         </div>
         <main className="mx-auto max-w-5xl px-6 py-6">
-          {activeView === "explorer" ? <DecisionExplorer /> : <FederationHub />}
+          {activeView === "decisions" && <DecisionExplorer />}
+          {activeView === "federation" && <FederationHub />}
+          {activeView === "audit" && <AuditView />}
+          {activeView === "context" && <ContextView />}
         </main>
       </div>
     </WorldProvider>
