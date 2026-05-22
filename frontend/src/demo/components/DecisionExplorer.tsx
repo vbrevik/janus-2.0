@@ -214,15 +214,15 @@ export function DecisionExplorer() {
         </Card>
       </div>
 
-      <DecisionTrace result={result} />
-      <p className="text-xs text-slate-400">
-        {captionFor(
+      <DecisionTrace
+        result={result}
+        prose={captionFor(
           result.failed,
           result.overrides.length > 0,
           resource.domain,
           result.decision === "ALLOW",
         )}
-      </p>
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card title="Actions this role may take">

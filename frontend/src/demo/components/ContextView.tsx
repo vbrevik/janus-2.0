@@ -30,6 +30,24 @@ const UNIT_OPTIONS = UNIT_IDS.map((id) => ({
   label: UNITS[id].label,
 }));
 
+function proseSentence(decision: Decision): string {
+  if (decision.overrides.length > 0)
+    return "Access is denied because this subject is under a security hold.";
+  if (decision.decision === "ALLOW")
+    return "Access is allowed because this subject holds all required attributes for this resource.";
+  const first = decision.rules.find((r) => !r.pass);
+  if (!first) return `Access is denied.`;
+  if (first.name === "Clearance")
+    return "Access is denied because this subject's clearance is below the required level.";
+  if (first.name === "Domain tier")
+    return "Access is denied because this subject lacks the required domain tier.";
+  if (first.name === "Need-to-know")
+    return "Access is denied because this subject is missing a required compartment.";
+  if (first.name === "Affiliation")
+    return "Access is denied because this subject's entity has no agreement with the resource owner.";
+  return `Access is denied: ${first.detail}`;
+}
+
 // ContextTrace — local component for displaying a Decision result with ALLOW/DENY verdict.
 // NOT exported. Used by the deployment and shielding panels where the rules shape from
 // obligations.ts matches the standard Decision interface.
@@ -51,6 +69,9 @@ function ContextTrace({
       <div className="text-lg font-semibold">
         {allow ? "✓ ALLOW" : "✗ DENY"}
       </div>
+      <p className="mt-2 text-sm italic text-slate-600">
+        {proseSentence(decision)}
+      </p>
       <ul className="mt-3 space-y-1.5">
         {decision.rules.map((r) => (
           <li key={r.name} className="flex gap-2 text-sm">

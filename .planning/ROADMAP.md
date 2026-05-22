@@ -21,8 +21,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - Unified mock world-state, pure-computed ABAC engine, 8 operating roles, and persistent [DEMO/MOCK] banner (completed 2026-05-21)
 - [x] **Phase 2: Federation Hub** - Discovery-without-disclosure hub, typed interchange contract, verified signed credentials, holder-gated release, and entity console views (completed 2026-05-22)
-- [ ] **Phase 3: Audit & Context** - Append-only event log with point-in-time reconstruction, per-entity policy divergence, support-obligation grants, and directional shielding
-- [ ] **Phase 4: Demo Shell & Legibility** - Composed coherent shell, cross-view consistency, plain-prose decision traces, and production build registration
+- [x] **Phase 3: Audit & Context** - Append-only event log with point-in-time reconstruction, per-entity policy divergence, support-obligation grants, and directional shielding (completed 2026-05-22)
+- [x] **Phase 4: Demo Shell & Legibility** - Composed coherent shell, cross-view consistency, plain-prose decision traces, and production build registration (completed 2026-05-22)
 
 ## Phase Details
 
@@ -136,11 +136,11 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Tab restructure: extend DemoRoot to 5-tab shell; extract UnitConsolePanel to standalone Entity Console tab; FederationHub reduced to 3 panels [DEMO-01, DEMO-02]
+- [x] 04-01-PLAN.md — Tab restructure: extend DemoRoot to 5-tab shell; extract UnitConsolePanel to standalone Entity Console tab; FederationHub reduced to 3 panels [DEMO-01, DEMO-02]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-02-PLAN.md — Legibility + build gate: plain-prose summary sentences in DecisionTrace and ContextTrace; Vitest pass; npm run build pass [DEMO-03, DEMO-04]
+- [x] 04-02-PLAN.md — Legibility + build gate: plain-prose summary sentences in DecisionTrace and ContextTrace; Vitest pass; npm run build pass [DEMO-03, DEMO-04]
 
 **UI hint**: yes
 
@@ -156,5 +156,5 @@ Phase 4 depends on both Phase 2 and Phase 3 completing.
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-05-21 |
 | 2. Federation Hub | 6/6 | Complete    | 2026-05-22 |
-| 3. Audit & Context | 0/? | Not started | - |
-| 4. Demo Shell & Legibility | 0/2 | Not started | - |
+| 3. Audit & Context | 4/4 | Complete | 2026-05-22 |
+| 4. Demo Shell & Legibility | 2/2 | Complete | 2026-05-22 |

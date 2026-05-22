@@ -98,13 +98,20 @@ export function Select<T extends string>({
   );
 }
 
-export function DecisionTrace({ result }: { result: Decision }) {
+export function DecisionTrace({
+  result,
+  prose,
+}: {
+  result: Decision;
+  prose?: string;
+}) {
   const allow = result.decision === "ALLOW";
   return (
     <div
       className={`rounded-lg border p-4 ${allow ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}
     >
       <div className="text-lg font-bold">{allow ? "✓ ALLOW" : "✗ DENY"}</div>
+      {prose && <p className="mt-2 text-sm italic text-slate-600">{prose}</p>}
       <ul className="mt-3 space-y-1.5">
         {result.rules.map((r) => (
           <li key={r.name} className="flex gap-2 text-sm">

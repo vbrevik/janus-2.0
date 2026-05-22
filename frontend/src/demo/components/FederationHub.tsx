@@ -6,8 +6,6 @@ import { useWorldDispatch } from "../store/world-state";
 import { HubDiscoveryPanel } from "./HubDiscoveryPanel";
 import { ExchangeTranscriptPanel } from "./ExchangeTranscriptPanel";
 import { CredentialVerifyPanel } from "./CredentialVerifyPanel";
-import { UnitConsolePanel } from "./UnitConsolePanel";
-
 export function FederationHub() {
   const dispatch = useWorldDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -70,7 +68,6 @@ export function FederationHub() {
       <HubDiscoveryPanel />
       <ExchangeTranscriptPanel />
       <CredentialVerifyPanel />
-      <UnitConsolePanel />
     </div>
   );
 }
