@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Authorization Hub (demo)
 status: executing
 stopped_at: Phase 2 UI-SPEC approved
-last_updated: "2026-05-22T05:03:45.345Z"
-last_activity: 2026-05-22 -- Phase 2 planning complete
+last_updated: "2026-05-22T05:12:49.922Z"
+last_activity: 2026-05-22
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 10
-  completed_plans: 4
+  completed_plans: 5
   percent: 25
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — proving the federated ABAC model before committing to a real build.
-**Current focus:** Phase 2 — federation hub
+**Current focus:** Phase 2 — Federation Hub
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
+Phase: 2 (Federation Hub) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-05-22 -- Phase 2 planning complete
+Last activity: 2026-05-22
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 02-federation-hub P01 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -64,6 +65,8 @@ Recent decisions affecting current work:
 - Demo is frontend-mock-first; no new Rust/backend work required for the demo phase
 - Spike code stays isolated in `frontend/src/spikes/` behind `/spikes.html` entry; no routeTree changes
 - Phase 3 depends on Phase 1 (not Phase 2) — Phases 2 and 3 can be planned in parallel
+- [Phase ?]: Network class NOT ported (D2-02); pure functions only in contract.ts
+- [Phase ?]: ROGUE-ISSUER excluded from TRUSTED_ISSUERS; T-02-02 mitigated
 
 ### Pending Todos
 
@@ -84,6 +87,6 @@ None for v2.0. (v1.0 WIP on `feature/frontend-consolidation` is superseded and a
 
 ## Session Continuity
 
-Last session: 2026-05-21T21:00:40.750Z
+Last session: 2026-05-22T05:12:49.894Z
 Stopped at: Phase 2 UI-SPEC approved
-Resume file: .planning/phases/02-federation-hub/02-UI-SPEC.md
+Resume file: None

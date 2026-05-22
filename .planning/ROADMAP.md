@@ -72,7 +72,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Pure interchange helpers: demo/lib/contract.ts (computeDetailResponse, buildPublishEnvelope, buildDiscoverEnvelopes) + demo/lib/credential.ts (issueCredential, verifyCredential, ISSUER_KEYS, TRUSTED_ISSUERS) [FED-02, FED-03, FED-04]
+- [x] 02-01-PLAN.md — Pure interchange helpers: demo/lib/contract.ts (computeDetailResponse, buildPublishEnvelope, buildDiscoverEnvelopes) + demo/lib/credential.ts (issueCredential, verifyCredential, ISSUER_KEYS, TRUSTED_ISSUERS) [FED-02, FED-03, FED-04]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -132,6 +132,6 @@ Phase 4 depends on both Phase 2 and Phase 3 completing.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-05-21 |
-| 2. Federation Hub | 0/6 | Not started | - |
+| 2. Federation Hub | 1/6 | In Progress|  |
 | 3. Audit & Context | 0/? | Not started | - |
 | 4. Demo Shell & Legibility | 0/? | Not started | - |
