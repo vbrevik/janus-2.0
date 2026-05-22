@@ -26,7 +26,13 @@ import {
   type Subject,
   type UnitId,
 } from "../lib/model";
-import { AGREEMENTS, HUB_INDEX, RESOURCES, SUBJECTS } from "../lib/seed";
+import {
+  AGREEMENTS,
+  HUB_INDEX,
+  INITIAL_EVENTS,
+  RESOURCES,
+  SUBJECTS,
+} from "../lib/seed";
 import { buildDiscoverEnvelopes, type DetailResult } from "../lib/contract";
 import type { VerifyResult } from "../lib/credential";
 import type { Principal } from "../lib/abac";
@@ -81,7 +87,7 @@ export function seedWorld(): WorldState {
     subjects: SUBJECTS,
     resources: RESOURCES,
     agreements: AGREEMENTS,
-    events: [],
+    events: INITIAL_EVENTS,
     hubIndex: HUB_INDEX,
     currentRole: "ACCESS_APPROVER",
     // CA-1 clean-ALLOW triple: the first same-unit subject + resource + its domain.
@@ -90,7 +96,7 @@ export function seedWorld(): WorldState {
       resourceId: firstResource.id,
       domain: firstResource.domain,
     },
-    seq: 0,
+    seq: INITIAL_EVENTS.length,
     fedCredentials: { valid: null, rogue: null },
     fedRunStage: "IDLE",
     fedTranscript: [],
