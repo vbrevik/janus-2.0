@@ -132,6 +132,6 @@ Phase 4 depends on both Phase 2 and Phase 3 completing.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-05-21 |
-| 2. Federation Hub | 6/6 | Complete   | 2026-05-22 |
+| 2. Federation Hub | 6/6 | Complete    | 2026-05-22 |
 | 3. Audit & Context | 0/? | Not started | - |
 | 4. Demo Shell & Legibility | 0/? | Not started | - |
