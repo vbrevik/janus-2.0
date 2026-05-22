@@ -103,7 +103,21 @@ Plans:
   4. Viewer can toggle a subunit's deployment status from HOME to ABROAD and observe that support-obligation access turns on; toggling back to HOME turns it off — no stored grant is created
   5. Viewer can observe that a request for shielded intel or industry data from a non-allowlisted entity is denied even when that requester holds standing access, while an allowlisted entity succeeds
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Lifted lib foundations: auditlog.ts + policy.ts + obligations.ts + tests + seed.ts extensions [AUDIT-01, AUDIT-02, CTX-01, CTX-02, CTX-03]
+
+**Wave 2** *(blocked on Wave 1 completion — plans 02/03 can run in parallel)*
+
+- [ ] 03-02-PLAN.md — world-state INITIAL_EVENTS seed + AuditView.tsx (slider + event log + reconstructed state + who-can-access) [AUDIT-01, AUDIT-02]
+- [ ] 03-03-PLAN.md — ContextView.tsx (policy divergence + deployment toggle + directional shielding) [CTX-01, CTX-02, CTX-03]
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-04-PLAN.md — DemoRoot.tsx 4-tab extension + full Vitest + Vite build gate [AUDIT-01, AUDIT-02, CTX-01, CTX-02, CTX-03]
+
 **UI hint**: yes
 
 ### Phase 4: Demo Shell & Legibility
