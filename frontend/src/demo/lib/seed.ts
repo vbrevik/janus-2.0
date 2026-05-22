@@ -3,7 +3,15 @@
 // Seed-head invariant (R9): do NOT modify records above the Task-3 boundary comment —
 // the 6 ported abac.test.ts fixture assertions depend on these exact records.
 
-import type { Subject, Resource, HubPointer, UnitId } from "./model";
+import type {
+  Subject,
+  Resource,
+  HubPointer,
+  UnitId,
+  AttrEvent,
+  Subunit,
+  EntityPolicy,
+} from "./model";
 export { ROLES, TIERS, UNITS } from "./model";
 export type { Subject, Resource, HubPointer, UnitId } from "./model";
 
@@ -813,3 +821,125 @@ HUB_INDEX.push(
   { subjectId: "subj-20", holdingUnit: "HOME_GUARD", domain: "PHYSICAL" },
   { subjectId: "subj-22", holdingUnit: "HOME_GUARD", domain: "DATA" },
 );
+
+// ============================================================
+// Phase 3: Audit & Context seed additions (D3-01, D3-06, D3-07)
+// ============================================================
+
+// INITIAL_EVENTS — 4 baseline events pre-seeded in world-state (D3-01).
+// Narrative: subj-1 (Dana Reyes) gains BLACKWING compartment (not already in base seed),
+// a security hold fires and clears, then ca5-subj (Maja Vik) is re-authorized.
+// Avoids the dedup no-op pitfall (RESEARCH Pitfall 2): subj-1 has only AURORA, not BLACKWING.
+export const INITIAL_EVENTS: AttrEvent[] = [
+  {
+    seq: 1,
+    subjectId: "subj-1",
+    op: "GRANT_COMPARTMENT",
+    value: "BLACKWING",
+    actor: "Access Approver / AO",
+  },
+  {
+    seq: 2,
+    subjectId: "subj-1",
+    op: "SET_HOLD",
+    actor: "Security Officer",
+  },
+  {
+    seq: 3,
+    subjectId: "subj-1",
+    op: "CLEAR_HOLD",
+    actor: "Security Officer",
+  },
+  {
+    seq: 4,
+    subjectId: "ca5-subj",
+    op: "AUTHORIZE_SUBJECT",
+    actor: "Manager / Supervisor",
+  },
+];
+
+// POLICIES — per-unit release policy (D3-06).
+// Three flavors: standard (all rules), strict (INTEL: TOP_SECRET floor), relaxed (INDUSTRY: no NTK/affiliation).
+// MILITARY_2, INFRA, HOME_GUARD inherit standard.
+export const POLICIES: Record<UnitId, EntityPolicy> = {
+  MILITARY_1: {
+    id: "MILITARY_1",
+    label: "Standard (all rules)",
+    rules: {
+      clearance: true,
+      domainTier: true,
+      needToKnow: true,
+      affiliation: true,
+    },
+  },
+  MILITARY_2: {
+    id: "MILITARY_2",
+    label: "Standard (all rules)",
+    rules: {
+      clearance: true,
+      domainTier: true,
+      needToKnow: true,
+      affiliation: true,
+    },
+  },
+  INTEL: {
+    id: "INTEL",
+    label: "Strict (TOP_SECRET floor)",
+    rules: {
+      clearance: true,
+      domainTier: true,
+      needToKnow: true,
+      affiliation: true,
+    },
+    minClearanceFloor: "TOP_SECRET",
+  },
+  INFRA: {
+    id: "INFRA",
+    label: "Standard (all rules)",
+    rules: {
+      clearance: true,
+      domainTier: true,
+      needToKnow: true,
+      affiliation: true,
+    },
+  },
+  INDUSTRY: {
+    id: "INDUSTRY",
+    label: "Relaxed (no NTK / no affiliation)",
+    rules: {
+      clearance: true,
+      domainTier: true,
+      needToKnow: false,
+      affiliation: false,
+    },
+  },
+  HOME_GUARD: {
+    id: "HOME_GUARD",
+    label: "Standard (all rules)",
+    rules: {
+      clearance: true,
+      domainTier: true,
+      needToKnow: true,
+      affiliation: true,
+    },
+  },
+};
+
+// SUBUNITS — 3 entries using MILITARY_1 and MILITARY_2 units (D3-07, adapted from obligations.ts).
+export const SUBUNITS: Subunit[] = [
+  { id: "su-1", name: "1st Recon Coy", unit: "MILITARY_1", deployment: "HOME" },
+  {
+    id: "su-2",
+    name: "Field Hospital",
+    unit: "MILITARY_1",
+    deployment: "ABROAD",
+  },
+  { id: "su-3", name: "2nd Armoured", unit: "MILITARY_2", deployment: "HOME" },
+];
+
+// SUPPORT_OBLIGATIONS — which units have a standing obligation to support another unit's deployed subunits.
+export const SUPPORT_OBLIGATIONS: { from: UnitId; to: UnitId }[] = [
+  { from: "INFRA", to: "MILITARY_1" },
+  { from: "MILITARY_2", to: "MILITARY_1" },
+  { from: "INFRA", to: "MILITARY_2" },
+];
