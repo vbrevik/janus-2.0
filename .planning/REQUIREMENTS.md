@@ -74,27 +74,27 @@ Deferred — safe to cut under time pressure; the infrastructure supports them.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MODEL-01 | Phase 1 | Pending |
-| MODEL-02 | Phase 1 | Pending |
-| MODEL-03 | Phase 1 | Pending |
-| ENGINE-01 | Phase 1 | Pending |
-| ENGINE-02 | Phase 1 | Pending |
-| ENGINE-03 | Phase 1 | Pending |
-| ROLE-01 | Phase 1 | Pending |
-| ROLE-02 | Phase 1 | Pending |
+| MODEL-01 | Phase 1 | Complete |
+| MODEL-02 | Phase 1 | Complete |
+| MODEL-03 | Phase 1 | Complete |
+| ENGINE-01 | Phase 1 | Complete |
+| ENGINE-02 | Phase 1 | Complete |
+| ENGINE-03 | Phase 1 | Complete |
+| ROLE-01 | Phase 1 | Complete |
+| ROLE-02 | Phase 1 | Complete |
 | FED-01 | Phase 2 | Complete |
 | FED-02 | Phase 2 | Complete |
 | FED-03 | Phase 2 | Complete |
 | FED-04 | Phase 2 | Complete |
-| AUDIT-01 | Phase 3 | Pending |
-| AUDIT-02 | Phase 3 | Pending |
-| CTX-01 | Phase 3 | Pending |
-| CTX-02 | Phase 3 | Pending |
-| CTX-03 | Phase 3 | Pending |
-| DEMO-01 | Phase 4 | Pending |
-| DEMO-02 | Phase 4 | Pending |
-| DEMO-03 | Phase 4 | Pending |
-| DEMO-04 | Phase 4 | Pending |
+| AUDIT-01 | Phase 3 | Complete |
+| AUDIT-02 | Phase 3 | Complete |
+| CTX-01 | Phase 3 | Complete |
+| CTX-02 | Phase 3 | Complete |
+| CTX-03 | Phase 3 | Complete |
+| DEMO-01 | Phase 4 | Complete |
+| DEMO-02 | Phase 4 | Complete |
+| DEMO-03 | Phase 4 | Complete |
+| DEMO-04 | Phase 4 | Complete |
 
 ---
 *Requirements defined: 2026-05-21 for milestone v2.0 Authorization Hub (demo)*

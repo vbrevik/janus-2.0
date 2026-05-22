@@ -45,6 +45,13 @@ function proseSentence(decision: Decision): string {
     return "Access is denied because this subject is missing a required compartment.";
   if (first.name === "Affiliation")
     return "Access is denied because this subject's entity has no agreement with the resource owner.";
+  if (
+    first.name === "Deployment (ABROAD)" ||
+    first.name === "Support obligation"
+  )
+    return "Access is denied because no support obligation exists between these units for this deployment status.";
+  if (first.name === "Directional shielding")
+    return "Access is denied because this resource is shielded — only allowlisted entities may access it.";
   return `Access is denied: ${first.detail}`;
 }
 
