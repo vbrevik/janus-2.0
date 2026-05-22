@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { issueCredential, ISSUER_KEYS } from "../lib/credential";
 import { useWorldDispatch } from "../store/world-state";
 import { HubDiscoveryPanel } from "./HubDiscoveryPanel";
+import { ExchangeTranscriptPanel } from "./ExchangeTranscriptPanel";
+import { CredentialVerifyPanel } from "./CredentialVerifyPanel";
+import { UnitConsolePanel } from "./UnitConsolePanel";
 
 export function FederationHub() {
   const dispatch = useWorldDispatch();
@@ -65,12 +68,9 @@ export function FederationHub() {
         </div>
       )}
       <HubDiscoveryPanel />
-      {/* ExchangeTranscriptPanel — added by plan 02-04; plan 02-06 wires the real import */}
-      {null}
-      {/* CredentialVerifyPanel — added by plan 02-04; plan 02-06 wires the real import */}
-      {null}
-      {/* UnitConsolePanel — added by plan 02-05; plan 02-06 wires the real import */}
-      {null}
+      <ExchangeTranscriptPanel />
+      <CredentialVerifyPanel />
+      <UnitConsolePanel />
     </div>
   );
 }
