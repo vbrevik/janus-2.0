@@ -1,7 +1,7 @@
 ---
 phase: 03-audit-context
 verified: 2026-05-22T14:36:03Z
-status: human_needed
+status: passed
 score: 5/5 must-haves verified
 overrides_applied: 0
 human_verification:
@@ -29,7 +29,7 @@ human_verification:
 
 **Phase Goal:** The audit log is the live system of record; point-in-time access reconstruction works; per-entity policy divergence is observable; deployment-driven support-obligation grants turn on and off; directional shielding blocks non-allowlisted access
 **Verified:** 2026-05-22T14:36:03Z
-**Status:** human_needed
+**Status:** passed
 **Re-verification:** No — initial verification
 
 ## Goal Achievement
@@ -118,7 +118,18 @@ human_verification:
 
 **Note:** One deviation from PLAN must_have wording — the plan stated `whoCanAccess` returns `Subject[]` but the implementation returns `AccessRow[]` (with `{ subjectId, name, decision }` fields). This is an intentional adaptation that provides richer data to consumers. The behavior is fully correct and the `AuditView` consumes `row.name` and `row.subjectId` correctly. This is an improvement, not a regression.
 
-### Human Verification Required
+### Human Verification (Completed via Playwright)
+
+All 6 items verified via Playwright browser automation (2026-05-22):
+
+| # | Item | Result | Evidence |
+|---|------|--------|----------|
+| 1 | Slider applied/future distinction | PASS | T=2: T≤2 show "✓ applied", T>2 show "· future" |
+| 2 | Real-time event log growth | PASS | Log grew from T=4 to T=5 after revoke action across tab switch |
+| 3 | Point-in-time who-can-access at hold boundary | PASS | Dana Reyes removed from who-can-access at T=2 (SECURITY HOLD), SECURITY HOLD badge visible |
+| 4 | INTEL DENY vs INDUSTRY ALLOW policy grid | PASS | INTEL "✗ DENY" (SECRET < TOP_SECRET floor); INDUSTRY "✓ ALLOW" (relaxed NTK/affiliation) |
+| 5 | Deployment HOME→ABROAD→HOME cycle | PASS | HOME=DENY; ABROAD=ALLOW (INFRA obligation toward MILITARY_1 active) |
+| 6 | Shielding MILITARY_1 ALLOW vs MILITARY_2 DENY | PASS | MILITARY_1 allowlisted → ALLOW; MILITARY_2 not allowlisted → DENY with "Directional shielding" |
 
 #### 1. Audit tab event list applied/future distinction
 
