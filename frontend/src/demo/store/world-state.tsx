@@ -118,6 +118,8 @@ export type Action =
   | { type: "REVOKE_ATTRIBUTE"; subjectId: string; value: Compartment }
   | { type: "TOGGLE_SECURITY_HOLD"; subjectId: string }
   | { type: "REQUEST_ATTRIBUTE"; subjectId: string; value: Compartment }
+  | { type: "AUTHORIZE_SUBJECT_ACTION"; subjectId: string }
+  | { type: "WITHDRAW_AUTHORIZATION_ACTION"; subjectId: string }
   | { type: "CREDENTIALS_READY"; valid: Credential; rogue: Credential }
   | {
       type: "CREDENTIAL_VERIFY_RESULTS";
@@ -261,6 +263,7 @@ export function reducer(state: WorldState, action: Action): WorldState {
     case "REQUEST_ATTRIBUTE":
       // SoD crux: a request is LOGGED but mutates NOTHING. subjects array is the same
       // reference; only the event log + seq advance. The Manager cannot grant via the store.
+      // REQUEST_COMPARTMENT (not GRANT_COMPARTMENT) ensures audit replay does NOT apply it.
       return {
         ...state,
         events: [
@@ -268,12 +271,48 @@ export function reducer(state: WorldState, action: Action): WorldState {
           appendEvent(
             state,
             action.subjectId,
-            "GRANT_COMPARTMENT",
+            "REQUEST_COMPARTMENT",
             action.value,
           ),
         ],
         seq: state.seq + 1,
       };
+
+    case "AUTHORIZE_SUBJECT_ACTION": {
+      const subjects = state.subjects.map((s) => {
+        if (s.id !== action.subjectId || !s.authorization) return s;
+        const clone = cloneSubject(s);
+        clone.authorization = { ...s.authorization, status: "AUTHORIZED" };
+        return clone;
+      });
+      return {
+        ...state,
+        subjects,
+        events: [
+          ...state.events,
+          appendEvent(state, action.subjectId, "AUTHORIZE_SUBJECT"),
+        ],
+        seq: state.seq + 1,
+      };
+    }
+
+    case "WITHDRAW_AUTHORIZATION_ACTION": {
+      const subjects = state.subjects.map((s) => {
+        if (s.id !== action.subjectId || !s.authorization) return s;
+        const clone = cloneSubject(s);
+        clone.authorization = { ...s.authorization, status: "WITHDRAWN" };
+        return clone;
+      });
+      return {
+        ...state,
+        subjects,
+        events: [
+          ...state.events,
+          appendEvent(state, action.subjectId, "WITHDRAW_AUTHORIZATION"),
+        ],
+        seq: state.seq + 1,
+      };
+    }
 
     case "CREDENTIALS_READY":
       return {

@@ -217,7 +217,8 @@ export type AttrOp =
   | "SET_REVOKED" // R6: make revoke event-sourced (not just flag)
   | "CLEAR_REVOKED" // R6: make revoke event-sourced (not just flag)
   | "AUTHORIZE_SUBJECT" // D-11: Manager authorizes a subject
-  | "WITHDRAW_AUTHORIZATION"; // D-11: Manager withdraws authorization
+  | "WITHDRAW_AUTHORIZATION" // D-11: Manager withdraws authorization
+  | "REQUEST_COMPARTMENT"; // SoD: Manager request — logged only, not applied (audit trail)
 
 export interface AttrEvent {
   // Lifted from auditlog.ts:17-23; extended for D-11

@@ -15,7 +15,9 @@ export function AuditView() {
   const { events, subjects, resources } = useWorld();
 
   // D3-03: slider defaults to events.length (= current state / "now").
-  const [asOf, setAsOf] = useState(events.length);
+  // manualAsOf is null until the user moves the slider; derived asOf tracks live events when null.
+  const [manualAsOf, setManualAsOf] = useState<number | null>(null);
+  const asOf = manualAsOf ?? events.length;
   const [subjId, setSubjId] = useState(subjects[0].id);
   const [resId, setResId] = useState(resources[0].id);
 
@@ -71,7 +73,7 @@ export function AuditView() {
             min={0}
             max={events.length}
             value={asOf}
-            onChange={(e) => setAsOf(Number(e.target.value))}
+            onChange={(e) => setManualAsOf(Number(e.target.value))}
             className="w-full"
           />
           {/* D3-03: "Current state" pill visible only at slider max */}

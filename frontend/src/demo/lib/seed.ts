@@ -815,7 +815,7 @@ HUB_INDEX.push(
   { subjectId: "fw2-subj", holdingUnit: "INFRA", domain: "PHYSICAL" },
   { subjectId: "fw1-subj", holdingUnit: "INTEL", domain: "COMPUTER" },
   { subjectId: "fw1-subj", holdingUnit: "INTEL", domain: "DATA" },
-  { subjectId: "fw3-res", holdingUnit: "INDUSTRY", domain: "DATA" }, // resource pointer (FW-4)
+  // fw3-res removed: it is a resource id, not a subject id — wrong type for HUB_INDEX (WR-02)
   { subjectId: "ca5-subj", holdingUnit: "INDUSTRY", domain: "DATA" },
   { subjectId: "subj-17", holdingUnit: "INDUSTRY", domain: "DATA" },
   { subjectId: "subj-20", holdingUnit: "HOME_GUARD", domain: "PHYSICAL" },

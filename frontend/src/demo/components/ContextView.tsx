@@ -124,8 +124,9 @@ export function ContextView() {
         subunitWithDeployment,
         SUPPORT_OBLIGATIONS,
       ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [obligRequester, obligSubunitId, deployment],
+    // subunitWithDeployment is derived from obligSubunitId + deployment; listing the
+    // derived object is correct — it changes whenever either primitive changes.
+    [obligRequester, subunitWithDeployment],
   );
 
   // ── Section B: Directional Shielding (CTX-03) ────────────────────────────
@@ -147,7 +148,7 @@ export function ContextView() {
   const shieldingDecision = useMemo(() => {
     if (!selectedShieldedResource) return null;
     return evaluateResourceAccess(shieldRequester, selectedShieldedResource);
-  }, [shieldRequester, shieldResId, selectedShieldedResource]);
+  }, [shieldRequester, selectedShieldedResource]);
 
   return (
     <div className="space-y-6">

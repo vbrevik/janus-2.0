@@ -67,6 +67,9 @@ export function reconstructSubject(
           state.authorization = { ...state.authorization, status: "WITHDRAWN" };
         }
         break;
+      case "REQUEST_COMPARTMENT":
+        // SoD: request is audit-only; no state mutation.
+        break;
       default:
         // Silently ignore unknown ops for forward compatibility.
         break;
@@ -115,7 +118,8 @@ export function whoCanAccess(
 ): AccessRow[] {
   const rows: AccessRow[] = [];
   for (const base of subjects) {
-    const state = reconstructSubject(base.id, subjects, events, asOf)!;
+    const state = reconstructSubject(base.id, subjects, events, asOf);
+    if (state === null) continue; // guard — never dereference null
     const decision = evaluateWithAuth(state, req);
     if (decision.decision === "ALLOW")
       rows.push({ subjectId: base.id, name: base.name, decision });
