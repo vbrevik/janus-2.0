@@ -47,7 +47,7 @@ Declared values (must be multiples of 4):
 
 Exceptions:
 - Range slider (`<input type="range">`) fills full width (`w-full`) — no token applies.
-- Tab button bar: `px-3 py-1.5` (= 12px / 6px) — matches established Phase 2 DemoRoot tab pattern (D3-09).
+- Tab button bar: `px-3 py-2` (= 12px / 8px) — matches 4px grid; throwaway nav (D3-09).
 - Touch target minimum: 44px height not enforced (desktop-only demo, no mobile requirement).
 
 ---
@@ -59,7 +59,7 @@ Exceptions:
 | Body | 14px (`text-sm`) | 400 (regular) | 1.5 | Descriptive prose, event list items, decision rule detail text |
 | Label | 12px (`text-xs`) | 600 (semibold) | 1.4 | Card section headings (`uppercase tracking-wide text-slate-400`), field labels, pill text, mono event entries |
 | Heading | 14px (`text-sm`) | 600 (semibold) | 1.4 | Panel headings (`font-semibold`), sub-section headers (e.g. "A · Support obligation") |
-| Display | 18px (`text-lg`) | 700 (bold) | 1.2 | ALLOW / DENY verdict line in DecisionTrace (`text-lg font-bold`) |
+| Display | 18px (`text-lg`) | 600 (semibold) | 1.2 | ALLOW / DENY verdict line in DecisionTrace (`text-lg font-semibold`) |
 
 **Monospace exception:** Timeline event entries use `font-mono text-xs` — preserved from Spike007 reference pattern.
 
@@ -144,13 +144,15 @@ Sub-panels may be extracted into the same file or sibling files per planner disc
 ### 4-Tab Navigation (DemoRoot)
 
 - Tab bar: horizontal row of 4 buttons, `flex gap-2`, `mx-auto max-w-5xl px-6 py-2`
-- Active tab: `bg-slate-800 text-white rounded px-3 py-1.5 text-sm`
-- Inactive tab: `border border-slate-300 text-slate-600 hover:bg-slate-50 rounded px-3 py-1.5 text-sm`
+- Active tab: `bg-slate-800 text-white rounded px-3 py-2 text-sm`
+- Inactive tab: `border border-slate-300 text-slate-600 hover:bg-slate-50 rounded px-3 py-2 text-sm`
 - Tab labels: "Decision Explorer", "Federation Hub", "Audit", "Context"
 - State: `useState<'decisions' | 'federation' | 'audit' | 'context'>` defaulting to `'decisions'`
 - No animation. Instant swap. This is a throwaway nav (D3-09).
 
 ### Audit View — Range Slider (AUDIT-01, AUDIT-02)
+
+Primary focal point: the range slider in the Timeline card — it is the interaction entry point from which all other panels derive their state.
 
 - Element: `<input type="range" min={0} max={events.length} value={asOf} />`  
 - Default value: `events.length` (= current state / "now") — D3-03
@@ -254,6 +256,12 @@ No third-party registries. No new shadcn component installs required for Phase 3
 | `src/index.css` | CSS variable values for color table |
 | `tailwind.config.js` | Spacing/color token structure confirmed |
 | User input | 0 — all decisions pre-populated from upstream artifacts |
+
+---
+
+## DecisionTrace — Verdict Line
+
+The ALLOW / DENY verdict line inside `DecisionTrace` uses `text-lg font-semibold` (Display role, 18px, weight 600). Do not use `font-bold` for this element.
 
 ---
 
