@@ -124,9 +124,9 @@ export function ContextView() {
         subunitWithDeployment,
         SUPPORT_OBLIGATIONS,
       ),
-    // subunitWithDeployment is derived from obligSubunitId + deployment; listing the
-    // derived object is correct — it changes whenever either primitive changes.
-    [obligRequester, subunitWithDeployment],
+    // Use primitives, not the derived object (new ref each render → no memoization).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [obligRequester, obligSubunitId, deployment],
   );
 
   // ── Section B: Directional Shielding (CTX-03) ────────────────────────────
