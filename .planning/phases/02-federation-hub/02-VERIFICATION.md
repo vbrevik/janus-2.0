@@ -1,10 +1,11 @@
 ---
 phase: 02-federation-hub
 verified: 2026-05-22T13:55:00Z
-status: human_needed
+status: passed
 score: 13/13 must-haves verified
 overrides_applied: 0
 re_verification: false
+human_verification_completed: "2026-05-22 — all 5 items verified in-browser via Playwright (vite dev, demo.html). Evidence: phase2-federation-deny-trace.png, phase2-federation-allow-released.png. FED-01 pointers-only + callout; FED-02 full 4-stage transcript with stage-gating + locked params + new-run; FED-03 side-by-side rogue-REJECTED([MOCK]) / valid-TRUSTED; FED-04 ALLOW RELEASED (record shown) + DENY WITHHELD with per-rule DecisionTrace, verify-before-trust, durable inbox/outbox; [DEMO/MOCK] banner persists across both views."
 human_verification:
   - test: "Switch to Federation Hub and select a seeded subject; confirm pointer list shows holding unit + domain only with NO clearance, tier, compartment, or decision rendered, and the 'What the hub does NOT store' callout is visible with struck-through items"
     expected: "One or more HubPointer rows appear (unit name pill + domain pill); no clearance/tier/compartment/decision text anywhere in the panel; four struck-through items visible"
