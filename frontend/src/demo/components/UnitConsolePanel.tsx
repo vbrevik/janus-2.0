@@ -83,8 +83,9 @@ export function UnitConsolePanel() {
                 {entry.detailResult.decision?.decision === "DENY" &&
                   !entry.verifyResult.valid && (
                     <p className="text-xs text-slate-500 mt-1">
-                      Credential not verified — ABAC was not evaluated on
-                      unverified claims.
+                      Credential not verified — its claims were discarded and
+                      ABAC ran on a downgraded unclassified principal, which
+                      denies.
                     </p>
                   )}
               </div>

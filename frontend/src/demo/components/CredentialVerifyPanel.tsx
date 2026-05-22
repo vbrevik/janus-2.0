@@ -26,7 +26,7 @@ export function CredentialVerifyPanel() {
     return () => {
       alive = false;
     };
-  }, [fedCredentials.valid, fedCredentials.rogue]);
+  }, [fedCredentials.valid, fedCredentials.rogue, dispatch]);
 
   // Loading: credentials not yet signed or verify results not yet arrived
   if (
