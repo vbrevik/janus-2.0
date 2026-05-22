@@ -132,7 +132,16 @@ Plans:
   3. A non-developer can read any decision trace on screen and narrate the mechanism — why access was allowed or denied — without coaching (legibility gate)
   4. Running the production build (`vite build`) succeeds and the demo entry is accessible in the built output
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Tab restructure: extend DemoRoot to 5-tab shell; extract UnitConsolePanel to standalone Entity Console tab; FederationHub reduced to 3 panels [DEMO-01, DEMO-02]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-02-PLAN.md — Legibility + build gate: plain-prose summary sentences in DecisionTrace and ContextTrace; Vitest pass; npm run build pass [DEMO-03, DEMO-04]
+
 **UI hint**: yes
 
 ## Progress
@@ -148,4 +157,4 @@ Phase 4 depends on both Phase 2 and Phase 3 completing.
 | 1. Foundation | 4/4 | Complete   | 2026-05-21 |
 | 2. Federation Hub | 6/6 | Complete    | 2026-05-22 |
 | 3. Audit & Context | 0/? | Not started | - |
-| 4. Demo Shell & Legibility | 0/? | Not started | - |
+| 4. Demo Shell & Legibility | 0/2 | Not started | - |
