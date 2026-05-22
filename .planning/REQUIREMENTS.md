@@ -23,7 +23,7 @@
 
 ### Federation
 
-- [ ] **FED-01**: Viewer can discover via the hub which entities hold authz info about a subject, with no details exposed and an explicit "what the hub does NOT store" callout
+- [x] **FED-01**: Viewer can discover via the hub which entities hold authz info about a subject, with no details exposed and an explicit "what the hub does NOT store" callout
 - [x] **FED-02**: Inter-entity exchange runs over a typed contract; the viewer sees the message transcript (publish → discover → request → response)
 - [x] **FED-03**: A requester's attributes ride in a signed credential the holder verifies before trusting; forged or untrusted-issuer credentials are rejected (labelled `[MOCK]`)
 - [x] **FED-04**: Detail release is gated by the holder's own ABAC policy — discovery without disclosure (pointer visible, content withheld unless authorized)
@@ -82,7 +82,7 @@ Deferred — safe to cut under time pressure; the infrastructure supports them.
 | ENGINE-03 | Phase 1 | Pending |
 | ROLE-01 | Phase 1 | Pending |
 | ROLE-02 | Phase 1 | Pending |
-| FED-01 | Phase 2 | Pending |
+| FED-01 | Phase 2 | Complete |
 | FED-02 | Phase 2 | Complete |
 | FED-03 | Phase 2 | Complete |
 | FED-04 | Phase 2 | Complete |

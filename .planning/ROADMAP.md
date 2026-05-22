@@ -76,7 +76,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — World-state federation extension: 6 new WorldState slices (fedCredentials, fedRunStage, fedTranscript, fedInbox, fedOutbox, fedVerifyResults), InboxEntry/OutboxEntry interfaces, 7 new Action types and reducer cases [FED-01, FED-02, FED-03, FED-04]
+- [x] 02-02-PLAN.md — World-state federation extension: 6 new WorldState slices (fedCredentials, fedRunStage, fedTranscript, fedInbox, fedOutbox, fedVerifyResults), InboxEntry/OutboxEntry interfaces, 7 new Action types and reducer cases [FED-01, FED-02, FED-03, FED-04]
 
 **Wave 3** *(blocked on Wave 2 completion — plans 03/04/05 can run in parallel)*
 
@@ -132,6 +132,6 @@ Phase 4 depends on both Phase 2 and Phase 3 completing.
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 4/4 | Complete   | 2026-05-21 |
-| 2. Federation Hub | 1/6 | In Progress|  |
+| 2. Federation Hub | 2/6 | In Progress|  |
 | 3. Audit & Context | 0/? | Not started | - |
 | 4. Demo Shell & Legibility | 0/? | Not started | - |
