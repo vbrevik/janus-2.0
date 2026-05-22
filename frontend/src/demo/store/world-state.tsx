@@ -17,7 +17,9 @@ import {
   type AttrEvent,
   type AttrOp,
   type Compartment,
+  type Credential,
   type Domain,
+  type Envelope,
   type HubPointer,
   type Resource,
   type RoleId,
@@ -25,11 +27,31 @@ import {
   type UnitId,
 } from "../lib/model";
 import { AGREEMENTS, HUB_INDEX, RESOURCES, SUBJECTS } from "../lib/seed";
+import { buildDiscoverEnvelopes, type DetailResult } from "../lib/contract";
+import type { VerifyResult } from "../lib/credential";
+import type { Principal } from "../lib/abac";
 
 export interface AbacTarget {
   subjectId: string;
   resourceId: string;
   domain: Domain;
+}
+
+export interface InboxEntry {
+  seq: number;
+  from: UnitId;
+  subjectId: string;
+  requester: Principal;
+  verifyResult: VerifyResult;
+  detailResult: DetailResult;
+}
+
+export interface OutboxEntry {
+  seq: number;
+  to: UnitId;
+  subjectId: string;
+  granted: boolean;
+  record: Subject | null;
 }
 
 export interface WorldState {
@@ -42,6 +64,12 @@ export interface WorldState {
   currentRole: RoleId;
   abacTarget: AbacTarget;
   seq: number;
+  fedCredentials: { valid: Credential | null; rogue: Credential | null };
+  fedRunStage: "IDLE" | "PUBLISHED" | "DISCOVERED" | "REQUESTED" | "RESPONDED";
+  fedTranscript: Envelope[];
+  fedInbox: Partial<Record<UnitId, InboxEntry[]>>;
+  fedOutbox: Partial<Record<UnitId, OutboxEntry[]>>;
+  fedVerifyResults: { valid: VerifyResult | null; rogue: VerifyResult | null };
 }
 
 /** Build the initial world from the frozen seed (lazy-init for useReducer). */
@@ -63,6 +91,12 @@ export function seedWorld(): WorldState {
       domain: firstResource.domain,
     },
     seq: 0,
+    fedCredentials: { valid: null, rogue: null },
+    fedRunStage: "IDLE",
+    fedTranscript: [],
+    fedInbox: {},
+    fedOutbox: {},
+    fedVerifyResults: { valid: null, rogue: null },
   };
 }
 
@@ -77,7 +111,37 @@ export type Action =
   | { type: "APPROVE_ATTRIBUTE"; subjectId: string; value: Compartment }
   | { type: "REVOKE_ATTRIBUTE"; subjectId: string; value: Compartment }
   | { type: "TOGGLE_SECURITY_HOLD"; subjectId: string }
-  | { type: "REQUEST_ATTRIBUTE"; subjectId: string; value: Compartment };
+  | { type: "REQUEST_ATTRIBUTE"; subjectId: string; value: Compartment }
+  | { type: "CREDENTIALS_READY"; valid: Credential; rogue: Credential }
+  | {
+      type: "CREDENTIAL_VERIFY_RESULTS";
+      validResult: VerifyResult;
+      rogueResult: VerifyResult;
+    }
+  | {
+      type: "FEDERATION_PUBLISH";
+      from: UnitId;
+      subjectId: string;
+      domain: Domain;
+    }
+  | { type: "FEDERATION_DISCOVER"; from: UnitId; subjectId: string }
+  | {
+      type: "FEDERATION_REQUEST_DETAIL";
+      from: UnitId;
+      to: UnitId;
+      subjectId: string;
+      requester: Principal;
+    }
+  | {
+      type: "FEDERATION_RESPOND";
+      verifyResult: VerifyResult;
+      detailResult: DetailResult;
+      requesterUnit: UnitId;
+      holderUnit: UnitId;
+      subjectId: string;
+      requester: Principal;
+    }
+  | { type: "FEDERATION_RESET" };
 
 /** Immutable subject clone — new object, new compartments array, new flags object. */
 function cloneSubject(s: Subject): Subject {
@@ -204,6 +268,117 @@ export function reducer(state: WorldState, action: Action): WorldState {
         ],
         seq: state.seq + 1,
       };
+
+    case "CREDENTIALS_READY":
+      return {
+        ...state,
+        fedCredentials: { valid: action.valid, rogue: action.rogue },
+      };
+
+    case "CREDENTIAL_VERIFY_RESULTS":
+      return {
+        ...state,
+        fedVerifyResults: {
+          valid: action.validResult,
+          rogue: action.rogueResult,
+        },
+      };
+
+    case "FEDERATION_PUBLISH": {
+      const envelope: Envelope = {
+        kind: "PUBLISH",
+        from: action.from,
+        subjectId: action.subjectId,
+        domain: action.domain,
+      };
+      return {
+        ...state,
+        fedTranscript: [...state.fedTranscript, envelope],
+        fedRunStage: "PUBLISHED",
+        seq: state.seq + 1,
+      };
+    }
+
+    case "FEDERATION_DISCOVER": {
+      const [discoverEnv, resultEnv] = buildDiscoverEnvelopes(
+        action.from,
+        action.subjectId,
+        state.hubIndex,
+      );
+      return {
+        ...state,
+        fedTranscript: [...state.fedTranscript, discoverEnv, resultEnv],
+        fedRunStage: "DISCOVERED",
+        seq: state.seq + 1,
+      };
+    }
+
+    case "FEDERATION_REQUEST_DETAIL": {
+      const requestEnv: Envelope = {
+        kind: "REQUEST_DETAIL",
+        from: action.from,
+        to: action.to,
+        subjectId: action.subjectId,
+        requester: action.requester as unknown,
+      };
+      return {
+        ...state,
+        fedTranscript: [...state.fedTranscript, requestEnv],
+        fedRunStage: "REQUESTED",
+        seq: state.seq + 1,
+      };
+    }
+
+    case "FEDERATION_RESPOND": {
+      const responseEnv: Envelope = {
+        kind: "DETAIL_RESPONSE",
+        to: action.requesterUnit,
+        subjectId: action.subjectId,
+        granted: action.detailResult.granted,
+        decision: action.detailResult.decision as unknown,
+        record: action.detailResult.record,
+      };
+      const inboxEntry: InboxEntry = {
+        seq: state.seq + 1,
+        from: action.requesterUnit,
+        subjectId: action.subjectId,
+        requester: action.requester,
+        verifyResult: action.verifyResult,
+        detailResult: action.detailResult,
+      };
+      const outboxEntry: OutboxEntry = {
+        seq: state.seq + 1,
+        to: action.holderUnit,
+        subjectId: action.subjectId,
+        granted: action.detailResult.granted,
+        record: action.detailResult.record,
+      };
+      return {
+        ...state,
+        fedTranscript: [...state.fedTranscript, responseEnv],
+        fedRunStage: "RESPONDED",
+        fedInbox: {
+          ...state.fedInbox,
+          [action.holderUnit]: [
+            ...(state.fedInbox[action.holderUnit] ?? []),
+            inboxEntry,
+          ],
+        },
+        fedOutbox: {
+          ...state.fedOutbox,
+          [action.requesterUnit]: [
+            ...(state.fedOutbox[action.requesterUnit] ?? []),
+            outboxEntry,
+          ],
+        },
+        seq: state.seq + 1,
+      };
+    }
+
+    case "FEDERATION_RESET":
+      // D2-06 / Pitfall 7: ONLY clear fedTranscript + reset fedRunStage.
+      // fedInbox and fedOutbox are append-only durable history — do NOT clear.
+      return { ...state, fedTranscript: [], fedRunStage: "IDLE" };
 
     default:
       return state;
