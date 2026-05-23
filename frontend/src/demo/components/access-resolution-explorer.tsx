@@ -213,8 +213,12 @@ export function AccessResolutionExplorer() {
   );
 
   // Grants relevant to the current person + zone context
-  const relevantGrants: PhysicalAccessGrant[] = world.grants.filter(
-    (g) => g.person_id === personId && relevantZoneIds.has(g.zone_id),
+  const relevantGrants: PhysicalAccessGrant[] = useMemo(
+    () =>
+      world.grants.filter(
+        (g) => g.person_id === personId && relevantZoneIds.has(g.zone_id),
+      ),
+    [world.grants, personId, relevantZoneIds],
   );
 
   // Helper lookups
