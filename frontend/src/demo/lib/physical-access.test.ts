@@ -577,6 +577,54 @@ describe("resolveGrant", () => {
     // Either grant on z-bldg1 is acceptable — confirm it is the ancestor zone
     expect(grant?.zone_id).toBe("z-bldg1");
   });
+
+  it("GRANT-02: returns ancestor grant when zone_type matches — CONTROLLED ancestor for CONTROLLED child", () => {
+    // Direct child of Z_SITE (CONTROLLED); no requires_explicit_auth
+    const Z_CONTROLLED_CHILD: ZoneNode = {
+      id: "z-controlled-child",
+      name: "Controlled Child",
+      level: "BUILDING",
+      zone_type: "CONTROLLED",
+      parent_id: "z-site",
+      admin_org_id: "org-a",
+      asset_owner_org_id: "org-a",
+      requires_explicit_auth: false,
+    };
+    const allZonesExt = [...ALL_ZONES, Z_CONTROLLED_CHILD];
+    const G_SITE_CTRL: PhysicalAccessGrant = {
+      id: "g-site-ctrl",
+      person_id: "p-1",
+      zone_id: "z-site",
+      valid_from: null,
+      valid_until: null,
+    };
+    const grant = resolveGrant("p-1", Z_CONTROLLED_CHILD, allZonesExt, [G_SITE_CTRL], NOW);
+    expect(grant).not.toBeNull();
+    expect(grant?.id).toBe("g-site-ctrl");
+  });
+
+  it("GRANT-03: returns null for CONTROLLED zone with matching ancestor when requires_explicit_auth=true", () => {
+    const Z_CONTROLLED_EXPLICIT: ZoneNode = {
+      id: "z-controlled-explicit",
+      name: "Controlled + Explicit Auth",
+      level: "BUILDING",
+      zone_type: "CONTROLLED",
+      parent_id: "z-site",
+      admin_org_id: "org-a",
+      asset_owner_org_id: "org-a",
+      requires_explicit_auth: true,
+    };
+    const allZonesExt = [...ALL_ZONES, Z_CONTROLLED_EXPLICIT];
+    const G_SITE_CTRL: PhysicalAccessGrant = {
+      id: "g-site-ctrl2",
+      person_id: "p-1",
+      zone_id: "z-site",
+      valid_from: null,
+      valid_until: null,
+    };
+    const grant = resolveGrant("p-1", Z_CONTROLLED_EXPLICIT, allZonesExt, [G_SITE_CTRL], NOW);
+    expect(grant).toBeNull();
+  });
 });
 
 describe("resolveZoneAccess", () => {
