@@ -82,6 +82,20 @@ federated ABAC model is proven. The next milestone transitions this from demo to
 
 **Seeds:** SEED-009 active · Demo/mock only (backend defers to later milestone)
 
+### Planned: v2.3 Dataset Access (demo)
+
+**Goal:** Establish fine-grained authorization for named datasets within applications — the innermost access layer. Application access (v2.2) does not grant access to everything inside; each dataset (mailbox, archive role, document site) requires its own authorization with its own access level vocabulary.
+
+**Planned scope:**
+- Dataset model: named authorizable resource within an application (`MAILBOX` / `ARCHIVE_ROLE` / `DOCUMENT_SITE` types)
+- Access levels per type: Mailbox (READ/SEND_AS/FULL_ACCESS), Archive (READER/CASE_HANDLER/ADMIN), Document site (READ/CONTRIBUTE/FULL_CONTROL)
+- Active Application grant is prerequisite for any dataset grant (carries forward from v2.2)
+- Admin org + asset owner org per dataset; delegation mirrors v2.1/v2.2 pattern
+- Time-limited `DatasetAccessGrant` with effective level = highest active grant
+- Mock dataset + demo UI showing prerequisite chain and denied-access cases
+
+**Seeds:** None yet · Demo/mock only (backend defers to later milestone)
+
 ### Future milestones
 
 - [ ] Demo → fullstack: wire ABAC engine into the Rust/Rocket backend (real enforcement, not mock)

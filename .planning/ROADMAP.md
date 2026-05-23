@@ -103,3 +103,6 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
 | 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
 | 10. Grants, Resolution & Delegation | v2.2 | 0/? | Planned | - |
 | 11. Mock Dataset & Demo UI | v2.2 | 0/? | Planned | - |
+| 12. Dataset Model & Access Rules | v2.3 | 0/? | Planned | - |
+| 13. Grants, Resolution & Delegation | v2.3 | 0/? | Planned | - |
+| 14. Mock Dataset & Demo UI | v2.3 | 0/? | Planned | - |
