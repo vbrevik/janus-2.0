@@ -323,6 +323,34 @@ describe("isGrantActive", () => {
     // valid_until === now → boundary is inclusive
     expect(isGrantActive(G_BOUNDARY, NOW)).toBe(true);
   });
+  it("returns true for grant with valid_from in past and null valid_until (open-ended upper bound)", () => {
+    // (non-null from, null until) combination → active when valid_from <= now
+    const g: PhysicalAccessGrant = {
+      ...G_PERMANENT,
+      valid_from: new Date("2025-06-01T00:00:00Z"),
+      valid_until: null,
+    };
+    expect(isGrantActive(g, NOW)).toBe(true);
+  });
+  it("returns true for grant with null valid_from and valid_until in future (open-ended lower bound)", () => {
+    // (null from, non-null until) combination → active when valid_until >= now
+    const g: PhysicalAccessGrant = {
+      ...G_PERMANENT,
+      valid_from: null,
+      valid_until: new Date("2026-06-01T00:00:00Z"),
+    };
+    expect(isGrantActive(g, NOW)).toBe(true);
+  });
+  it("returns false when valid_from equals valid_until and both are before now", () => {
+    // Point-in-time grant that has already elapsed
+    const pastDate = new Date("2024-06-01T00:00:00Z");
+    const g: PhysicalAccessGrant = {
+      ...G_PERMANENT,
+      valid_from: pastDate,
+      valid_until: pastDate,
+    };
+    expect(isGrantActive(g, NOW)).toBe(false);
+  });
 });
 
 describe("isDelegateActive", () => {
@@ -347,6 +375,33 @@ describe("isDelegateActive", () => {
       valid_until: null,
     };
     expect(isDelegateActive(d, NOW)).toBe(false);
+  });
+  it("returns true at exact valid_until boundary (inclusive)", () => {
+    // Boundary-exact: valid_until === NOW → still active (inclusive upper bound)
+    const d: ZoneAccessDelegate = {
+      ...DELEGATE_ACTIVE,
+      valid_from: null,
+      valid_until: NOW,
+    };
+    expect(isDelegateActive(d, NOW)).toBe(true);
+  });
+  it("returns true for delegate with both bounds set and active window (non-null/non-null within range)", () => {
+    // (non-null from, non-null until) combination where now is within the window
+    const d: ZoneAccessDelegate = {
+      ...DELEGATE_ACTIVE,
+      valid_from: new Date("2026-01-01T00:00:00Z"),
+      valid_until: new Date("2026-12-31T23:59:59Z"),
+    };
+    expect(isDelegateActive(d, NOW)).toBe(true);
+  });
+  it("returns true for delegate with null valid_from and valid_until in future (open lower bound)", () => {
+    // (null from, non-null until) combination where valid_until is after NOW
+    const d: ZoneAccessDelegate = {
+      ...DELEGATE_ACTIVE,
+      valid_from: null,
+      valid_until: new Date("2026-06-01T00:00:00Z"),
+    };
+    expect(isDelegateActive(d, NOW)).toBe(true);
   });
 });
 
@@ -427,6 +482,100 @@ describe("resolveGrant", () => {
   it("returns null when no grants at all", () => {
     const grant = resolveGrant("p-1", Z_ROOM1, ALL_ZONES, [], NOW);
     expect(grant).toBeNull();
+  });
+  it("returns direct grant over ancestor grant when both exist (most-specific wins)", () => {
+    // G_PERMANENT is a direct grant on z-room1; G_ANCESTOR_BLDG1 is on z-bldg1 (SECURED parent)
+    // Both are active and match zone_type — direct grant must win
+    // Use Z_SECURED_ROOM (no explicit auth) to allow ancestor comparison
+    const Z_SECURED_ROOM: ZoneNode = {
+      id: "z-secured-room",
+      name: "Secured Room",
+      level: "ROOM",
+      zone_type: "SECURED",
+      parent_id: "z-bldg1",
+      admin_org_id: "org-intel",
+      asset_owner_org_id: "org-intel",
+      requires_explicit_auth: false,
+    };
+    const G_DIRECT_SECURED: PhysicalAccessGrant = {
+      id: "g-direct-secured",
+      person_id: "p-1",
+      zone_id: "z-secured-room",
+      valid_from: null,
+      valid_until: null,
+    };
+    const allZonesExt = [...ALL_ZONES, Z_SECURED_ROOM];
+    // allGrants has both a direct grant AND the ancestor grant — direct must win
+    const grant = resolveGrant(
+      "p-1",
+      Z_SECURED_ROOM,
+      allZonesExt,
+      [G_DIRECT_SECURED, G_ANCESTOR_BLDG1],
+      NOW,
+    );
+    expect(grant).not.toBeNull();
+    expect(grant?.id).toBe("g-direct-secured");
+  });
+  it("returns null when only grant belongs to a different person (person_id mismatch)", () => {
+    // G_BLDG2 has person_id:"p-2"; resolveGrant for "p-1" should return null
+    const grant = resolveGrant("p-1", Z_BUILDING2, ALL_ZONES, [G_BLDG2], NOW);
+    expect(grant).toBeNull();
+  });
+  it("returns null when ancestor grant is CONTROLLED but target zone is RESTRICTED (cross-type inheritance blocked)", () => {
+    // G_ANCESTOR_SITE is on z-site (CONTROLLED); Z_BUILDING2 is RESTRICTED — type mismatch
+    const grant = resolveGrant(
+      "p-1",
+      Z_BUILDING2,
+      ALL_ZONES,
+      [G_ANCESTOR_SITE],
+      NOW,
+    );
+    expect(grant).toBeNull();
+  });
+  it("returns null for future grant passed to resolveGrant (not-yet-active grant yields null)", () => {
+    // G_FUTURE has valid_from after NOW — isGrantActive returns false, so resolveGrant returns null
+    const grant = resolveGrant("p-1", Z_ROOM1, ALL_ZONES, [G_FUTURE], NOW);
+    expect(grant).toBeNull();
+  });
+  it("returns closest ancestor (leaf-first) when multiple matching ancestors exist", () => {
+    // Z_SECURED_ROOM has two matching ancestors: z-bldg1 (SECURED, closer) and z-site (CONTROLLED, farther)
+    // G_ANCESTOR_BLDG1 is on z-bldg1 (SECURED). Only SECURED type ancestor matches → z-bldg1 grant wins.
+    const Z_SECURED_ROOM: ZoneNode = {
+      id: "z-secured-room",
+      name: "Secured Room",
+      level: "ROOM",
+      zone_type: "SECURED",
+      parent_id: "z-bldg1",
+      admin_org_id: "org-intel",
+      asset_owner_org_id: "org-intel",
+      requires_explicit_auth: false,
+    };
+    const G_BLDG1_ALT: PhysicalAccessGrant = {
+      id: "g-bldg1-alt",
+      person_id: "p-1",
+      zone_id: "z-bldg1",
+      valid_from: null,
+      valid_until: null,
+    };
+    const G_BLDG1_NEWER: PhysicalAccessGrant = {
+      id: "g-bldg1-newer",
+      person_id: "p-1",
+      zone_id: "z-bldg1",
+      valid_from: new Date("2026-01-10T00:00:00Z"),
+      valid_until: null,
+    };
+    const allZonesExt = [...ALL_ZONES, Z_SECURED_ROOM];
+    // Both G_BLDG1_ALT and G_BLDG1_NEWER are on the same ancestor; first found wins
+    const grant = resolveGrant(
+      "p-1",
+      Z_SECURED_ROOM,
+      allZonesExt,
+      [G_BLDG1_ALT, G_BLDG1_NEWER],
+      NOW,
+    );
+    expect(grant).not.toBeNull();
+    // Either grant on z-bldg1 is acceptable — confirm it is the ancestor zone
+    expect(grant?.zone_id).toBe("z-bldg1");
   });
 });
 
@@ -525,5 +674,95 @@ describe("resolveZoneAccess", () => {
     expect(result.allow).toBe(true);
     expect(result.gate).toBe("ZONE_TYPE_RULE");
     expect(result.reason).toBe("GRANT_FOUND");
+  });
+  it("returns gate:GRANT_LOOKUP reason:NO_GRANT for CONTROLLED zone with no grant", () => {
+    // Z_SITE is CONTROLLED; no grants for p-1 → GRANT_LOOKUP fires
+    const result = resolveZoneAccess(
+      "p-1",
+      Z_SITE,
+      "TOP_SECRET",
+      false,
+      ALL_ZONES,
+      [],
+      NOW,
+    );
+    expect(result.allow).toBe(false);
+    expect(result.gate).toBe("GRANT_LOOKUP");
+    expect(result.reason).toBe("NO_GRANT");
+  });
+  it("returns gate:GRANT_LOOKUP reason:NO_GRANT when grant exists but is expired", () => {
+    // Expired grant → resolveGrant returns null → GRANT_LOOKUP fires even though a grant record exists
+    const result = resolveZoneAccess(
+      "p-1",
+      Z_ROOM1,
+      "TOP_SECRET",
+      false,
+      ALL_ZONES,
+      [G_EXPIRED],
+      NOW,
+    );
+    expect(result.allow).toBe(false);
+    expect(result.gate).toBe("GRANT_LOOKUP");
+    expect(result.reason).toBe("NO_GRANT");
+  });
+  it("ALLOW for RESTRICTED zone when escort present with insufficient clearance (escort path)", () => {
+    // RESTRICTED zone: UNCLASSIFIED clearance but escort is present → escort unlocks
+    const result = resolveZoneAccess(
+      "p-2",
+      Z_BUILDING2,
+      "UNCLASSIFIED",
+      true,
+      ALL_ZONES,
+      [G_BLDG2],
+      NOW,
+    );
+    expect(result.allow).toBe(true);
+    expect(result.gate).toBe("ZONE_TYPE_RULE");
+    expect(result.reason).toBe("GRANT_FOUND");
+  });
+  it("ALLOW for SECURED zone with TOP_SECRET clearance (above minimum threshold)", () => {
+    // TOP_SECRET > SECRET threshold → should allow just as SECRET does
+    const result = resolveZoneAccess(
+      "p-1",
+      Z_ROOM1,
+      "TOP_SECRET",
+      false,
+      ALL_ZONES,
+      [G_PERMANENT],
+      NOW,
+    );
+    expect(result.allow).toBe(true);
+    expect(result.gate).toBe("ZONE_TYPE_RULE");
+    expect(result.reason).toBe("GRANT_FOUND");
+  });
+  it("DENY for SECURED zone when escort present but clearance below SECRET (escort does not unlock SECURED)", () => {
+    // T-05-01: escort substitution is NOT valid for SECURED zones — clearance still required
+    const result = resolveZoneAccess(
+      "p-1",
+      Z_ROOM1,
+      "CONFIDENTIAL",
+      true, // escort present but irrelevant for SECURED
+      ALL_ZONES,
+      [G_PERMANENT],
+      NOW,
+    );
+    expect(result.allow).toBe(false);
+    expect(result.gate).toBe("ZONE_TYPE_RULE");
+    expect(result.reason).toBe("INSUFFICIENT_CLEARANCE");
+  });
+  it("returns gate:GRANT_LOOKUP when a grant exists but belongs to a different person", () => {
+    // G_BLDG2 is for p-2; requesting access as p-1 → no grant found → GRANT_LOOKUP fires
+    const result = resolveZoneAccess(
+      "p-1",
+      Z_BUILDING2,
+      "RESTRICTED",
+      false,
+      ALL_ZONES,
+      [G_BLDG2],
+      NOW,
+    );
+    expect(result.allow).toBe(false);
+    expect(result.gate).toBe("GRANT_LOOKUP");
+    expect(result.reason).toBe("NO_GRANT");
   });
 });
