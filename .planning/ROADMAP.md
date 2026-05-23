@@ -22,7 +22,7 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
 ### v2.1 Physical Access Zones (demo)
 
 - [x] **Phase 5: Zone Model & Access Rules** — Zone hierarchy types, dual org ownership, explicit-auth flag, 5-tier clearance ladder, and NSM-grounded zone-type rules (completed 2026-05-23)
-- [ ] **Phase 6: Grants, Resolution & Delegation** — PhysicalAccessGrant with time windows, zone-type-scoped inheritance, explicit-auth overrides, two-gate access resolution, and admin-org delegation
+- [x] **Phase 6: Grants, Resolution & Delegation** — PhysicalAccessGrant with time windows, zone-type-scoped inheritance, explicit-auth overrides, two-gate access resolution, and admin-org delegation (completed 2026-05-23)
 - [ ] **Phase 7: Entry Log & Visitor Passes** — ZoneEntryLog with CARD/ESCORT methods, escort person reference, mandatory-for-SECURED enforcement, and ZoneVisitorPass tied to escort entries
 - [ ] **Phase 8: Mock Dataset & Demo UI** — Rich 6-unit mock dataset exercising all model features, Zone Browser tab, Access Resolution Explorer, and Zone Entry Log view
 
@@ -77,7 +77,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 06-02-PLAN.md — physical-access.test.ts: Vitest coverage of all six Phase 6 exports
+- [x] 06-02-PLAN.md — physical-access.test.ts: Vitest coverage of all six Phase 6 exports
 
 ### Phase 7: Entry Log & Visitor Passes
 
@@ -121,7 +121,7 @@ Plans:
 | 3. Audit & Context | v2.0 | 4/4 | Complete | 2026-05-22 |
 | 4. Demo Shell & Legibility | v2.0 | 2/2 | Complete | 2026-05-22 |
 | 5. Zone Model & Access Rules | v2.1 | 2/2 | Complete   | 2026-05-23 |
-| 6. Grants, Resolution & Delegation | v2.1 | 1/2 | In Progress|  |
+| 6. Grants, Resolution & Delegation | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 7. Entry Log & Visitor Passes | v2.1 | 0/? | Not started | - |
 | 8. Mock Dataset & Demo UI | v2.1 | 0/? | Not started | - |
 | 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
