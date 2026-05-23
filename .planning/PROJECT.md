@@ -56,13 +56,14 @@ federated ABAC model is proven. The next milestone transitions this from demo to
 
 ### Active (v2.1)
 
-- [ ] Zone hierarchy model: Site → Building → Room with zone_type enum
-- [ ] 5-tier clearance ladder replacing 4-tier (adds RESTRICTED between UNCLASSIFIED and CONFIDENTIAL)
-- [ ] NSM-grounded zone access rules: CONTROLLED / RESTRICTED / SECURED with clearance + escort policies
-- [ ] Per-zone PhysicalAccessGrant with valid_from/valid_until; inheritance (parent covers children)
-- [ ] Dual org ownership: admin_org + asset_owner_org per zone
-- [ ] Delegation: admin org → named person or org; delegates can grant access
-- [ ] ZoneEntryLog with method (CARD/ESCORT), escort person ref, entry/exit timestamps
+- [x] Zone hierarchy model: Site → Building → Room with zone_type enum — Validated in Phase 5
+- [x] 5-tier clearance ladder replacing 4-tier (adds RESTRICTED between UNCLASSIFIED and CONFIDENTIAL) — Validated in Phase 5
+- [x] NSM-grounded zone access rules: CONTROLLED / RESTRICTED / SECURED with clearance + escort policies — Validated in Phase 5
+- [x] Per-zone PhysicalAccessGrant with valid_from/valid_until; inheritance (parent covers children) — Validated in Phase 6
+- [x] Dual org ownership: admin_org + asset_owner_org per zone — Validated in Phase 5
+- [x] Delegation: admin org → named person or org; delegates can grant access — Validated in Phase 6
+- [x] ZoneEntryLog with method (CARD/ESCORT), escort person ref, entry/exit timestamps — Validated in Phase 7
+- [x] ZoneVisitorPass linked to escort entries with time-bounded validity — Validated in Phase 7
 - [ ] Rich mock dataset instantiating the 6-unit scenario with zones, grants, entry log
 - [ ] Demo UI tab: zone browser + access resolution explorer + entry log
 
