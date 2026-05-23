@@ -50,7 +50,7 @@ Declared values (multiples of 4 — aligned to Tailwind default scale):
 
 Exceptions:
 - Zone tree indent per depth level: 16px (1rem) per level, using `ml-4`
-- Sub-nav button row: `px-3 py-2` (12px / 8px) — closest 4-multiple match to existing DemoRoot tab button pattern
+- Sub-nav button row: `px-4 py-2` (16px / 8px) — matches standard 4-multiple scale
 
 ---
 
@@ -148,8 +148,8 @@ All components are from the existing demo primitive set. No new primitives neede
 ```
 
 Inner sub-nav uses **identical button pattern** to the outer tab bar:
-- Active: `rounded px-3 py-2 text-sm bg-slate-800 text-white`
-- Inactive: `rounded px-3 py-2 text-sm border border-slate-300 text-slate-600 hover:bg-slate-50`
+- Active: `rounded px-4 py-2 text-sm bg-slate-800 text-white`
+- Inactive: `rounded px-4 py-2 text-sm border border-slate-300 text-slate-600 hover:bg-slate-50`
 
 ### Zone Browser Layout
 
