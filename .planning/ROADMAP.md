@@ -62,7 +62,10 @@ Plans:
   3. Nodes with requires_explicit_auth = true require their own explicit grant even when a parent grant of matching zone_type exists
   4. Two-gate resolution (grant lookup, then zone_type rule check) produces an ALLOW or DENY with both gates evaluated and surfaced
   5. A ZoneAccessDelegate record can be created for a zone, assigning granting authority to a named person or another org, with its own valid_from / valid_until window
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 06-01-PLAN.md — model.ts: PhysicalAccessGrant + ZoneAccessDelegate interfaces, isGrantActive, resolveGrant, resolveZoneAccess, isDelegateActive
+- [ ] 06-02-PLAN.md — physical-access.test.ts: Vitest coverage of all six Phase 6 exports
 
 ### Phase 7: Entry Log & Visitor Passes
 **Goal**: Zone entry events are recordable with the correct method and escort tracking, and escorted visitors have queryable passes
@@ -100,7 +103,7 @@ Plans:
 | 3. Audit & Context | v2.0 | 4/4 | Complete | 2026-05-22 |
 | 4. Demo Shell & Legibility | v2.0 | 2/2 | Complete | 2026-05-22 |
 | 5. Zone Model & Access Rules | v2.1 | 2/2 | Complete   | 2026-05-23 |
-| 6. Grants, Resolution & Delegation | v2.1 | 0/? | Not started | - |
+| 6. Grants, Resolution & Delegation | v2.1 | 0/2 | Not started | - |
 | 7. Entry Log & Visitor Passes | v2.1 | 0/? | Not started | - |
 | 8. Mock Dataset & Demo UI | v2.1 | 0/? | Not started | - |
 | 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
