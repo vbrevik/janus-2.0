@@ -177,6 +177,13 @@ export function getDescendants(
   zoneId: string,
   allZones: ZoneNode[],
 ): ZoneNode[] {
+  if (!allZones.some((z) => z.id === zoneId)) {
+    // Ghost zone ID — data integrity error; fail visibly in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`getDescendants: zone "${zoneId}" not found in allZones`);
+    }
+    return [];
+  }
   const result: ZoneNode[] = [];
   const visited = new Set<string>();
   const queue: string[] = [zoneId];
