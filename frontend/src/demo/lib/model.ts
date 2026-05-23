@@ -262,6 +262,11 @@ export function resolveGrant(
   return null;
 }
 
+// Exhaustive helper — TS will error if ZoneType grows and the switch isn't updated
+function assertNever(x: never): never {
+  throw new Error(`Unhandled zone_type: ${String(x)}`);
+}
+
 // --- ACCESS-05: resolveZoneAccess — two-gate entry point ---
 // Gate 1: resolveGrant() — null → DENY {gate:"GRANT_LOOKUP", reason:"NO_GRANT"}.
 // Gate 2: dispatch by zone_type to Phase 5 evaluate functions with hasGrant=true.
@@ -271,7 +276,7 @@ export function resolveZoneAccess(
   personId: string,
   zone: ZoneNode,
   clearance: Clearance,
-  hasValidEscort: boolean,
+  hasValidEscort: boolean, // unlocks RESTRICTED; annotation-only in SECURED (D-03)
   allZones: ZoneNode[],
   allGrants: PhysicalAccessGrant[],
   now: Date,
@@ -281,14 +286,17 @@ export function resolveZoneAccess(
     return { allow: false, gate: "GRANT_LOOKUP", reason: "NO_GRANT" };
   }
   // Gate 2: zone-type rule (hasGrant=true — grant was found above)
-  if (zone.zone_type === "CONTROLLED") {
-    return evaluateControlledAccess(true);
+  switch (zone.zone_type) {
+    case "CONTROLLED":
+      return evaluateControlledAccess(true);
+    case "RESTRICTED":
+      return evaluateRestrictedAccess(true, clearance, hasValidEscort);
+    case "SECURED":
+      // isEscorted is annotation-only in SECURED zones (D-03); does not affect allow/deny
+      return evaluateSecuredAccess(true, clearance, /* isEscorted */ hasValidEscort);
+    default:
+      return assertNever(zone.zone_type);
   }
-  if (zone.zone_type === "RESTRICTED") {
-    return evaluateRestrictedAccess(true, clearance, hasValidEscort);
-  }
-  // Default: SECURED
-  return evaluateSecuredAccess(true, clearance, hasValidEscort);
 }
 
 // --- DELEG-01: isDelegateActive — delegate time-window check ---
