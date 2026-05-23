@@ -40,7 +40,7 @@ Declared values (multiples of 4 — aligned to Tailwind default scale):
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| xs | 4px | Icon gaps, inline badge padding (`px-1 py-0.5`) |
+| xs | 4px | Icon gaps, inline badge padding (`px-1 py-1`) |
 | sm | 8px | Compact element spacing (`gap-2`, `p-2`) |
 | md | 16px | Default element spacing (`p-4`, `gap-4`) |
 | lg | 24px | Section padding (`px-6 py-6`) |
@@ -50,7 +50,7 @@ Declared values (multiples of 4 — aligned to Tailwind default scale):
 
 Exceptions:
 - Zone tree indent per depth level: 16px (1rem) per level, using `ml-4`
-- Sub-nav button row: `px-3 py-1.5` (12px / 6px) — matches existing DemoRoot tab button pattern exactly
+- Sub-nav button row: `px-3 py-2` (12px / 8px) — closest 4-multiple match to existing DemoRoot tab button pattern
 
 ---
 
@@ -62,10 +62,10 @@ All type is set in the Tailwind/shadcn default system sans-serif stack. Sizes ar
 |------|------|--------|-------------|-------|
 | Body | 14px (text-sm) | 400 (normal) | 1.5 | Prose explanations, field values, list rows |
 | Label / badge | 12px (text-xs) | 600 (semibold) | 1 | Card section headers (uppercase tracking-wide), Pill badges, Field labels |
-| Sub-heading | 14px (text-sm) | 500 (medium) | 1.25 | Zone tree node names, grant list item labels |
-| Display verdict | 18px (text-lg) | 700 (bold) | 1.2 | ALLOW / DENY verdict line inside DecisionTrace |
+| Sub-heading | 14px (text-sm) | 600 (semibold) | 1.25 | Zone tree node names, grant list item labels |
+| Display verdict | 18px (text-lg) | 600 (semibold) | 1.2 | ALLOW / DENY verdict line inside DecisionTrace |
 
-Two weights in use: **400 (normal)** for body prose and **600/700 (semibold/bold)** for labels, badges, and verdict. No other weights permitted.
+Two weights in use: **400 (normal)** for body prose and **600 (semibold)** for labels, badges, sub-headings, and verdict. No other weights permitted.
 
 ---
 
@@ -148,8 +148,8 @@ All components are from the existing demo primitive set. No new primitives neede
 ```
 
 Inner sub-nav uses **identical button pattern** to the outer tab bar:
-- Active: `rounded px-3 py-1.5 text-sm bg-slate-800 text-white`
-- Inactive: `rounded px-3 py-1.5 text-sm border border-slate-300 text-slate-600 hover:bg-slate-50`
+- Active: `rounded px-3 py-2 text-sm bg-slate-800 text-white`
+- Inactive: `rounded px-3 py-2 text-sm border border-slate-300 text-slate-600 hover:bg-slate-50`
 
 ### Zone Browser Layout
 
@@ -167,7 +167,7 @@ Zone tree (collapsible)       Card: Zone Detail
 
 Grid: `grid grid-cols-3 gap-4`. Tree panel spans 1 col, detail panel spans 2 cols.
 
-Zone tree node: `flex items-center gap-1.5 cursor-pointer text-sm py-0.5 hover:text-slate-900`
+Zone tree node: `flex items-center gap-2 cursor-pointer text-sm py-1 hover:text-slate-900`
 - Expand/collapse toggle: `▶` (collapsed) / `▼` (expanded) as text characters, `text-xs text-slate-400`
 - Selected node: `font-semibold text-slate-900`
 - Indent: `ml-4` per depth level
