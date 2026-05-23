@@ -54,8 +54,8 @@ export interface ZoneNode {
   level: ZoneLevel;
   zone_type: ZoneType;
   parent_id: string | null;
-  admin_org_id: string;
-  asset_owner_org_id: string;
+  admin_org_id: UnitId;
+  asset_owner_org_id: UnitId;
   requires_explicit_auth: boolean;
 }
 

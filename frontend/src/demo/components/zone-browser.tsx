@@ -137,12 +137,12 @@ function ZoneDetailPanel({
       </Field>
       <Field label="Admin Org">
         <span className="mt-1 block text-sm">
-          {unitName(zone.admin_org_id as UnitId)}
+          {unitName(zone.admin_org_id)}
         </span>
       </Field>
       <Field label="Asset Owner">
         <span className="mt-1 block text-sm">
-          {unitName(zone.asset_owner_org_id as UnitId)}
+          {unitName(zone.asset_owner_org_id)}
         </span>
       </Field>
       {ancestors.length > 0 && (

@@ -8,7 +8,6 @@ import {
   unitName,
   type Clearance,
   type PhysicalAccessGrant,
-  type UnitId,
   type ZoneAccessResult,
   type ZoneNode,
   type ZoneType,
@@ -296,7 +295,7 @@ export function AccessResolutionExplorer() {
               )}
               {selectedZone.admin_org_id && (
                 <p className="text-xs text-slate-400">
-                  Admin: {unitName(selectedZone.admin_org_id as UnitId)}
+                  Admin: {unitName(selectedZone.admin_org_id)}
                 </p>
               )}
             </div>
