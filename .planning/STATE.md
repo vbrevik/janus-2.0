@@ -18,10 +18,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-21)
+See: .planning/PROJECT.md (updated 2026-05-23 after v2.0 milestone)
 
-**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — proving the federated ABAC model before committing to a real build.
-**Current focus:** Milestone complete — all 4 phases delivered
+**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — the model is proven; next milestone transitions demo to real build.
+**Current focus:** Planning next milestone — demo → fullstack transition
 
 ## Current Position
 
@@ -85,12 +85,26 @@ None for v2.0. (v1.0 WIP on `feature/frontend-consolidation` is superseded and a
 
 ## Deferred Items
 
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| Stretch | AUDIT-03 leak/anomaly indicator | Future/stretch | 2026-05-21 |
-| Stretch | CTX-04 home guard territorial scoping | Future/stretch | 2026-05-21 |
-| Stretch | SCOPE-01 real data-level ownership scoping | Future/stretch | 2026-05-21 |
-| v1.0 cleanup | GUARD/ROUTE/TEST/CLEAN frontend-consolidation | Superseded/archived | 2026-05-21 |
+Items acknowledged and deferred at milestone close on 2026-05-23:
+
+| Category | Item | Status |
+|----------|------|--------|
+| seed | 001-pob-form-engine | dormant |
+| seed | 002-autorisasjonssamtale-form | dormant |
+| seed | 003-access-requirements-crosswalk | dormant |
+| seed | 004-beyond-cia-security-properties | dormant |
+| seed | 005-audit-log-requirements | dormant |
+| seed | 006-nda-requirements | dormant |
+| seed | 007-taushetserklaering-form | dormant |
+| seed | 008-clearance-import-mapping | dormant |
+| seed | 009-info-system-security-requirements | dormant |
+| seed | 010-personnel-security-annotations | dormant |
+| seed | 011-demo-to-fullstack-transition | dormant |
+| uat_gap | phase-02 02-HUMAN-UAT.md (false positive — status: passed, 0 open scenarios) | passed |
+| stretch | AUDIT-03 leak/anomaly indicator | future/stretch |
+| stretch | CTX-04 home guard territorial scoping | future/stretch |
+| stretch | SCOPE-01 real data-level ownership scoping | future/stretch |
+| v1.0 cleanup | GUARD/ROUTE/TEST/CLEAN frontend-consolidation | superseded/archived |
 
 ## Session Continuity
 
