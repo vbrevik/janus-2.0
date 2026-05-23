@@ -220,6 +220,89 @@ export interface ZoneAccessDelegate {
   valid_until: Date | null;
 }
 
+// --- GRANT-01: isGrantActive — time-window check ---
+// Both boundaries are inclusive. Null on either side means that boundary is unbounded.
+export function isGrantActive(grant: PhysicalAccessGrant, now: Date): boolean {
+  return (
+    (grant.valid_from === null || grant.valid_from <= now) &&
+    (grant.valid_until === null || grant.valid_until >= now)
+  );
+}
+
+// --- GRANT-04: resolveGrant — ancestor walk, most-specific active grant ---
+// Checks target zone first (most specific), then getAncestors() order (leaf → root).
+// Ancestor grants only count if ancestor.zone_type === zone.zone_type.
+// If zone.requires_explicit_auth is true, skips ancestor walk entirely.
+export function resolveGrant(
+  personId: string,
+  zone: ZoneNode,
+  allZones: ZoneNode[],
+  allGrants: PhysicalAccessGrant[],
+  now: Date,
+): PhysicalAccessGrant | null {
+  // requires_explicit_auth: skip ancestor walk entirely — only direct zone grants count
+  const searchZones: ZoneNode[] = zone.requires_explicit_auth
+    ? [zone]
+    : [zone, ...getAncestors(zone.id, allZones)];
+
+  for (const searchZone of searchZones) {
+    // ancestor grants only count if zone_type matches target zone
+    // (filter applied to ancestors only, never to the target zone itself)
+    if (searchZone.id !== zone.id && searchZone.zone_type !== zone.zone_type) {
+      continue;
+    }
+    const grant = allGrants.find(
+      (g) =>
+        g.person_id === personId &&
+        g.zone_id === searchZone.id &&
+        isGrantActive(g, now),
+    );
+    if (grant) return grant;
+  }
+  return null;
+}
+
+// --- ACCESS-05: resolveZoneAccess — two-gate entry point ---
+// Gate 1: resolveGrant() — null → DENY {gate:"GRANT_LOOKUP", reason:"NO_GRANT"}.
+// Gate 2: dispatch by zone_type to Phase 5 evaluate functions with hasGrant=true.
+// NOTE: For SECURED zones, hasValidEscort maps to isEscorted (annotation-only per D-03;
+//       escort does not substitute for clearance in SECURED zones).
+export function resolveZoneAccess(
+  personId: string,
+  zone: ZoneNode,
+  clearance: Clearance,
+  hasValidEscort: boolean,
+  allZones: ZoneNode[],
+  allGrants: PhysicalAccessGrant[],
+  now: Date,
+): ZoneAccessResult {
+  const grant = resolveGrant(personId, zone, allZones, allGrants, now);
+  if (grant === null) {
+    return { allow: false, gate: "GRANT_LOOKUP", reason: "NO_GRANT" };
+  }
+  // Gate 2: zone-type rule (hasGrant=true — grant was found above)
+  if (zone.zone_type === "CONTROLLED") {
+    return evaluateControlledAccess(true);
+  }
+  if (zone.zone_type === "RESTRICTED") {
+    return evaluateRestrictedAccess(true, clearance, hasValidEscort);
+  }
+  // Default: SECURED
+  return evaluateSecuredAccess(true, clearance, hasValidEscort);
+}
+
+// --- DELEG-01: isDelegateActive — delegate time-window check ---
+// Identical null-boundary logic to isGrantActive but operating on ZoneAccessDelegate fields.
+export function isDelegateActive(
+  delegate: ZoneAccessDelegate,
+  now: Date,
+): boolean {
+  return (
+    (delegate.valid_from === null || delegate.valid_from <= now) &&
+    (delegate.valid_until === null || delegate.valid_until >= now)
+  );
+}
+
 // --- D-10: UnitId (the 6 canonical units) is the single entity-id type ---
 // Lifted from obligations.ts:4-19.
 
