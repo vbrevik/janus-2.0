@@ -32,6 +32,156 @@ export const TIERS: Partial<Record<Domain, string[]>> = {
   DATA: ["INTERNAL", "RESTRICTED", "CLASSIFIED"],
 };
 
+// --- Phase 5: Zone hierarchy model (v2.1 Physical Access Zones) ---
+
+// Zone hierarchy levels: SITE is broadest scope, ROOM is narrowest.
+export type ZoneLevel = "SITE" | "AREA" | "BUILDING" | "ZONE" | "ROOM";
+
+// Zone security classification. Note: ZoneType "RESTRICTED" is distinct from
+// TIERS.DATA["RESTRICTED"] (a data-domain tier string) and Clearance "RESTRICTED"
+// (a clearance level). These are three separate contexts in the type system.
+export type ZoneType = "CONTROLLED" | "RESTRICTED" | "SECURED";
+
+// A node in the zone tree. parent_id is null at the root (SITE level).
+// admin_org_id: the org that controls/delegates access grants for this zone.
+// asset_owner_org_id: the org that owns the protected assets inside the zone.
+export interface ZoneNode {
+  id: string;
+  name: string;
+  level: ZoneLevel;
+  zone_type: ZoneType;
+  parent_id: string | null;
+  admin_org_id: string;
+  asset_owner_org_id: string;
+  requires_explicit_auth: boolean;
+}
+
+// --- Zone access result types (D-01) ---
+
+// Gate discriminator: GRANT_LOOKUP (Phase 6, did a grant exist?) vs ZONE_TYPE_RULE (Phase 5, does the zone type allow?).
+export type ZoneAccessGate = "GRANT_LOOKUP" | "ZONE_TYPE_RULE";
+
+export type ZoneAccessReason =
+  | "GRANT_FOUND"
+  | "NO_GRANT"
+  | "INSUFFICIENT_CLEARANCE"
+  | "ESCORT_REQUIRED"
+  | "ENTRY_LOG_REQUIRED";
+
+export interface ZoneAccessResult {
+  allow: boolean;
+  gate: ZoneAccessGate;
+  reason: ZoneAccessReason;
+  detail?: string;
+}
+
+// --- ZONE-03 ceiling rule ---
+// SECURED zone_type is only valid at BUILDING, ZONE, or ROOM level.
+// SITE and AREA are too broad for SECURED classification.
+export function isValidZoneTypeCombination(
+  level: ZoneLevel,
+  zone_type: ZoneType,
+): boolean {
+  if (zone_type === "SECURED" && (level === "SITE" || level === "AREA")) {
+    return false;
+  }
+  return true;
+}
+
+// --- ACCESS-02: CONTROLLED zone access rule ---
+// CONTROLLED zones require explicit authorization only — no clearance check.
+export function evaluateControlledAccess(hasGrant: boolean): ZoneAccessResult {
+  return hasGrant
+    ? { allow: true, gate: "ZONE_TYPE_RULE", reason: "GRANT_FOUND" }
+    : { allow: false, gate: "ZONE_TYPE_RULE", reason: "NO_GRANT" };
+}
+
+// --- ACCESS-03: RESTRICTED zone access rule ---
+// RESTRICTED zones require a grant AND (RESTRICTED clearance or above, OR a valid escort).
+// hasValidEscort: the caller (Phase 6 resolver) has already verified the escort holds an active grant.
+export function evaluateRestrictedAccess(
+  hasGrant: boolean,
+  clearance: Clearance,
+  hasValidEscort: boolean,
+): ZoneAccessResult {
+  if (!hasGrant)
+    return { allow: false, gate: "ZONE_TYPE_RULE", reason: "NO_GRANT" };
+  if (
+    CLEARANCE_RANK[clearance] >= CLEARANCE_RANK["RESTRICTED"] ||
+    hasValidEscort
+  ) {
+    return { allow: true, gate: "ZONE_TYPE_RULE", reason: "GRANT_FOUND" };
+  }
+  return {
+    allow: false,
+    gate: "ZONE_TYPE_RULE",
+    reason: "INSUFFICIENT_CLEARANCE",
+    detail: `clearance: ${clearance}, required: RESTRICTED`,
+  };
+}
+
+// --- ACCESS-04: SECURED zone access rule ---
+// SECURED zones require a grant AND SECRET clearance or above.
+// isEscorted does NOT substitute for clearance in SECURED zones (D-03); it only annotates the detail field.
+export function evaluateSecuredAccess(
+  hasGrant: boolean,
+  clearance: Clearance,
+  isEscorted: boolean,
+): ZoneAccessResult {
+  if (!hasGrant)
+    return { allow: false, gate: "ZONE_TYPE_RULE", reason: "NO_GRANT" };
+  if (CLEARANCE_RANK[clearance] >= CLEARANCE_RANK["SECRET"]) {
+    return {
+      allow: true,
+      gate: "ZONE_TYPE_RULE",
+      reason: "GRANT_FOUND",
+      detail: isEscorted
+        ? "escort noted — entry log mandatory"
+        : "entry log mandatory",
+    };
+  }
+  return {
+    allow: false,
+    gate: "ZONE_TYPE_RULE",
+    reason: "INSUFFICIENT_CLEARANCE",
+    detail: `clearance: ${clearance}, required: SECRET`,
+  };
+}
+
+// --- D-02: Zone tree traversal helpers ---
+
+// Returns parent-first ancestor chain: [direct-parent, grandparent, ..., root].
+// Phase 6 uses this for grant resolution (leaf-first = most specific wins).
+export function getAncestors(zoneId: string, allZones: ZoneNode[]): ZoneNode[] {
+  const nodeMap = new Map(allZones.map((z) => [z.id, z]));
+  const ancestors: ZoneNode[] = [];
+  let current = nodeMap.get(zoneId);
+  while (current?.parent_id != null) {
+    const parent = nodeMap.get(current.parent_id);
+    if (!parent) break;
+    ancestors.push(parent);
+    current = parent;
+  }
+  return ancestors;
+}
+
+// Returns all transitive descendants (not just direct children) via breadth-first walk.
+// Phase 8 uses this for full subtree rendering in the Zone Browser UI.
+export function getDescendants(
+  zoneId: string,
+  allZones: ZoneNode[],
+): ZoneNode[] {
+  const result: ZoneNode[] = [];
+  const queue: string[] = [zoneId];
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const children = allZones.filter((z) => z.parent_id === current);
+    result.push(...children);
+    queue.push(...children.map((c) => c.id));
+  }
+  return result;
+}
+
 // --- D-10: UnitId (the 6 canonical units) is the single entity-id type ---
 // Lifted from obligations.ts:4-19.
 
