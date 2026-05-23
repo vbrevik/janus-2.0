@@ -26,10 +26,13 @@ export type Domain = "COMPUTER" | "DATA" | "PHYSICAL";
 
 // Per-domain tier scales (A7: each domain has its own ladder, ordered low→high).
 // NEVER collapse into a single ladder — per-domain tiers evaluate independently (ENGINE-02, R3).
-// PHYSICAL domain removed in Phase 5: physical access is now governed by zone-type rules (see ZoneType below).
+// PHYSICAL domain: tier ladder retained so seed resources/subjects with domain:"PHYSICAL" evaluate
+// correctly via tierRank. Zone-type rules (see ZoneType below) govern zone-level physical access
+// independently; the PHYSICAL tier ladder governs resource-level ABAC for PHYSICAL-domain resources.
 export const TIERS: Partial<Record<Domain, string[]>> = {
   COMPUTER: ["STANDARD", "PRIVILEGED", "ROOT"],
   DATA: ["INTERNAL", "RESTRICTED", "CLASSIFIED"],
+  PHYSICAL: ["LOBBY", "RESTRICTED_AREA", "SECURE_VAULT"],
 };
 
 // --- Phase 5: Zone hierarchy model (v2.1 Physical Access Zones) ---
