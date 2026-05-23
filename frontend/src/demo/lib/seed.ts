@@ -11,6 +11,11 @@ import type {
   AttrEvent,
   Subunit,
   EntityPolicy,
+  ZoneNode,
+  PhysicalAccessGrant,
+  ZoneAccessDelegate,
+  ZoneEntryLog,
+  ZoneVisitorPass,
 } from "./model";
 export { ROLES, TIERS, UNITS } from "./model";
 export type { Subject, Resource, HubPointer, UnitId } from "./model";
@@ -942,4 +947,310 @@ export const SUPPORT_OBLIGATIONS: { from: UnitId; to: UnitId }[] = [
   { from: "INFRA", to: "MILITARY_1" },
   { from: "MILITARY_2", to: "MILITARY_1" },
   { from: "INFRA", to: "MILITARY_2" },
+];
+
+// ============================================================
+// Phase 8: Physical Access Zone Seed Data
+// ============================================================
+
+// ZONES — 3 root Sites, covering all three zone_type values.
+// SECURED nodes only at BUILDING/ZONE/ROOM level (never SITE or AREA).
+export const ZONES: ZoneNode[] = [
+  // --- Site 1: Alpha Command (MILITARY_1, CONTROLLED) ---
+  {
+    id: "zone-site-alpha",
+    name: "Alpha Command",
+    level: "SITE",
+    zone_type: "CONTROLLED",
+    parent_id: null,
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "MILITARY_1",
+    requires_explicit_auth: false,
+  },
+  {
+    id: "zone-area-north",
+    name: "North Wing",
+    level: "AREA",
+    zone_type: "CONTROLLED",
+    parent_id: "zone-site-alpha",
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "MILITARY_1",
+    requires_explicit_auth: false,
+  },
+  {
+    id: "zone-bldg-block-a",
+    name: "Block A",
+    level: "BUILDING",
+    zone_type: "CONTROLLED",
+    parent_id: "zone-area-north",
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "MILITARY_1",
+    requires_explicit_auth: false,
+  },
+  {
+    id: "zone-corr-c1",
+    name: "Corridor C1",
+    level: "ZONE",
+    zone_type: "CONTROLLED",
+    parent_id: "zone-bldg-block-a",
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "MILITARY_1",
+    requires_explicit_auth: false,
+  },
+  {
+    id: "zone-room-sr1",
+    name: "Server Room 1",
+    level: "ROOM",
+    zone_type: "CONTROLLED",
+    parent_id: "zone-corr-c1",
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "MILITARY_1",
+    requires_explicit_auth: false,
+  },
+  // SEED-05 explicit exclusion: SECURED zone inside CONTROLLED building — parent grant does NOT cover it.
+  {
+    id: "zone-secure-lab",
+    name: "Secure Lab",
+    level: "ZONE",
+    zone_type: "SECURED",
+    parent_id: "zone-bldg-block-a",
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "INTEL",
+    requires_explicit_auth: true,
+  },
+
+  // --- Site 2: Intel Campus (INTEL, RESTRICTED) ---
+  {
+    id: "zone-site-intel",
+    name: "Intel Campus",
+    level: "SITE",
+    zone_type: "RESTRICTED",
+    parent_id: null,
+    admin_org_id: "INTEL",
+    asset_owner_org_id: "INTEL",
+    requires_explicit_auth: false,
+  },
+  {
+    id: "zone-bldg-analysis",
+    name: "Analysis Wing",
+    level: "BUILDING",
+    zone_type: "RESTRICTED",
+    parent_id: "zone-site-intel",
+    admin_org_id: "INTEL",
+    asset_owner_org_id: "INTEL",
+    requires_explicit_auth: false,
+  },
+  // SEED-02: SECURED at ROOM level only (never SITE or AREA).
+  {
+    id: "zone-room-sigint",
+    name: "SIGINT Suite",
+    level: "ROOM",
+    zone_type: "SECURED",
+    parent_id: "zone-bldg-analysis",
+    admin_org_id: "INTEL",
+    asset_owner_org_id: "INTEL",
+    requires_explicit_auth: true,
+  },
+
+  // --- Site 3: Logistics Hub (INFRA, CONTROLLED) ---
+  {
+    id: "zone-site-logistics",
+    name: "Logistics Hub",
+    level: "SITE",
+    zone_type: "CONTROLLED",
+    parent_id: null,
+    admin_org_id: "INFRA",
+    asset_owner_org_id: "INFRA",
+    requires_explicit_auth: false,
+  },
+  {
+    id: "zone-area-yard",
+    name: "Yard",
+    level: "AREA",
+    zone_type: "CONTROLLED",
+    parent_id: "zone-site-logistics",
+    admin_org_id: "INFRA",
+    asset_owner_org_id: "INFRA",
+    requires_explicit_auth: false,
+  },
+  {
+    id: "zone-bldg-warehouse-a",
+    name: "Warehouse A",
+    level: "BUILDING",
+    zone_type: "CONTROLLED",
+    parent_id: "zone-area-yard",
+    admin_org_id: "INFRA",
+    asset_owner_org_id: "MILITARY_2",
+    requires_explicit_auth: false,
+  },
+  // SEED-04 inheritance target: grant at Warehouse A covers this room (same zone_type).
+  {
+    id: "zone-room-supply",
+    name: "Supply Room",
+    level: "ROOM",
+    zone_type: "CONTROLLED",
+    parent_id: "zone-bldg-warehouse-a",
+    admin_org_id: "INFRA",
+    asset_owner_org_id: "MILITARY_2",
+    requires_explicit_auth: false,
+  },
+];
+
+// GRANTS — temporal variety (active/expired/future/permanent) for TOGGLE_GRANT interactivity.
+// ≤2 site-level grants per SEED-03; majority at BUILDING/ROOM level.
+export const GRANTS: PhysicalAccessGrant[] = [
+  // Permanent grant: covers CONTROLLED children of Block A via inheritance (SEED-04 demo).
+  {
+    id: "grant-dana-block-a",
+    person_id: "subj-1",
+    zone_id: "zone-bldg-block-a",
+    valid_from: null,
+    valid_until: null,
+  },
+  // Active explicit grant: required for SECURED zone (SEED-05 toggle demo — toggling off shows DENY).
+  {
+    id: "grant-dana-secure-lab",
+    person_id: "subj-1",
+    zone_id: "zone-secure-lab",
+    valid_from: new Date("2026-01-01"),
+    valid_until: null,
+  },
+  // Site-level grant #1 of ≤2 (SEED-03): Sam has site-wide access to Alpha Command.
+  {
+    id: "grant-sam-alpha-site",
+    person_id: "subj-2",
+    zone_id: "zone-site-alpha",
+    valid_from: null,
+    valid_until: null,
+  },
+  // Active explicit grant for SECURED SIGINT Suite (TOP_SECRET person).
+  {
+    id: "grant-sam-sigint",
+    person_id: "subj-2",
+    zone_id: "zone-room-sigint",
+    valid_from: new Date("2026-01-01"),
+    valid_until: null,
+  },
+  // Permanent grant: Lee has access to Warehouse A (covers Supply Room via inheritance).
+  {
+    id: "grant-lee-warehouse",
+    person_id: "subj-3",
+    zone_id: "zone-bldg-warehouse-a",
+    valid_from: null,
+    valid_until: null,
+  },
+  // Permanent grant: Mara has access to Analysis Wing.
+  {
+    id: "grant-mara-analysis",
+    person_id: "subj-4",
+    zone_id: "zone-bldg-analysis",
+    valid_from: null,
+    valid_until: null,
+  },
+  // EXPIRED grant (SEED-09): valid_until is 2026-03-01, before the demo date 2026-06-01.
+  {
+    id: "grant-expired-lee",
+    person_id: "subj-3",
+    zone_id: "zone-site-logistics",
+    valid_from: new Date("2025-01-01"),
+    valid_until: new Date("2026-03-01"),
+  },
+  // FUTURE grant (SEED-09): valid_from is 2026-08-01, after the demo date 2026-06-01.
+  {
+    id: "grant-future-dana",
+    person_id: "subj-1",
+    zone_id: "zone-bldg-analysis",
+    valid_from: new Date("2026-08-01"),
+    valid_until: null,
+  },
+];
+
+// DELEGATES — one PERSON delegate and one ORG delegate (SEED-06).
+export const DELEGATES: ZoneAccessDelegate[] = [
+  // PERSON delegate: Mara (subj-4) can issue grants for Block A on behalf of MILITARY_1.
+  {
+    id: "deleg-person-1",
+    zone_id: "zone-bldg-block-a",
+    delegate_type: "PERSON",
+    delegate_person_id: "subj-4",
+    delegate_org_id: null,
+    granted_by_org_id: "MILITARY_1",
+    valid_from: null,
+    valid_until: null,
+  },
+  // ORG delegate: MILITARY_2 can issue grants for Intel Campus on behalf of INTEL.
+  {
+    id: "deleg-org-1",
+    zone_id: "zone-site-intel",
+    delegate_type: "ORG",
+    delegate_person_id: null,
+    delegate_org_id: "MILITARY_2",
+    granted_by_org_id: "INTEL",
+    valid_from: new Date("2026-01-01"),
+    valid_until: null,
+  },
+];
+
+// ENTRY_LOGS — both CARD and ESCORT entries; all pass validateEntryLog (SEED-07).
+// ESCORT entries must have escort_person_id set; CARD entries must have escort_person_id null.
+export const ENTRY_LOGS: ZoneEntryLog[] = [
+  {
+    id: "log-card-1",
+    person_id: "subj-1",
+    zone_id: "zone-bldg-block-a",
+    entry_at: new Date("2026-05-15T09:00:00Z"),
+    exit_at: new Date("2026-05-15T17:00:00Z"),
+    method: "CARD",
+    escort_person_id: null,
+  },
+  {
+    id: "log-card-2",
+    person_id: "subj-4",
+    zone_id: "zone-bldg-analysis",
+    entry_at: new Date("2026-05-16T08:30:00Z"),
+    exit_at: null,
+    method: "CARD",
+    escort_person_id: null,
+  },
+  // ESCORT entry: Lee (CONFIDENTIAL) escorted by Sam (TOP_SECRET) into SIGINT Suite.
+  {
+    id: "log-escort-1",
+    person_id: "subj-3",
+    zone_id: "zone-room-sigint",
+    entry_at: new Date("2026-05-17T10:00:00Z"),
+    exit_at: new Date("2026-05-17T12:00:00Z"),
+    method: "ESCORT",
+    escort_person_id: "subj-2",
+  },
+  // ESCORT entry: Lee escorted by Dana into Block A.
+  {
+    id: "log-escort-2",
+    person_id: "subj-3",
+    zone_id: "zone-bldg-block-a",
+    entry_at: new Date("2026-05-20T14:00:00Z"),
+    exit_at: null,
+    method: "ESCORT",
+    escort_person_id: "subj-1",
+  },
+];
+
+// VISITOR_PASSES — each pass references an ESCORT entry_log_id (SEED-08).
+// pass-1 is EXPIRED relative to demo date 2026-06-01; pass-2 is ACTIVE.
+export const VISITOR_PASSES: ZoneVisitorPass[] = [
+  {
+    id: "pass-1",
+    entry_log_id: "log-escort-1",
+    escort_person_id: "subj-2",
+    zone_id: "zone-room-sigint",
+    valid_from: new Date("2026-05-17T10:00:00Z"),
+    valid_until: new Date("2026-05-17T12:00:00Z"),
+  },
+  {
+    id: "pass-2",
+    entry_log_id: "log-escort-2",
+    escort_person_id: "subj-1",
+    zone_id: "zone-bldg-block-a",
+    valid_from: new Date("2026-05-20T14:00:00Z"),
+    valid_until: new Date("2026-12-31T23:59:59Z"),
+  },
 ];
