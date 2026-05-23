@@ -22,6 +22,22 @@ Multiple entities can **discover and exchange authorization information without 
 every access decision **computed live from attributes** and **fully explainable and auditable** — the
 federated ABAC model is proven. The next milestone transitions this from demo to real build.
 
+## Current Milestone: v2.1 Physical Access Zones (demo)
+
+**Goal:** Extend the v2.0 mock demo with a rich, NSM-grounded physical access model — hierarchical named zones, per-zone authorizations, time-limited grants with inheritance, dual org ownership, delegation, escort tracking, and entry audit logs.
+
+**Target features:**
+- Zone hierarchy: Site → Building → Room; each node has `zone_type` (CONTROLLED / RESTRICTED / SECURED)
+- 5-tier clearance ladder: `UNCLASSIFIED → RESTRICTED → CONFIDENTIAL → SECRET → TOP_SECRET`
+- NSM-grounded access rules per zone type (SEED-003): CONTROLLED = authz only; RESTRICTED = clearance req or escorted; SECURED = SECRET+ + explicit auth + entry logged or escorted + logged
+- Per-zone grants with independent `valid_from`/`valid_until`; parent grant inherits to children; narrower child grant can further restrict
+- Dual org ownership: `admin_org` (controls/delegates) + `asset_owner_org` (owns protected assets)
+- Delegation: admin org can delegate access-granting authority to a named person OR another org
+- `ZoneEntryLog`: method (CARD/ESCORT), escort person ref, timestamps; mandatory for SECURED zones
+- Rich mock dataset demonstrating the full model + demo UI tab for interactive exploration
+
+**Scope constraint:** Demo/mock only — Rust/PostgreSQL backend defers to a later milestone.
+
 ## Requirements
 
 ### Validated (v2.0)
@@ -38,9 +54,22 @@ federated ABAC model is proven. The next milestone transitions this from demo to
 - ✓ Coherent demo shell — 5 tabs, shared world-state, plain-prose traces, production build — v2.0 (Phase 4)
 - ✓ Existing substrate: JWT auth, Person/Org/InfoSystem CRUD, access grants, audit log, WebSocket, React/Vite/shadcn frontend
 
-### Active (next milestone)
+### Active (v2.1)
+
+- [ ] Zone hierarchy model: Site → Building → Room with zone_type enum
+- [ ] 5-tier clearance ladder replacing 4-tier (adds RESTRICTED between UNCLASSIFIED and CONFIDENTIAL)
+- [ ] NSM-grounded zone access rules: CONTROLLED / RESTRICTED / SECURED with clearance + escort policies
+- [ ] Per-zone PhysicalAccessGrant with valid_from/valid_until; inheritance (parent covers children)
+- [ ] Dual org ownership: admin_org + asset_owner_org per zone
+- [ ] Delegation: admin org → named person or org; delegates can grant access
+- [ ] ZoneEntryLog with method (CARD/ESCORT), escort person ref, entry/exit timestamps
+- [ ] Rich mock dataset instantiating the 6-unit scenario with zones, grants, entry log
+- [ ] Demo UI tab: zone browser + access resolution explorer + entry log
+
+### Future milestones
 
 - [ ] Demo → fullstack: wire ABAC engine into the Rust/Rocket backend (real enforcement, not mock)
+- [ ] Physical access zones → real Rust/PostgreSQL backend (backend deferred from v2.1)
 - [ ] Real data-level ownership scoping for 3 scoped roles (Manager→team, Sponsor→org, Subject→self)
 - [ ] Leak/anomaly indicator for shielded industry data (AUDIT-03)
 - [ ] Home Guard territorial scoping via location/territory attribute (CTX-04)
@@ -98,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 after v2.0 milestone — Authorization Hub (demo) shipped*
+*Last updated: 2026-05-23 — Milestone v2.1 Physical Access Zones (demo) started*

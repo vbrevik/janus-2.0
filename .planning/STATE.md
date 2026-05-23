@@ -1,79 +1,67 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: milestone
-status: complete
-stopped_at: All 4 phases complete — milestone done
-last_updated: 2026-05-22T17:15:00.000Z
-last_activity: 2026-05-22 -- Phase 04 execution complete
+milestone: v2.1
+milestone_name: Physical Access Zones (demo)
+status: planning
+stopped_at: null
+last_updated: "2026-05-23T12:00:00.000Z"
+last_activity: 2026-05-23
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 16
-  completed_plans: 16
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-23 after v2.0 milestone)
+See: .planning/PROJECT.md (updated 2026-05-23 for v2.1 milestone)
 
-**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — the model is proven; next milestone transitions demo to real build.
-**Current focus:** Planning next milestone — demo → fullstack transition
+**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — the federated ABAC model is proven. v2.1 deepens the physical access domain with NSM-grounded zone hierarchy, delegation, and entry logging.
+**Current focus:** Defining requirements and roadmap for v2.1 Physical Access Zones (demo)
 
 ## Current Position
 
-Phase: 4
-Plan: Complete (2/2)
-Status: Milestone complete
-Last activity: 2026-05-22
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-23 — Milestone v2.1 started
 
-Progress: [██████████] 100%
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 20
+- Total plans completed: 0
 - Average duration: - min
 - Total execution time: 0 hours
 
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01 | 4 | - | - |
-| 2 | 6 | - | - |
-| 03 | 4 | - | - |
-
-**Recent Trend:**
-
-- Last 5 plans: -
-- Trend: -
-
 *Updated after each plan completion*
-| Phase 02-federation-hub P01 | 8 | 2 tasks | 2 files |
-| Phase 02-federation-hub P02 | 15 | 1 tasks | 1 files |
-| Phase 02-federation-hub P04 | 15 | 2 tasks | 2 files |
-| Phase 02-federation-hub P05 | 3 | 1 tasks | 1 files |
-| Phase 02-federation-hub P06 | 5 | 2 tasks | 1 files |
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Carried forward from v2.0:
 
 - All 9 spikes VALIDATED (2026-05-20/21) — every mechanism in the 6-unit scenario proven
-- Demo is frontend-mock-first; no new Rust/backend work required for the demo phase
+- Demo is frontend-mock-first; no new Rust/backend work required for v2.1
 - Spike code stays isolated in `frontend/src/spikes/` behind `/spikes.html` entry; no routeTree changes
-- Phase 3 depends on Phase 1 (not Phase 2) — Phases 2 and 3 can be planned in parallel
-- [Phase ?]: Network class NOT ported (D2-02); pure functions only in contract.ts
-- [Phase ?]: ROGUE-ISSUER excluded from TRUSTED_ISSUERS; T-02-02 mitigated
-- [Phase ?]: verify-before-trust in ExchangeTranscriptPanel.handleRespond: verifyCredential first, Principal from claims only if valid===true (D2-10)
+- Demo stays in `frontend/src/demo/` isolation — no routeTree.gen.ts changes for v2.1
+
+v2.1 decisions:
+- Physical access zones: demo/mock only — Rust/PostgreSQL backend defers to later milestone
+- Clearance ladder extended from 4 to 5 tiers: UNCLASSIFIED → RESTRICTED → CONFIDENTIAL → SECRET → TOP_SECRET
+- Zone access rules grounded in NSM (SEED-003): CONTROLLED = authz only, RESTRICTED = clearance req, SECURED = SECRET+ + per-zone auth
+- Escorted persons receive visitor passes (trackable; tied to escort + entry log entry)
+- Site-level grants are rare in practice — mock dataset should be primarily Building + Room level; Site grants reserved for edge cases (e.g. site commander, top-level security officer)
+- Inheritance model: zone-type scoped + explicit overrides. A grant covers children of the SAME zone_type only. Children with a higher zone_type (RESTRICTED/SECURED) never inherit — they always require explicit grants. Additionally, individual zones can carry `requires_explicit_auth: true` to force explicit grants even within the same zone_type.
+- Zone_type ceiling per level: SECURED zones never exist at the SITE level — too broad a scope. Sites can be CONTROLLED or RESTRICTED. SECURED is only valid at Building or Room level.
 
 ### Pending Todos
 
@@ -81,17 +69,15 @@ None yet.
 
 ### Blockers/Concerns
 
-None for v2.0. (v1.0 WIP on `feature/frontend-consolidation` is superseded and archived.)
+None.
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-05-23:
+Items deferred from v2.0, carried forward:
 
 | Category | Item | Status |
 |----------|------|--------|
-| seed | 001-pob-form-engine | dormant |
 | seed | 002-autorisasjonssamtale-form | dormant |
-| seed | 003-access-requirements-crosswalk | dormant |
 | seed | 004-beyond-cia-security-properties | dormant |
 | seed | 005-audit-log-requirements | dormant |
 | seed | 006-nda-requirements | dormant |
@@ -100,14 +86,14 @@ Items acknowledged and deferred at milestone close on 2026-05-23:
 | seed | 009-info-system-security-requirements | dormant |
 | seed | 010-personnel-security-annotations | dormant |
 | seed | 011-demo-to-fullstack-transition | dormant |
-| uat_gap | phase-02 02-HUMAN-UAT.md (false positive — status: passed, 0 open scenarios) | passed |
+| seed | 001-pob-form-engine | dormant |
+| seed | 003-access-requirements-crosswalk | **active — selected for v2.1** |
 | stretch | AUDIT-03 leak/anomaly indicator | future/stretch |
 | stretch | CTX-04 home guard territorial scoping | future/stretch |
 | stretch | SCOPE-01 real data-level ownership scoping | future/stretch |
-| v1.0 cleanup | GUARD/ROUTE/TEST/CLEAN frontend-consolidation | superseded/archived |
 
 ## Session Continuity
 
-Last session: 2026-05-22T14:02:44.605Z
-Stopped at: context exhaustion at 76% (2026-05-22)
+Last session: 2026-05-23
+Stopped at: —
 Resume file: None
