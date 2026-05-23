@@ -98,22 +98,26 @@ export function AuditView() {
           {asOf === events.length && <Pill tone="blue">Current state</Pill>}
         </div>
 
-        {/* Event list: applied vs future distinction */}
+        {/* Event list: filtered to selected subject; asOf computation uses full events array */}
         <div className="mt-3 space-y-1">
-          {events.length === 0 ? (
-            <p className="text-sm text-slate-400">No events recorded.</p>
+          {events.filter((e) => e.subjectId === subjId).length === 0 ? (
+            <p className="text-sm text-slate-400">
+              No events for this subject.
+            </p>
           ) : (
-            events.map((e) => (
-              <p
-                key={e.seq}
-                className={`font-mono text-xs ${e.seq <= asOf ? "text-slate-700" : "text-slate-300"}`}
-              >
-                T={e.seq} {e.op}
-                {e.value ? ` ${e.value}` : ""} on{" "}
-                {subjectNameById.get(e.subjectId) ?? e.subjectId} by {e.actor}{" "}
-                {e.seq <= asOf ? "✓ applied" : "· future"}
-              </p>
-            ))
+            events
+              .filter((e) => e.subjectId === subjId)
+              .map((e) => (
+                <p
+                  key={e.seq}
+                  className={`font-mono text-xs ${e.seq <= asOf ? "text-slate-700" : "text-slate-300"}`}
+                >
+                  T={e.seq} {e.op}
+                  {e.value ? ` ${e.value}` : ""} on{" "}
+                  {subjectNameById.get(e.subjectId) ?? e.subjectId} by {e.actor}{" "}
+                  {e.seq <= asOf ? "✓ applied" : "· future"}
+                </p>
+              ))
           )}
         </div>
       </Card>
