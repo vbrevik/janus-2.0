@@ -115,8 +115,16 @@ Plans:
   5. The Access Resolution Explorer allows selecting a person and zone, then displays an ALLOW or DENY result with a plain-prose trace covering grant found, zone_type rule, clearance check, and escort note
   6. The Zone Entry Log view lists entry events filterable by zone and person; ESCORT rows show visitor pass status
 
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+Plans:
+**Wave 1**
+
+- [ ] 08-01-PLAN.md — seed.ts: ZONES/GRANTS/DELEGATES/ENTRY_LOGS/VISITOR_PASSES appended below SEED-HEAD boundary; world-state.tsx: zone fields + TOGGLE_GRANT reducer
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 08-02-PLAN.md — DemoRoot: 6th Physical Access tab; PhysicalAccessPanel: inner sub-nav; ZoneBrowser: collapsible tree + detail panel
+- [ ] 08-03-PLAN.md — AccessResolutionExplorer: selectors + ZoneResolutionTrace + TOGGLE_GRANT checkboxes; ZoneEntryLogView: filters + visitor pass badges
 
 ---
 
@@ -131,7 +139,7 @@ Plans:
 | 5. Zone Model & Access Rules | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 6. Grants, Resolution & Delegation | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 7. Entry Log & Visitor Passes | v2.1 | 2/2 | Complete   | 2026-05-23 |
-| 8. Mock Dataset & Demo UI | v2.1 | 0/? | Not started | - |
+| 8. Mock Dataset & Demo UI | v2.1 | 0/3 | Not started | - |
 | 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
 | 10. Grants, Resolution & Delegation | v2.2 | 0/? | Planned | - |
 | 11. Mock Dataset & Demo UI | v2.2 | 0/? | Planned | - |
