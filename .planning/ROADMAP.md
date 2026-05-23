@@ -26,6 +26,14 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
 - [ ] **Phase 7: Entry Log & Visitor Passes** — ZoneEntryLog with CARD/ESCORT methods, escort person reference, mandatory-for-SECURED enforcement, and ZoneVisitorPass tied to escort entries
 - [ ] **Phase 8: Mock Dataset & Demo UI** — Rich 6-unit mock dataset exercising all model features, Zone Browser tab, Access Resolution Explorer, and Zone Entry Log view
 
+### v2.2 Platform, Network & Application Access (demo) — PLANNED
+
+> Placeholder — phases will be detailed when v2.2 becomes active. Requirements: `.planning/milestones/v2.2-REQUIREMENTS.md`
+
+- [ ] **Phase 9: Digital Resource Model** — Network → Platform → Application hierarchy, classification tiers (National Restricted, Tactical Secure, NATO levels), dual org ownership, clearance-based access rules
+- [ ] **Phase 10: Grants, Resolution & Delegation** — Per-resource explicit grants, prerequisite tier chain (Network→Platform→Application), zone-prerequisite link, delegation
+- [ ] **Phase 11: Mock Dataset & Demo UI** — 6-unit digital resource dataset, Resource Browser, Access Resolution Explorer for digital resources
+
 ---
 
 ## Phase Details
@@ -92,3 +100,6 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
 | 6. Grants, Resolution & Delegation | v2.1 | 0/? | Not started | - |
 | 7. Entry Log & Visitor Passes | v2.1 | 0/? | Not started | - |
 | 8. Mock Dataset & Demo UI | v2.1 | 0/? | Not started | - |
+| 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
+| 10. Grants, Resolution & Delegation | v2.2 | 0/? | Planned | - |
+| 11. Mock Dataset & Demo UI | v2.2 | 0/? | Planned | - |

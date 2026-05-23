@@ -66,10 +66,27 @@ federated ABAC model is proven. The next milestone transitions this from demo to
 - [ ] Rich mock dataset instantiating the 6-unit scenario with zones, grants, entry log
 - [ ] Demo UI tab: zone browser + access resolution explorer + entry log
 
+### Planned: v2.2 Platform, Network & Application Access (demo)
+
+**Goal:** Extend the demo with an access model for the full digital resource stack — classified networks, the platforms running on them, and the applications deployed on those platforms. Pre-registered as a capture target for digital-access topics that emerge during v2.1 physical zone work.
+
+**Planned scope:**
+- Digital resource hierarchy: Network → Platform → Application
+- Network classification tiers (National Restricted, Tactical Secure, NATO Restricted/Secret, etc.)
+- Clearance + authorization required per resource tier
+- Admin org + asset owner org per resource (mirrors v2.1 zone model)
+- Time-limited access grants per resource
+- Physical zone ↔ network/platform prerequisite link (being in a zone may be required to access a network)
+- Mock dataset + demo UI (carries v2.1 patterns)
+- SEED-009 activated (info-system security requirements: NSM §6, approval-to-operate, adequate security level)
+
+**Seeds:** SEED-009 active · Demo/mock only (backend defers to later milestone)
+
 ### Future milestones
 
 - [ ] Demo → fullstack: wire ABAC engine into the Rust/Rocket backend (real enforcement, not mock)
 - [ ] Physical access zones → real Rust/PostgreSQL backend (backend deferred from v2.1)
+- [ ] Platform/network/application access → real backend (backend deferred from v2.2)
 - [ ] Real data-level ownership scoping for 3 scoped roles (Manager→team, Sponsor→org, Subject→self)
 - [ ] Leak/anomaly indicator for shielded industry data (AUDIT-03)
 - [ ] Home Guard territorial scoping via location/territory attribute (CTX-04)
