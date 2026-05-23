@@ -1,7 +1,8 @@
 ---
 phase: 8
 slug: mock-dataset-demo-ui
-status: draft
+status: approved
+reviewed_at: 2026-05-23T00:00:00Z
 shadcn_initialized: true
 preset: new-york / slate / cssVariables
 created: 2026-05-23
