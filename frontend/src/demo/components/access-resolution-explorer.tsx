@@ -314,13 +314,13 @@ export function AccessResolutionExplorer() {
               ]}
             />
           </Field>
-          {escortId !== "none" && !escortHasGrant && escortName && (
+          {escortId !== "none" && selectedZone !== null && !escortHasGrant && escortName && (
             <p className="mt-2 text-xs text-red-500">
               Escort ({escortName}) does not hold an active grant for this zone
               — escort check fails.
             </p>
           )}
-          {escortId !== "none" && escortHasGrant && (
+          {escortId !== "none" && selectedZone !== null && escortHasGrant && (
             <p className="mt-2 text-xs text-green-600">
               Escort holds a valid grant for this zone.
             </p>
