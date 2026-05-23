@@ -62,15 +62,15 @@
 
 ## Mock Dataset (SEED)
 
-- [ ] **SEED-01**: Dataset defines ≥3 root Sites from the 6-unit scenario, each with a subtree of Areas, Buildings, Zones, and/or Rooms as appropriate.
-- [ ] **SEED-02**: Dataset includes zones of all three types (CONTROLLED, RESTRICTED, SECURED); SECURED nodes appear only at BUILDING, ZONE, or ROOM level.
-- [ ] **SEED-03**: Access grants are primarily at BUILDING or ROOM level; Site-level grants are rare (≤2 examples, reserved for high-authority roles).
-- [ ] **SEED-04**: Dataset demonstrates zone_type-scoped inheritance: a CONTROLLED-Building grant that covers CONTROLLED Rooms inside it.
-- [ ] **SEED-05**: Dataset demonstrates explicit exclusion: a RESTRICTED or SECURED node inside a CONTROLLED parent, requiring its own grant.
-- [ ] **SEED-06**: Dataset includes delegation examples: ≥1 person delegate and ≥1 org delegate.
-- [ ] **SEED-07**: `ZoneEntryLog` entries include both CARD and ESCORT method examples.
-- [ ] **SEED-08**: Dataset includes ≥1 `ZoneVisitorPass` example tied to an ESCORT entry.
-- [ ] **SEED-09**: Grants include a realistic mix of active, expired, and future-dated records.
+- [x] **SEED-01**: Dataset defines ≥3 root Sites from the 6-unit scenario, each with a subtree of Areas, Buildings, Zones, and/or Rooms as appropriate.
+- [x] **SEED-02**: Dataset includes zones of all three types (CONTROLLED, RESTRICTED, SECURED); SECURED nodes appear only at BUILDING, ZONE, or ROOM level.
+- [x] **SEED-03**: Access grants are primarily at BUILDING or ROOM level; Site-level grants are rare (≤2 examples, reserved for high-authority roles).
+- [x] **SEED-04**: Dataset demonstrates zone_type-scoped inheritance: a CONTROLLED-Building grant that covers CONTROLLED Rooms inside it.
+- [x] **SEED-05**: Dataset demonstrates explicit exclusion: a RESTRICTED or SECURED node inside a CONTROLLED parent, requiring its own grant.
+- [x] **SEED-06**: Dataset includes delegation examples: ≥1 person delegate and ≥1 org delegate.
+- [x] **SEED-07**: `ZoneEntryLog` entries include both CARD and ESCORT method examples.
+- [x] **SEED-08**: Dataset includes ≥1 `ZoneVisitorPass` example tied to an ESCORT entry.
+- [x] **SEED-09**: Grants include a realistic mix of active, expired, and future-dated records.
 
 ---
 
@@ -127,15 +127,15 @@
 | VISIT-01 | Phase 7 | Pending |
 | VISIT-02 | Phase 7 | Pending |
 | VISIT-03 | Phase 7 | Pending |
-| SEED-01 | Phase 8 | Pending |
-| SEED-02 | Phase 8 | Pending |
-| SEED-03 | Phase 8 | Pending |
-| SEED-04 | Phase 8 | Pending |
-| SEED-05 | Phase 8 | Pending |
-| SEED-06 | Phase 8 | Pending |
-| SEED-07 | Phase 8 | Pending |
-| SEED-08 | Phase 8 | Pending |
-| SEED-09 | Phase 8 | Pending |
+| SEED-01 | Phase 8 | Complete |
+| SEED-02 | Phase 8 | Complete |
+| SEED-03 | Phase 8 | Complete |
+| SEED-04 | Phase 8 | Complete |
+| SEED-05 | Phase 8 | Complete |
+| SEED-06 | Phase 8 | Complete |
+| SEED-07 | Phase 8 | Complete |
+| SEED-08 | Phase 8 | Complete |
+| SEED-09 | Phase 8 | Complete |
 | UI-01 | Phase 8 | Pending |
 | UI-02 | Phase 8 | Pending |
 | UI-03 | Phase 8 | Pending |

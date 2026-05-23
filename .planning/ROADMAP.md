@@ -119,7 +119,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 08-01-PLAN.md — seed.ts: ZONES/GRANTS/DELEGATES/ENTRY_LOGS/VISITOR_PASSES appended below SEED-HEAD boundary; world-state.tsx: zone fields + TOGGLE_GRANT reducer
+- [x] 08-01-PLAN.md — seed.ts: ZONES/GRANTS/DELEGATES/ENTRY_LOGS/VISITOR_PASSES appended below SEED-HEAD boundary; world-state.tsx: zone fields + TOGGLE_GRANT reducer
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -139,7 +139,7 @@ Plans:
 | 5. Zone Model & Access Rules | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 6. Grants, Resolution & Delegation | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 7. Entry Log & Visitor Passes | v2.1 | 2/2 | Complete   | 2026-05-23 |
-| 8. Mock Dataset & Demo UI | v2.1 | 0/3 | Not started | - |
+| 8. Mock Dataset & Demo UI | v2.1 | 1/3 | In Progress|  |
 | 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
 | 10. Grants, Resolution & Delegation | v2.2 | 0/? | Planned | - |
 | 11. Mock Dataset & Demo UI | v2.2 | 0/? | Planned | - |
