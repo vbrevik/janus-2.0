@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Physical Access Zones (demo)
-status: planning
-stopped_at: null
-last_updated: "2026-05-23T12:00:00.000Z"
-last_activity: 2026-05-23
+status: executing
+stopped_at: —
+last_updated: "2026-05-23T14:03:43.028Z"
+last_activity: 2026-05-23 -- Phase 05 execution started
 progress:
   total_phases: 4
   completed_phases: 0
-  total_plans: 0
+  total_plans: 2
   completed_plans: 0
   percent: 0
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-23 for v2.1 milestone)
 
 **Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — the federated ABAC model is proven. v2.1 deepens the physical access domain with NSM-grounded zone hierarchy, delegation, and entry logging.
-**Current focus:** Roadmap defined — ready to plan Phase 5
+**Current focus:** Phase 05 — zone-model-access-rules
 
 ## Current Position
 
-Phase: Not started (roadmap defined, planning Phase 5 next)
-Plan: —
-Status: Roadmap defined
-Last activity: 2026-05-23 — Roadmap created for v2.1 (4 phases, 30 requirements)
+Phase: 05 (zone-model-access-rules) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 05
+Last activity: 2026-05-23 -- Phase 05 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -55,6 +55,7 @@ Carried forward from v2.0:
 - Demo stays in `frontend/src/demo/` isolation — no routeTree.gen.ts changes for v2.1
 
 v2.1 decisions:
+
 - Physical access zones: demo/mock only — Rust/PostgreSQL backend defers to later milestone
 - Clearance ladder extended from 4 to 5 tiers: UNCLASSIFIED → RESTRICTED → CONFIDENTIAL → SECRET → TOP_SECRET
 - Zone access rules grounded in NSM (SEED-003): CONTROLLED = authz only, RESTRICTED = clearance req, SECURED = SECRET+ + per-zone auth

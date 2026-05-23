@@ -49,7 +49,7 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
   4. Zone-type access rules are codified as functions: CONTROLLED returns allow on authz-only, RESTRICTED checks clearance >= RESTRICTED or escort, SECURED checks clearance >= SECRET and explicit grant and logged entry
 **Plans**: 2 plans
 Plans:
-- [ ] 05-01-PLAN.md — Extend model.ts: 5-tier clearance, zone hierarchy types, access-rule functions, tree helpers; null-guard companion edits
+- [x] 05-01-PLAN.md — Extend model.ts: 5-tier clearance, zone hierarchy types, access-rule functions, tree helpers; null-guard companion edits
 - [ ] 05-02-PLAN.md — physical-access.test.ts: Vitest coverage of clearance ranks, ceiling rule, access rules, and tree helpers
 
 ### Phase 6: Grants, Resolution & Delegation
@@ -99,7 +99,7 @@ Plans:
 | 2. Federation Hub | v2.0 | 6/6 | Complete | 2026-05-22 |
 | 3. Audit & Context | v2.0 | 4/4 | Complete | 2026-05-22 |
 | 4. Demo Shell & Legibility | v2.0 | 2/2 | Complete | 2026-05-22 |
-| 5. Zone Model & Access Rules | v2.1 | 0/? | Not started | - |
+| 5. Zone Model & Access Rules | v2.1 | 1/2 | In Progress|  |
 | 6. Grants, Resolution & Delegation | v2.1 | 0/? | Not started | - |
 | 7. Entry Log & Visitor Passes | v2.1 | 0/? | Not started | - |
 | 8. Mock Dataset & Demo UI | v2.1 | 0/? | Not started | - |
