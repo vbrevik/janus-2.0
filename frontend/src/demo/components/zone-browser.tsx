@@ -86,6 +86,8 @@ export function ZoneBrowser() {
     const activeDelegates: ZoneAccessDelegate[] = world.delegates.filter(
       (d) => d.zone_id === zone.id && isDelegateActive(d, now),
     );
+    const personName = (id: string) =>
+      world.subjects.find((s) => s.id === id)?.name ?? id;
 
     return (
       <div className="space-y-3">
@@ -135,7 +137,8 @@ export function ZoneBrowser() {
             <ul className="space-y-1">
               {activeGrants.map((g) => (
                 <li key={g.id} className="text-sm">
-                  {g.person_id} <span className="text-slate-400">(active)</span>
+                  {personName(g.person_id)}{" "}
+                  <span className="text-slate-400">(active)</span>
                 </li>
               ))}
             </ul>
@@ -149,8 +152,8 @@ export function ZoneBrowser() {
               {activeDelegates.map((d) => (
                 <li key={d.id} className="text-sm">
                   {d.delegate_type === "PERSON"
-                    ? d.delegate_person_id
-                    : d.delegate_org_id}
+                    ? personName(d.delegate_person_id ?? "")
+                    : unitName(d.delegate_org_id as UnitId)}
                   <span className="ml-1 text-slate-400">
                     ({d.delegate_type})
                   </span>
