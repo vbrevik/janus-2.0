@@ -47,7 +47,10 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
   2. Each zone node holds admin_org_id and asset_owner_org_id, and the requires_explicit_auth flag can be set independently per node
   3. The 5-tier clearance ladder (UNCLASSIFIED → RESTRICTED → CONFIDENTIAL → SECRET → TOP_SECRET) is defined as an ordered enum and replaces the old 4-tier ladder throughout the demo
   4. Zone-type access rules are codified as functions: CONTROLLED returns allow on authz-only, RESTRICTED checks clearance >= RESTRICTED or escort, SECURED checks clearance >= SECRET and explicit grant and logged entry
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 05-01-PLAN.md — Extend model.ts: 5-tier clearance, zone hierarchy types, access-rule functions, tree helpers; null-guard companion edits
+- [ ] 05-02-PLAN.md — physical-access.test.ts: Vitest coverage of clearance ranks, ceiling rule, access rules, and tree helpers
 
 ### Phase 6: Grants, Resolution & Delegation
 **Goal**: Access decisions can be computed for any person + zone combination, and admin orgs can delegate granting authority
