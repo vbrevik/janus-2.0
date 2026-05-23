@@ -11,13 +11,15 @@ import { FederationHub } from "./components/FederationHub";
 import { UnitConsolePanel } from "./components/UnitConsolePanel";
 import { AuditView } from "./components/AuditView";
 import { ContextView } from "./components/ContextView";
+import { PhysicalAccessPanel } from "./components/physical-access-panel";
 
 type ActiveView =
   | "decisions"
   | "federation"
   | "entity-console"
   | "audit"
-  | "context";
+  | "context"
+  | "physical-access";
 
 export function DemoRoot() {
   const [activeView, setActiveView] = useState<ActiveView>("decisions");
@@ -58,6 +60,12 @@ export function DemoRoot() {
           >
             Context
           </button>
+          <button
+            className={`rounded px-3 py-1.5 text-sm ${activeView === "physical-access" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => setActiveView("physical-access")}
+          >
+            Physical Access
+          </button>
         </div>
         <main className="mx-auto max-w-5xl px-6 py-6">
           {activeView === "decisions" && <DecisionExplorer />}
@@ -65,6 +73,7 @@ export function DemoRoot() {
           {activeView === "entity-console" && <UnitConsolePanel />}
           {activeView === "audit" && <AuditView />}
           {activeView === "context" && <ContextView />}
+          {activeView === "physical-access" && <PhysicalAccessPanel />}
         </main>
       </div>
     </WorldProvider>
