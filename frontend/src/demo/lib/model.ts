@@ -64,12 +64,12 @@ export interface ZoneNode {
 // Gate discriminator: GRANT_LOOKUP (Phase 6, did a grant exist?) vs ZONE_TYPE_RULE (Phase 5, does the zone type allow?).
 export type ZoneAccessGate = "GRANT_LOOKUP" | "ZONE_TYPE_RULE";
 
+// ESCORT_REQUIRED and ENTRY_LOG_REQUIRED removed: no evaluator returns them.
+// Escort and entry-log semantics are carried in the detail string instead.
 export type ZoneAccessReason =
   | "GRANT_FOUND"
   | "NO_GRANT"
-  | "INSUFFICIENT_CLEARANCE"
-  | "ESCORT_REQUIRED"
-  | "ENTRY_LOG_REQUIRED";
+  | "INSUFFICIENT_CLEARANCE";
 
 export interface ZoneAccessResult {
   allow: boolean;
