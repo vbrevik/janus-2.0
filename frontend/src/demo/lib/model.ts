@@ -179,7 +179,7 @@ export function getDescendants(
 ): ZoneNode[] {
   if (!allZones.some((z) => z.id === zoneId)) {
     // Ghost zone ID — data integrity error; fail visibly in development
-    if (process.env.NODE_ENV !== 'production') {
+    if (import.meta.env.DEV) {
       console.warn(`getDescendants: zone "${zoneId}" not found in allZones`);
     }
     return [];
@@ -300,7 +300,11 @@ export function resolveZoneAccess(
       return evaluateRestrictedAccess(true, clearance, hasValidEscort);
     case "SECURED":
       // isEscorted is annotation-only in SECURED zones (D-03); does not affect allow/deny
-      return evaluateSecuredAccess(true, clearance, /* isEscorted */ hasValidEscort);
+      return evaluateSecuredAccess(
+        true,
+        clearance,
+        /* isEscorted */ hasValidEscort,
+      );
     default:
       return assertNever(zone.zone_type);
   }
