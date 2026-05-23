@@ -102,15 +102,43 @@
 
 ## Traceability
 
-*Filled by roadmapper after phases are defined.*
-
-| REQ-ID | Phase |
-|--------|-------|
-| ZONE-01..05 | — |
-| ACCESS-01..05 | — |
-| GRANT-01..04 | — |
-| DELEG-01..03 | — |
-| LOG-01..03 | — |
-| VISIT-01..03 | — |
-| SEED-01..09 | — |
-| UI-01..06 | — |
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| ZONE-01 | Phase 5 | Pending |
+| ZONE-02 | Phase 5 | Pending |
+| ZONE-03 | Phase 5 | Pending |
+| ZONE-04 | Phase 5 | Pending |
+| ZONE-05 | Phase 5 | Pending |
+| ACCESS-01 | Phase 5 | Pending |
+| ACCESS-02 | Phase 5 | Pending |
+| ACCESS-03 | Phase 5 | Pending |
+| ACCESS-04 | Phase 5 | Pending |
+| ACCESS-05 | Phase 6 | Pending |
+| GRANT-01 | Phase 6 | Pending |
+| GRANT-02 | Phase 6 | Pending |
+| GRANT-03 | Phase 6 | Pending |
+| GRANT-04 | Phase 6 | Pending |
+| DELEG-01 | Phase 6 | Pending |
+| DELEG-02 | Phase 6 | Pending |
+| DELEG-03 | Phase 6 | Pending |
+| LOG-01 | Phase 7 | Pending |
+| LOG-02 | Phase 7 | Pending |
+| LOG-03 | Phase 7 | Pending |
+| VISIT-01 | Phase 7 | Pending |
+| VISIT-02 | Phase 7 | Pending |
+| VISIT-03 | Phase 7 | Pending |
+| SEED-01 | Phase 8 | Pending |
+| SEED-02 | Phase 8 | Pending |
+| SEED-03 | Phase 8 | Pending |
+| SEED-04 | Phase 8 | Pending |
+| SEED-05 | Phase 8 | Pending |
+| SEED-06 | Phase 8 | Pending |
+| SEED-07 | Phase 8 | Pending |
+| SEED-08 | Phase 8 | Pending |
+| SEED-09 | Phase 8 | Pending |
+| UI-01 | Phase 8 | Pending |
+| UI-02 | Phase 8 | Pending |
+| UI-03 | Phase 8 | Pending |
+| UI-04 | Phase 8 | Pending |
+| UI-05 | Phase 8 | Pending |
+| UI-06 | Phase 8 | Pending |
