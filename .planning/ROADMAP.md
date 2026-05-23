@@ -24,7 +24,7 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
 - [x] **Phase 5: Zone Model & Access Rules** — Zone hierarchy types, dual org ownership, explicit-auth flag, 5-tier clearance ladder, and NSM-grounded zone-type rules (completed 2026-05-23)
 - [x] **Phase 6: Grants, Resolution & Delegation** — PhysicalAccessGrant with time windows, zone-type-scoped inheritance, explicit-auth overrides, two-gate access resolution, and admin-org delegation (completed 2026-05-23)
 - [x] **Phase 7: Entry Log & Visitor Passes** — ZoneEntryLog with CARD/ESCORT methods, escort person reference, mandatory-for-SECURED enforcement, and ZoneVisitorPass tied to escort entries (completed 2026-05-23)
-- [ ] **Phase 8: Mock Dataset & Demo UI** — Rich 6-unit mock dataset exercising all model features, Zone Browser tab, Access Resolution Explorer, and Zone Entry Log view
+- [x] **Phase 8: Mock Dataset & Demo UI** — Rich 6-unit mock dataset exercising all model features, Zone Browser tab, Access Resolution Explorer, and Zone Entry Log view (completed 2026-05-23)
 
 ### v2.2 Platform, Network & Application Access (demo) — PLANNED
 
@@ -124,7 +124,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 08-02-PLAN.md — DemoRoot: 6th Physical Access tab; PhysicalAccessPanel: inner sub-nav; ZoneBrowser: collapsible tree + detail panel
-- [ ] 08-03-PLAN.md — AccessResolutionExplorer: selectors + ZoneResolutionTrace + TOGGLE_GRANT checkboxes; ZoneEntryLogView: filters + visitor pass badges
+- [x] 08-03-PLAN.md — AccessResolutionExplorer: selectors + ZoneResolutionTrace + TOGGLE_GRANT checkboxes; ZoneEntryLogView: filters + visitor pass badges
 
 ---
 
@@ -139,7 +139,7 @@ Plans:
 | 5. Zone Model & Access Rules | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 6. Grants, Resolution & Delegation | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 7. Entry Log & Visitor Passes | v2.1 | 2/2 | Complete   | 2026-05-23 |
-| 8. Mock Dataset & Demo UI | v2.1 | 1/3 | In Progress|  |
+| 8. Mock Dataset & Demo UI | v2.1 | 3/3 | Complete   | 2026-05-23 |
 | 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
 | 10. Grants, Resolution & Delegation | v2.2 | 0/? | Planned | - |
 | 11. Mock Dataset & Demo UI | v2.2 | 0/? | Planned | - |
