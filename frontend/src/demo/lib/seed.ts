@@ -47,7 +47,7 @@ export const AGREEMENTS: [UnitId, UnitId][] = [
 // subj-3: Lee Park — CA-2 tier-DENY actor (INTEL, CONFIDENTIAL, COMPUTER:STANDARD only)
 // subj-4: Mara Vance — CA-4 NTK-DENY actor (MILITARY_1, TOP_SECRET, CITADEL not AURORA)
 
-export const SUBJECTS: Subject[] = [
+const BASE_SUBJECTS: Subject[] = [
   {
     id: "subj-1",
     name: "Dana Reyes",
@@ -96,7 +96,7 @@ export const SUBJECTS: Subject[] = [
 // res-3: Dev Jump Host — COMPUTER PRIVILEGED, no compartments, owned by INTEL
 // res-4: Crypto Vault — DATA CLASSIFIED, needs CITADEL, owned by MILITARY_1
 
-export const RESOURCES: Resource[] = [
+const BASE_RESOURCES: Resource[] = [
   {
     id: "res-1",
     name: "Classified File Share",
@@ -137,7 +137,7 @@ export const RESOURCES: Resource[] = [
 
 // Hub discovery index: WHO holds authz info about WHOM, in WHICH domain.
 // No details (no clearance, compartments, tiers, or decision) — pointers only.
-export const HUB_INDEX: HubPointer[] = [
+const BASE_HUB_INDEX: HubPointer[] = [
   { subjectId: "subj-1", holdingUnit: "MILITARY_1", domain: "DATA" },
   { subjectId: "subj-1", holdingUnit: "MILITARY_2", domain: "PHYSICAL" },
   { subjectId: "subj-2", holdingUnit: "MILITARY_2", domain: "PHYSICAL" },
@@ -795,7 +795,8 @@ const fw5Subjects: Subject[] = [
 // Merge all expansion records into the exported arrays
 // ============================================================
 
-SUBJECTS.push(
+export const SUBJECTS: Subject[] = [
+  ...BASE_SUBJECTS,
   ...mil1Subjects,
   ...mil2Subjects,
   ...intelSubjects,
@@ -803,19 +804,21 @@ SUBJECTS.push(
   ...industrySubjects,
   ...homeGuardSubjects,
   ...fw5Subjects,
-);
+];
 
-RESOURCES.push(
+export const RESOURCES: Resource[] = [
+  ...BASE_RESOURCES,
   ...mil1Resources,
   ...mil2Resources,
   ...intelResources,
   ...infraResources,
   ...industryResources,
   ...homeGuardResources,
-);
+];
 
 // FW-4: hub index expansion — pointers for the forward actors
-HUB_INDEX.push(
+export const HUB_INDEX: HubPointer[] = [
+  ...BASE_HUB_INDEX,
   { subjectId: "fw2-subj", holdingUnit: "MILITARY_1", domain: "DATA" },
   { subjectId: "fw2-subj", holdingUnit: "INFRA", domain: "PHYSICAL" },
   { subjectId: "fw1-subj", holdingUnit: "INTEL", domain: "COMPUTER" },
@@ -825,7 +828,7 @@ HUB_INDEX.push(
   { subjectId: "subj-17", holdingUnit: "INDUSTRY", domain: "DATA" },
   { subjectId: "subj-20", holdingUnit: "HOME_GUARD", domain: "PHYSICAL" },
   { subjectId: "subj-22", holdingUnit: "HOME_GUARD", domain: "DATA" },
-);
+];
 
 // ============================================================
 // Phase 3: Audit & Context seed additions (D3-01, D3-06, D3-07)
