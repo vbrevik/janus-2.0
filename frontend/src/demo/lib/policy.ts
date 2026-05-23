@@ -6,7 +6,7 @@
 //   - evaluateWithPolicy applies rule toggles and optional clearance floor
 
 import { CLEARANCE_RANK, TIERS } from "./model";
-import type { EntityPolicy, UnitId } from "./model";
+import type { EntityPolicy } from "./model";
 import { hasAgreement } from "./abac";
 import type { Decision, Principal, Requirement, Rule } from "./abac";
 import type { Clearance } from "./model";
@@ -75,7 +75,7 @@ export function evaluateWithPolicy(
   }
 
   if (policy.rules.affiliation) {
-    const ok = hasAgreement(principal.entity as UnitId, req.ownerUnit);
+    const ok = hasAgreement(principal.entity, req.ownerUnit);
     rules.push({
       name: "Affiliation",
       pass: ok,
