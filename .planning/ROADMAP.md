@@ -73,7 +73,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 06-01-PLAN.md — model.ts: PhysicalAccessGrant + ZoneAccessDelegate interfaces, isGrantActive, resolveGrant, resolveZoneAccess, isDelegateActive
+- [x] 06-01-PLAN.md — model.ts: PhysicalAccessGrant + ZoneAccessDelegate interfaces, isGrantActive, resolveGrant, resolveZoneAccess, isDelegateActive
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -121,7 +121,7 @@ Plans:
 | 3. Audit & Context | v2.0 | 4/4 | Complete | 2026-05-22 |
 | 4. Demo Shell & Legibility | v2.0 | 2/2 | Complete | 2026-05-22 |
 | 5. Zone Model & Access Rules | v2.1 | 2/2 | Complete   | 2026-05-23 |
-| 6. Grants, Resolution & Delegation | v2.1 | 0/2 | Not started | - |
+| 6. Grants, Resolution & Delegation | v2.1 | 1/2 | In Progress|  |
 | 7. Entry Log & Visitor Passes | v2.1 | 0/? | Not started | - |
 | 8. Mock Dataset & Demo UI | v2.1 | 0/? | Not started | - |
 | 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
