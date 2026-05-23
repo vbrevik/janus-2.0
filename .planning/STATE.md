@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v2.1
 milestone_name: Physical Access Zones
-status: executing
-stopped_at: context exhaustion at 75% (2026-05-23)
-last_updated: "2026-05-23T18:38:27.379Z"
+status: ready_to_plan
+stopped_at: Phase 07 complete (2/2) — ready to discuss Phase 8
+last_updated: 2026-05-23T19:06:30.659Z
 last_activity: 2026-05-23 -- Phase 07 execution started
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 22
   percent: 50
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-23 for v2.1 milestone)
 
 **Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — the federated ABAC model is proven. v2.1 deepens the physical access domain with NSM-grounded zone hierarchy, delegation, and entry logging.
-**Current focus:** Phase 07 — Entry Log & Visitor Passes
+**Current focus:** Phase 8 — mock dataset & demo ui
 
 ## Current Position
 
-Phase: 07 (Entry Log & Visitor Passes) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 07
-Last activity: 2026-05-23 -- Phase 07 execution started
+Phase: 8
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-05-23
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -36,7 +36,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 2
 - Average duration: - min
 - Total execution time: 0 hours
 
