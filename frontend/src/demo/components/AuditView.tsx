@@ -48,6 +48,19 @@ export function AuditView() {
     [subjects],
   );
 
+  // Subjects whose clearance is claimed via an untrusted issuer — ABAC engine
+  // evaluates the attribute value, not the issuer; flag these in who-can-access
+  // so the distinction between attribute-based access and credential trust is visible.
+  const unverifiedClearanceIds = useMemo(
+    () =>
+      new Set(
+        subjects
+          .filter((s: Subject) => s.clearanceGrantedBy === "ROGUE-ISSUER")
+          .map((s: Subject) => s.id),
+      ),
+    [subjects],
+  );
+
   const resourceOptions = resources.map((r) => ({
     value: r.id,
     label: `${r.name} (${r.domain})`,
@@ -150,8 +163,16 @@ export function AuditView() {
             ) : (
               <ul className="space-y-1 text-sm">
                 {canAccess.map((row) => (
-                  <li key={row.subjectId} className="text-green-700">
+                  <li
+                    key={row.subjectId}
+                    className="flex items-center gap-1.5 text-green-700"
+                  >
                     ✓ {row.name}
+                    {unverifiedClearanceIds.has(row.subjectId) && (
+                      <span className="rounded bg-amber-100 px-1 py-0.5 font-mono text-xs text-amber-700">
+                        [MOCK — unverified issuer]
+                      </span>
+                    )}
                   </li>
                 ))}
               </ul>
