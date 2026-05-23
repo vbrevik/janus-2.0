@@ -21,7 +21,7 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
 
 ### v2.1 Physical Access Zones (demo)
 
-- [ ] **Phase 5: Zone Model & Access Rules** — Zone hierarchy types, dual org ownership, explicit-auth flag, 5-tier clearance ladder, and NSM-grounded zone-type rules
+- [x] **Phase 5: Zone Model & Access Rules** — Zone hierarchy types, dual org ownership, explicit-auth flag, 5-tier clearance ladder, and NSM-grounded zone-type rules (completed 2026-05-23)
 - [ ] **Phase 6: Grants, Resolution & Delegation** — PhysicalAccessGrant with time windows, zone-type-scoped inheritance, explicit-auth overrides, two-gate access resolution, and admin-org delegation
 - [ ] **Phase 7: Entry Log & Visitor Passes** — ZoneEntryLog with CARD/ESCORT methods, escort person reference, mandatory-for-SECURED enforcement, and ZoneVisitorPass tied to escort entries
 - [ ] **Phase 8: Mock Dataset & Demo UI** — Rich 6-unit mock dataset exercising all model features, Zone Browser tab, Access Resolution Explorer, and Zone Entry Log view
@@ -50,7 +50,7 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
 **Plans**: 2 plans
 Plans:
 - [x] 05-01-PLAN.md — Extend model.ts: 5-tier clearance, zone hierarchy types, access-rule functions, tree helpers; null-guard companion edits
-- [ ] 05-02-PLAN.md — physical-access.test.ts: Vitest coverage of clearance ranks, ceiling rule, access rules, and tree helpers
+- [x] 05-02-PLAN.md — physical-access.test.ts: Vitest coverage of clearance ranks, ceiling rule, access rules, and tree helpers
 
 ### Phase 6: Grants, Resolution & Delegation
 **Goal**: Access decisions can be computed for any person + zone combination, and admin orgs can delegate granting authority
@@ -99,7 +99,7 @@ Plans:
 | 2. Federation Hub | v2.0 | 6/6 | Complete | 2026-05-22 |
 | 3. Audit & Context | v2.0 | 4/4 | Complete | 2026-05-22 |
 | 4. Demo Shell & Legibility | v2.0 | 2/2 | Complete | 2026-05-22 |
-| 5. Zone Model & Access Rules | v2.1 | 1/2 | In Progress|  |
+| 5. Zone Model & Access Rules | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 6. Grants, Resolution & Delegation | v2.1 | 0/? | Not started | - |
 | 7. Entry Log & Visitor Passes | v2.1 | 0/? | Not started | - |
 | 8. Mock Dataset & Demo UI | v2.1 | 0/? | Not started | - |
