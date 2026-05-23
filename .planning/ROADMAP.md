@@ -95,7 +95,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 07-01-PLAN.md — model.ts: ZoneEntryLog + ZoneVisitorPass interfaces, validateEntryLog, validateSecuredZoneEntry, getActiveVisitorPasses
+- [x] 07-01-PLAN.md — model.ts: ZoneEntryLog + ZoneVisitorPass interfaces, validateEntryLog, validateSecuredZoneEntry, getActiveVisitorPasses
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -130,7 +130,7 @@ Plans:
 | 4. Demo Shell & Legibility | v2.0 | 2/2 | Complete | 2026-05-22 |
 | 5. Zone Model & Access Rules | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 6. Grants, Resolution & Delegation | v2.1 | 2/2 | Complete   | 2026-05-23 |
-| 7. Entry Log & Visitor Passes | v2.1 | 0/2 | Not started | - |
+| 7. Entry Log & Visitor Passes | v2.1 | 1/2 | In Progress|  |
 | 8. Mock Dataset & Demo UI | v2.1 | 0/? | Not started | - |
 | 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
 | 10. Grants, Resolution & Delegation | v2.2 | 0/? | Planned | - |
