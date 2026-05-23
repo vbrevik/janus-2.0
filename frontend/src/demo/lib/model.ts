@@ -191,6 +191,35 @@ export function getDescendants(
   return result;
 }
 
+// --- Phase 6: Grant and delegation types ---
+
+/**
+ * A grant linking a person to a zone with an optional time window.
+ * Null boundaries are unbounded on that side.
+ */
+export interface PhysicalAccessGrant {
+  id: string;
+  person_id: string;
+  zone_id: string;
+  valid_from: Date | null; // null = valid immediately (no start boundary)
+  valid_until: Date | null; // null = permanent (no end boundary)
+}
+
+/**
+ * Delegation record granting authority to issue PhysicalAccessGrants for a zone.
+ * Supports both person delegates (delegate_type: PERSON) and org delegates (delegate_type: ORG).
+ */
+export interface ZoneAccessDelegate {
+  id: string;
+  zone_id: string;
+  delegate_type: "PERSON" | "ORG";
+  delegate_person_id: string | null;
+  delegate_org_id: string | null;
+  granted_by_org_id: string;
+  valid_from: Date | null;
+  valid_until: Date | null;
+}
+
 // --- D-10: UnitId (the 6 canonical units) is the single entity-id type ---
 // Lifted from obligations.ts:4-19.
 
