@@ -158,8 +158,11 @@ export function evaluateSecuredAccess(
 export function getAncestors(zoneId: string, allZones: ZoneNode[]): ZoneNode[] {
   const nodeMap = new Map(allZones.map((z) => [z.id, z]));
   const ancestors: ZoneNode[] = [];
+  const visited = new Set<string>();
   let current = nodeMap.get(zoneId);
   while (current?.parent_id != null) {
+    if (visited.has(current.id)) break; // cycle guard
+    visited.add(current.id);
     const parent = nodeMap.get(current.parent_id);
     if (!parent) break;
     ancestors.push(parent);
@@ -175,9 +178,12 @@ export function getDescendants(
   allZones: ZoneNode[],
 ): ZoneNode[] {
   const result: ZoneNode[] = [];
+  const visited = new Set<string>();
   const queue: string[] = [zoneId];
   while (queue.length > 0) {
     const current = queue.shift()!;
+    if (visited.has(current)) continue; // cycle guard
+    visited.add(current);
     const children = allZones.filter((z) => z.parent_id === current);
     result.push(...children);
     queue.push(...children.map((c) => c.id));
