@@ -119,11 +119,11 @@ export function seedWorld(): WorldState {
     fedInbox: {},
     fedOutbox: {},
     fedVerifyResults: { valid: null, rogue: null },
-    zones: ZONES,
-    grants: GRANTS,
-    delegates: DELEGATES,
-    entryLogs: ENTRY_LOGS,
-    visitorPasses: VISITOR_PASSES,
+    zones: [...ZONES],
+    grants: [...GRANTS],
+    delegates: [...DELEGATES],
+    entryLogs: [...ENTRY_LOGS],
+    visitorPasses: [...VISITOR_PASSES],
     disabledGrantIds: new Set<string>(),
   };
 }
