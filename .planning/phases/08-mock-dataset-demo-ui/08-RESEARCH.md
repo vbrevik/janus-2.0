@@ -460,7 +460,7 @@ Components import both: `import { useWorld, useWorldDispatch } from '../store/wo
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **ZoneResolutionTrace vs DecisionTrace adapter**
    - What we know: DecisionTrace accepts `Decision` (ABAC type); ZoneAccessResult has a different shape
