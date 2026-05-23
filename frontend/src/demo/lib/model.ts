@@ -7,15 +7,17 @@
 
 export type Clearance =
   | "UNCLASSIFIED"
+  | "RESTRICTED"
   | "CONFIDENTIAL"
   | "SECRET"
   | "TOP_SECRET";
 
 export const CLEARANCE_RANK: Record<Clearance, number> = {
   UNCLASSIFIED: 0,
-  CONFIDENTIAL: 1,
-  SECRET: 2,
-  TOP_SECRET: 3,
+  RESTRICTED: 1,
+  CONFIDENTIAL: 2,
+  SECRET: 3,
+  TOP_SECRET: 4,
 };
 
 // --- Authorization domains (lifted verbatim from data.ts:16-23) ---
@@ -24,10 +26,10 @@ export type Domain = "COMPUTER" | "DATA" | "PHYSICAL";
 
 // Per-domain tier scales (A7: each domain has its own ladder, ordered low→high).
 // NEVER collapse into a single ladder — per-domain tiers evaluate independently (ENGINE-02, R3).
-export const TIERS: Record<Domain, string[]> = {
+// PHYSICAL domain removed in Phase 5: physical access is now governed by zone-type rules (see ZoneType below).
+export const TIERS: Partial<Record<Domain, string[]>> = {
   COMPUTER: ["STANDARD", "PRIVILEGED", "ROOT"],
   DATA: ["INTERNAL", "RESTRICTED", "CLASSIFIED"],
-  PHYSICAL: ["LOBBY", "RESTRICTED_AREA", "SECURE_VAULT"],
 };
 
 // --- D-10: UnitId (the 6 canonical units) is the single entity-id type ---
