@@ -102,9 +102,6 @@ export function evaluateWithPolicy(
     decision,
     rules,
     overrides,
-    failed: [
-      ...rules.filter((r) => !r.pass).map((r) => r.name),
-      ...overrides.map((r) => r.name),
-    ],
+    failed: rules.filter((r) => !r.pass).map((r) => r.name), // base rules only, matching evaluate() contract
   };
 }
