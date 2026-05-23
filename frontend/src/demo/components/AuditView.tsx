@@ -43,6 +43,11 @@ export function AuditView() {
     label: s.name,
   }));
 
+  const subjectNameById = useMemo(
+    () => new Map(subjects.map((s: Subject) => [s.id, s.name])),
+    [subjects],
+  );
+
   const resourceOptions = resources.map((r) => ({
     value: r.id,
     label: `${r.name} (${r.domain})`,
@@ -90,7 +95,9 @@ export function AuditView() {
                 key={e.seq}
                 className={`font-mono text-xs ${e.seq <= asOf ? "text-slate-700" : "text-slate-300"}`}
               >
-                T={e.seq} {e.op} {e.value ?? ""} by {e.actor}{" "}
+                T={e.seq} {e.op}
+                {e.value ? ` ${e.value}` : ""} on{" "}
+                {subjectNameById.get(e.subjectId) ?? e.subjectId} by {e.actor}{" "}
                 {e.seq <= asOf ? "✓ applied" : "· future"}
               </p>
             ))
