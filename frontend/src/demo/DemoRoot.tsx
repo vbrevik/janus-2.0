@@ -20,7 +20,6 @@ type ActiveView =
   | "context";
 
 export function DemoRoot() {
-  // Interim view toggle (D2-04 / D3-09) — throwaway; Phase 4 shell replaces this
   const [activeView, setActiveView] = useState<ActiveView>("decisions");
 
   return (

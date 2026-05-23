@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { ProtectedRoute } from '@/components/protected-route'
 import { Layout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,7 +35,7 @@ function InfoSystemsList() {
   const { data, isLoading, error } = useInfoSystemsList(page, perPage)
 
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute>
       <Layout>
         <div className="space-y-6">
           {/* Header */}
@@ -159,7 +159,6 @@ function InfoSystemRow({ system }: { system: InfoSystem }) {
   const onSave = async () => {
     // Validation
     if (!form.system_name.trim()) {
-      alert('System name is required')
       return
     }
 
@@ -174,9 +173,9 @@ function InfoSystemRow({ system }: { system: InfoSystem }) {
         managed_by: form.managed_by || null,
       })
       setEditing(false)
-      alert('System updated successfully')
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to update system')
+      // Error handling is done by TanStack Query
+      console.error('Failed to update system:', error)
     }
   }
 
@@ -187,9 +186,9 @@ function InfoSystemRow({ system }: { system: InfoSystem }) {
 
     try {
       await deleteMutation.mutateAsync(system.id)
-      alert('System deleted successfully')
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete system')
+      // Error handling is done by TanStack Query
+      console.error('Failed to delete system:', error)
     }
   }
 
@@ -337,7 +336,6 @@ function CreateInfoSystemRow({ onDone }: { onDone: () => void }) {
   const onCreate = async () => {
     // Validation
     if (!form.system_name.trim()) {
-      alert('System name is required')
       return
     }
 
@@ -359,9 +357,9 @@ function CreateInfoSystemRow({ onDone }: { onDone: () => void }) {
         domain: null,
         managed_by: null,
       })
-      alert('System created successfully')
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to create system')
+      // Error handling is done by TanStack Query
+      console.error('Failed to create system:', error)
     }
   }
 

@@ -36,7 +36,7 @@ fn health() -> Json<HealthResponse> {
     Json(HealthResponse {
         status: "healthy".to_string(),
         version: "2.0.0".to_string(),
-        port: 15520,
+        port: 8000,
         database: "connected".to_string(),
     })
 }

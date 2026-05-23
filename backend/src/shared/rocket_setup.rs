@@ -70,8 +70,14 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
         println!("✅ CORS configured");
     }
 
+    // Respect ROCKET_PORT if provided (default to 8000 inside container)
+    let port: u16 = env::var("ROCKET_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(8000);
+
     rocket::build()
-        .configure(rocket::Config::figment().merge(("port", 15520)))
+        .configure(rocket::Config::figment().merge(("port", port)))
         .manage(db_pool)
         .manage(jwt_secret)
         .manage(ws_manager.clone())

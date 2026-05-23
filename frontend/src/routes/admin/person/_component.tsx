@@ -1,6 +1,5 @@
-import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ProtectedRoute } from '@/components/protected-route'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Layout } from '@/components/layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, ExternalLink, Users } from 'lucide-react'
+import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import {
   usePersonList,
   useCreatePerson,
@@ -24,11 +23,7 @@ import {
 import { Link } from '@tanstack/react-router'
 import type { Person, ClearanceLevel, CreatePersonRequest } from '@/types/person'
 
-export const Route = createFileRoute('/person/')({
-  component: PersonList,
-})
-
-function PersonList() {
+export default function PersonListPage() {
   const [page, setPage] = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const perPage = 10
@@ -36,7 +31,7 @@ function PersonList() {
   const { data, isLoading, error } = usePersonList(page, perPage)
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={['admin']}>
       <Layout>
         <div className="space-y-6">
           {/* Header */}
@@ -47,18 +42,10 @@ function PersonList() {
                 Manage persons, users, and their security clearances
               </p>
             </div>
-            <div className="flex gap-2">
-              <Link to="/person-relations">
-                <Button variant="outline">
-                  <Users className="h-4 w-4 mr-2" />
-                  Manage Relations
-                </Button>
-              </Link>
-              <Button onClick={() => setShowCreate((v) => !v)}>
-                <Plus className="h-4 w-4 mr-2" />
-                {showCreate ? 'Hide New Row' : 'Add Person'}
-              </Button>
-            </div>
+            <Button onClick={() => setShowCreate((v) => !v)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {showCreate ? 'Hide New Row' : 'Add Person'}
+            </Button>
           </div>
 
           {/* Table */}
@@ -153,13 +140,13 @@ function PersonRow({ person }: { person: Person }) {
   const deleteMutation = useDeletePerson()
 
   const [form, setForm] = useState({
-    first_name: person.first_name,
-    last_name: person.last_name,
-    email: person.email,
+    first_name: person.first_name || '',
+    last_name: person.last_name || '',
+    email: person.email || '',
     phone: person.phone || '',
-    department: person.department,
-    position: person.position,
-    clearance_level: person.clearance_level as ClearanceLevel,
+    department: person.department || '',
+    position: person.position || '',
+    clearance_level: person.clearance_level || 'UNCLASSIFIED' as ClearanceLevel,
   })
 
   const onSave = async () => {
@@ -184,55 +171,57 @@ function PersonRow({ person }: { person: Person }) {
       <TableCell className="font-medium">
         {editing ? (
           <div className="grid grid-cols-2 gap-2">
-            <Input value={form.first_name || ''} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
-            <Input value={form.last_name || ''} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
+            <Input value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} />
+            <Input value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} />
           </div>
         ) : (
-          <Link to="/person/$personId" params={{ personId: person.id.toString() }} className="hover:underline flex items-center gap-2">
-            {person.first_name} {person.last_name}
+          <Link to="/admin/person/$personId" params={{ personId: person.id.toString() }} className="hover:underline flex items-center gap-2">
+            {person.first_name && person.last_name 
+              ? `${person.first_name} ${person.last_name}`
+              : person.username || person.email || `Person #${person.id}`}
             <ExternalLink className="h-3 w-3 opacity-50" />
           </Link>
         )}
       </TableCell>
       <TableCell>
         {editing ? (
-          <Input type="email" value={form.email || ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         ) : (
-          person.email
+          person.email || 'N/A'
         )}
       </TableCell>
       <TableCell>
         {editing ? (
-          <Input value={form.department || ''} onChange={(e) => setForm({ ...form, department: e.target.value })} />
+          <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
         ) : (
-          person.department
+          person.department || 'N/A'
         )}
       </TableCell>
       <TableCell>
         {editing ? (
-          <Input value={form.position || ''} onChange={(e) => setForm({ ...form, position: e.target.value })} />
+          <Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
         ) : (
-          person.position
+          person.position || 'N/A'
         )}
       </TableCell>
       <TableCell>
         {editing ? (
           <Select
-            value={form.clearance_level}
+            value={form.clearance_level || 'UNCLASSIFIED'}
             onValueChange={(v) => setForm({ ...form, clearance_level: v as ClearanceLevel })}
           >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="NONE">None</SelectItem>
+              <SelectItem value="UNCLASSIFIED">Unclassified</SelectItem>
               <SelectItem value="CONFIDENTIAL">Confidential</SelectItem>
               <SelectItem value="SECRET">Secret</SelectItem>
               <SelectItem value="TOP_SECRET">Top Secret</SelectItem>
             </SelectContent>
           </Select>
         ) : (
-          <ClearanceBadge level={person.clearance_level} />
+          <ClearanceBadge level={person.clearance_level || 'UNCLASSIFIED'} />
         )}
       </TableCell>
       <TableCell className="text-right">
@@ -306,13 +295,13 @@ function CreatePersonRow({ onDone }: { onDone: () => void }) {
       <TableCell>
         <Input placeholder="Position" value={form.position || ''} onChange={(e) => setForm({ ...form, position: e.target.value })} />
       </TableCell>
-      <TableCell>
+        <TableCell>
         <Select value={form.clearance_level || 'UNCLASSIFIED'} onValueChange={(v) => setForm({ ...form, clearance_level: v as ClearanceLevel })}>
           <SelectTrigger>
             <SelectValue placeholder="Level" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="NONE">None</SelectItem>
+            <SelectItem value="UNCLASSIFIED">Unclassified</SelectItem>
             <SelectItem value="CONFIDENTIAL">Confidential</SelectItem>
             <SelectItem value="SECRET">Secret</SelectItem>
             <SelectItem value="TOP_SECRET">Top Secret</SelectItem>
@@ -333,7 +322,7 @@ function CreatePersonRow({ onDone }: { onDone: () => void }) {
   )
 }
 
-function ClearanceBadge({ level }: { level: ClearanceLevel | null }) {
+function ClearanceBadge({ level }: { level: ClearanceLevel }) {
   const variants: Record<ClearanceLevel, 'default' | 'secondary' | 'warning' | 'destructive'> = {
     UNCLASSIFIED: 'secondary',
     CONFIDENTIAL: 'default',
@@ -341,14 +330,5 @@ function ClearanceBadge({ level }: { level: ClearanceLevel | null }) {
     TOP_SECRET: 'destructive',
   }
 
-  const safeLevel: ClearanceLevel = level || 'UNCLASSIFIED'
-  return <Badge variant={variants[safeLevel]}>{safeLevel}</Badge>
+  return <Badge variant={variants[level]}>{level}</Badge>
 }
-
-// Inline create handled by CreatePersonnelRow
-
-// Inline editing replaces EditPersonnelDialog
-
-// Delete handled inline in PersonnelRow
-
-// Removed old modal form component; inline fields are used instead

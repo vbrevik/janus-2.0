@@ -218,7 +218,10 @@ export function ContextView() {
               <p className="text-sm font-semibold">{uid}</p>
               <p className="text-xs text-slate-400">{policy.label}</p>
               <div className="mt-2">
-                <DecisionTrace result={decision} />
+                <DecisionTrace
+                  result={decision}
+                  prose={proseSentence(decision)}
+                />
               </div>
             </Card>
           ))}

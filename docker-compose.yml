@@ -45,7 +45,7 @@ services:
       dockerfile: Dockerfile
     container_name: janus2-frontend
     environment:
-      VITE_API_URL: http://localhost:15520/api
+      VITE_API_URL: http://janus2-backend:8000
     ports:
       - "15510:3000"  # Host:Container - Frontend on 15510
     depends_on:

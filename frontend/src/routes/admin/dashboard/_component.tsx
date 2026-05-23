@@ -1,14 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { ProtectedRoute } from '@/components/protected-route'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { Layout } from '@/components/layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api'
 import { Users, Building2, Key, FileText, Activity } from 'lucide-react'
-
-export const Route = createFileRoute('/dashboard')({
-  component: Dashboard,
-})
 
 interface DashboardStats {
   total_persons: number
@@ -18,7 +13,7 @@ interface DashboardStats {
   recent_audit_logs: number
 }
 
-function Dashboard() {
+export default function DashboardPage() {
   const { data: response, isLoading } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => {
@@ -30,7 +25,7 @@ function Dashboard() {
   const stats = response?.data
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute allowedRoles={['admin']}>
       <Layout>
         <div className="space-y-6">
           <div>
@@ -127,15 +122,15 @@ function Dashboard() {
                         <Users className="h-4 w-4" />
                         Manage Persons
                       </a>
-                      <a href="/organizations" className="flex items-center gap-2 text-sm hover:text-primary">
+                      <a href="/admin/organizations" className="flex items-center gap-2 text-sm hover:text-primary">
                         <Building2 className="h-4 w-4" />
                         Manage Organizations
                       </a>
-                      <a href="/access" className="flex items-center gap-2 text-sm hover:text-primary">
+                      <a href="/admin/access" className="flex items-center gap-2 text-sm hover:text-primary">
                         <Key className="h-4 w-4" />
                         Grant Access
                       </a>
-                      <a href="/audit" className="flex items-center gap-2 text-sm hover:text-primary">
+                      <a href="/admin/audit" className="flex items-center gap-2 text-sm hover:text-primary">
                         <FileText className="h-4 w-4" />
                         View Audit Logs
                       </a>

@@ -1,5 +1,6 @@
 # Build stage
-FROM rust:1.75-slim as builder
+# Using a newer toolchain to support Cargo.lock v4
+FROM rust:1.87-slim as builder
 
 # Install required dependencies for compilation
 RUN apt-get update && apt-get install -y \
@@ -12,11 +13,11 @@ WORKDIR /app
 # Copy manifests
 COPY Cargo.toml Cargo.lock ./
 
-# Create a dummy main.rs to cache dependencies
-RUN mkdir src && \
-    echo "fn main() {}" > src/main.rs && \
-    cargo build --release && \
-    rm -rf src
+# Provide database URL so SQLx macros can compile during build
+ENV DATABASE_URL=postgresql://janus:janus_dev_password@host.docker.internal:15530/janus2
+
+# Pre-fetch dependencies for caching
+RUN cargo fetch
 
 # Copy source code
 COPY src ./src

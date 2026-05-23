@@ -1,5 +1,6 @@
 // API client configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:15520/api'
+// Use host without trailing `/api`; endpoints include the /api prefix themselves.
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:15520'
 
 export class ApiError extends Error {
   status: number

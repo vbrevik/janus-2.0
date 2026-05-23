@@ -1,7 +1,6 @@
 // demo/lib/contract.ts — pure interchange helpers lifted from spikes/lib/contract.ts. Network class NOT ported (D2-02).
 import {
   type UnitId,
-  type Domain,
   type Subject,
   type Envelope,
   type Pointer,
@@ -18,16 +17,6 @@ export interface DetailResult {
   granted: boolean;
   decision: Decision | null;
   record: Subject | null;
-}
-
-// Returns a PUBLISH envelope for the given subject/domain.
-// Source: spike Network.publishAll() body (lines 72-75).
-export function buildPublishEnvelope(
-  from: UnitId,
-  subjectId: string,
-  domain: Domain,
-): Envelope {
-  return { kind: "PUBLISH", from, subjectId, domain };
 }
 
 // Returns a [DISCOVER, DISCOVER_RESULT] envelope tuple for the given subject.

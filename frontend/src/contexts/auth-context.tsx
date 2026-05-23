@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (username: string, password: string): Promise<{ role: string }> => {
     const response = await apiFetch<{
       token: string
-      user_id: string
+      person_id: string  // Backend returns person_id, not user_id
       role: string
     }>('/auth/login', {
       method: 'POST',
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     const userData: User = {
-      id: response.user_id,
+      id: response.person_id,  // Use person_id from response
       username,
       role: response.role,
     }

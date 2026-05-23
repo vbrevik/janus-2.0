@@ -3,7 +3,7 @@ import { useAuth, getDefaultRoute } from '@/contexts/auth-context'
 import { useWebSocketContext } from '@/contexts/websocket-context'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown, LayoutDashboard, Server, Lock, Wifi, WifiOff, ClipboardList } from 'lucide-react'
+import { Shield, Users, Building2, Key, FileText, LogOut, User, ChevronDown, LayoutDashboard, Server, Lock, Wifi, WifiOff, ClipboardList, MessageSquare } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,11 +27,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // Define navigation items by role
   const adminNavItems: NavItem[] = [
     { to: '/admin/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { to: '/admin/person', label: 'Personnel', icon: <Users className="h-4 w-4" /> },
+    { to: '/admin/person', label: 'Persons', icon: <Users className="h-4 w-4" /> },
     { to: '/admin/organizations', label: 'Organizations', icon: <Building2 className="h-4 w-4" /> },
     { to: '/admin/info-systems', label: 'Info Systems', icon: <Server className="h-4 w-4" /> },
     { to: '/admin/access', label: 'Access Control', icon: <Key className="h-4 w-4" /> },
     { to: '/admin/ndas', label: 'NDAs', icon: <FileText className="h-4 w-4" /> },
+    { to: '/admin/discussions', label: 'Discussions', icon: <MessageSquare className="h-4 w-4" /> },
     { to: '/admin/audit', label: 'Audit Logs', icon: <FileText className="h-4 w-4" /> },
     { to: '/admin/roles', label: 'Roles', icon: <Lock className="h-4 w-4" /> },
   ]
@@ -43,7 +44,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const officialNavItems: NavItem[] = [
     { to: '/official/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-    { to: '/official/person', label: 'Personnel Lookup', icon: <Users className="h-4 w-4" /> },
+    { to: '/official/person', label: 'Person Lookup', icon: <Users className="h-4 w-4" /> },
     { to: '/official/organizations', label: 'Organization Lookup', icon: <Building2 className="h-4 w-4" /> },
   ]
 

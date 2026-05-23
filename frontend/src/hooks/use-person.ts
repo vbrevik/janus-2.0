@@ -23,7 +23,7 @@ export function usePersonList(page = 1, perPage = 10) {
     queryKey: personKeys.list(page, perPage),
     queryFn: () =>
       api.get<PersonListResponse>(
-        `/api/persons?page=${page}&per_page=${perPage}` // Fixed endpoint path
+        `/api/person?page=${page}&per_page=${perPage}` // Backend uses /api/person (singular)
       ),
   })
 }
@@ -32,7 +32,7 @@ export function usePersonList(page = 1, perPage = 10) {
 export function usePerson(id: number) {
   return useQuery({
     queryKey: personKeys.detail(id),
-    queryFn: () => api.get<Person>(`/api/persons/${id}`), // Fixed endpoint path
+    queryFn: () => api.get<Person>(`/api/person/${id}`), // Backend uses /api/person (singular)
     enabled: !!id,
   })
 }
@@ -43,7 +43,7 @@ export function useCreatePerson() {
 
   return useMutation({
     mutationFn: (data: CreatePersonRequest) =>
-      api.post<Person>('/api/persons', data), // Fixed endpoint path
+      api.post<Person>('/api/person', data), // Backend uses singular path
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: personKeys.lists() })
     },
@@ -56,7 +56,7 @@ export function useUpdatePerson(id: number) {
 
   return useMutation({
     mutationFn: (data: UpdatePersonRequest) =>
-      api.put<Person>(`/api/persons/${id}`, data), // Fixed endpoint path
+      api.put<Person>(`/api/person/${id}`, data), // Backend uses singular path
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: personKeys.lists() })
       queryClient.invalidateQueries({ queryKey: personKeys.detail(id) })
@@ -69,7 +69,7 @@ export function useDeletePerson() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: number) => api.delete(`/api/persons/${id}`), // Fixed endpoint path
+    mutationFn: (id: number) => api.delete(`/api/person/${id}`), // Backend uses singular path
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: personKeys.lists() })
     },

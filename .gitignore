@@ -62,3 +62,6 @@ src/routeTree.gen.ts
 # SQLx offline data
 .sqlx/
 
+# Playwright MCP artifacts (logs, screenshots, page state)
+.playwright-mcp/
+

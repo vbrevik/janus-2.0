@@ -10,7 +10,7 @@ use crate::auth::middleware::AuthGuard;
 use crate::shared::response::PaginatedResponse;
 use crate::shared::pagination::PaginationParams;
 
-#[get("/api/person?<page>&<per_page>")]
+#[get("/?<page>&<per_page>")]
 pub async fn list_persons(
     page: Option<i32>,
     per_page: Option<i32>,
@@ -69,7 +69,7 @@ pub async fn list_persons(
     }))
 }
 
-#[get("/api/person/<id>")]
+#[get("/<id>")]
 pub async fn get_person(
     id: i32,
     db: &State<PgPool>,
@@ -94,7 +94,7 @@ pub async fn get_person(
     Ok(Json(person))
 }
 
-#[post("/api/person", data = "<person_request>")]
+#[post("/", data = "<person_request>")]
 pub async fn create_person(
     person_request: Json<CreatePersonRequest>,
     db: &State<PgPool>,
@@ -173,7 +173,7 @@ pub async fn create_person(
     Ok(Json(person))
 }
 
-#[put("/api/person/<id>", data = "<person_request>")]
+#[put("/<id>", data = "<person_request>")]
 pub async fn update_person(
     id: i32,
     person_request: Json<UpdatePersonRequest>,
@@ -315,7 +315,7 @@ pub async fn update_person(
     Ok(Json(person))
 }
 
-#[delete("/api/person/<id>")]
+#[delete("/<id>")]
 pub async fn delete_person(
     id: i32,
     db: &State<PgPool>,
