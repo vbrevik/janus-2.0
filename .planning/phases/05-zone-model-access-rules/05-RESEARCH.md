@@ -640,6 +640,58 @@ Step 2.6: All work is pure TypeScript in `frontend/src/demo/lib/`. No external t
 
 ---
 
+## PACS Vendor Domain Research
+
+**Purpose:** Validate zone model design against industry PACS systems (Lenel OnGuard, C•CURE 9000, Gallagher, Genetec, Honeywell Pro-Watch).
+
+**Critical architectural context:** Janus is the **authorization source of truth** that feeds data TO these PACS enforcement layers — it does not replace them. `ZoneAccessResult` is the structured decision payload the integration layer will push to PACS. The PACS enforces at the door; Janus decides who should have access and why.
+
+### Integration Architecture
+
+```
+Janus 2.0 (authorization decisions)
+  └─ ZoneAccessResult { allow, gate, reason, detail }
+       ├─► Lenel OnGuard   → maps to AccessLevel + Segment assignment
+       ├─► C•CURE 9000     → maps to Clearance (door group) + CFL gate
+       ├─► Gallagher       → maps to AccessGroup + Competency gate
+       └─► Genetec Synergis → maps to AccessRule + clearance-level on Area
+```
+
+### Vendor Findings Summary
+
+| Our Concept | Lenel OnGuard | C•CURE 9000 | Gallagher | Genetec | Pro-Watch |
+|---|---|---|---|---|---|
+| ZoneLevel tree | Flat Areas (APB only) | Flat Areas (APB only) | Flat Access Zones | Nested Areas (opt-in, ≤3 levels) | Site→Channel→Panel (hardware) |
+| ZoneType (CONTROLLED/RESTRICTED/SECURED) | Reader mode (card/card+PIN) | CFL on reader + clearance | statusFlags + competency | Min. clearance level + escort rule | Auth-required clearance code flag |
+| Clearance (0–4 tier) | No native tier; custom extension | CFL (1–6, lockdown urgency scale, NOT classification) | Competency (named, date-bound) | 0–7 (inverted: 0=highest) | Naming convention only |
+| Explicit grant | AccessLevel (reader+schedule bundle) | Clearance (door group + schedule) | AccessGroup membership | AccessRule assignment | ClearanceCode assignment |
+| Escort gate | Area-specific chaperone flag | Dual-swipe (both must badge) | Visitor credential provisioning | Area-level visitor escort rule | Per-door escort requirement |
+| admin_org_id | Segment (admin/visibility boundary) | Partition | Division | Partition | Partition |
+| asset_owner_org_id | No equivalent | No equivalent | No equivalent | No equivalent | No equivalent |
+| Zone inheritance | No native | No native | No native | Area nesting (explicit config) | No native |
+
+### Key Validations for Phase 5
+
+1. **Two-gate pattern is industry-aligned.** C•CURE CFL (threshold gate) + Clearance (grant gate) is exactly our `GRANT_LOOKUP` + `ZONE_TYPE_RULE` two-gate model. The pattern is well-established.
+
+2. **Escort semantics confirmed correct.** All five vendors implement escort as a zone-level rule (not just a person attribute). RESTRICTED allows escort as alternate path; SECURED does not — validated by Lenel's area-specific escort + C•CURE's escort model that doesn't override CFL requirements.
+
+3. **`ZoneAccessResult.detail` is the PACS audit payload.** The `detail` field (e.g., `"clearance: CONFIDENTIAL, required: SECRET"`, `"escort noted — entry log mandatory"`) is exactly what PACS audit logs and integration middleware need. Keep it.
+
+4. **Our ZoneLevel hierarchy is richer than any vendor.** No vendor has a native SITE→AREA→BUILDING→ZONE→ROOM hierarchy. We are building a superset; PACS integration will map our levels to their flat area/partition constructs.
+
+5. **admin_org_id / asset_owner_org_id has no PACS precedent.** All vendors have a single partition/division per zone. Our dual-org ownership is a deliberate addition. When mapping to PACS, admin_org_id maps to the PACS partition owner; asset_owner_org_id is metadata kept in Janus only.
+
+6. **Clearance direction convention matters for integration.** Genetec uses 0=highest (inverted). Document clearly in Phase 5 that our UNCLASSIFIED=0 / TOP_SECRET=4 convention is ascending (higher number = higher clearance).
+
+7. **NATO alignment confirmed.** NATO Class I Security Area ≈ our `SECURED` (classified info access). NATO Class II ≈ our `RESTRICTED`. US Army FM 3-19-30 Controlled/Limited/Exclusion areas = our CONTROLLED/RESTRICTED/SECURED. The 5-tier ladder matches NATO NR/NC/NS/CTS + UNCLASSIFIED.
+
+### No Phase 5 Scope Changes
+
+Vendor research confirms Phase 5 implementation is unchanged. The model is architecturally sound and richer than industry baselines. No new fields or functions needed in Phase 5 as a result of this research.
+
+---
+
 ## Sources
 
 ### Primary (HIGH confidence)
