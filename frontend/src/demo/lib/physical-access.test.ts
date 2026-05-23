@@ -2,6 +2,7 @@
 // Covers: CLEARANCE_RANK ranks, isValidZoneTypeCombination, evaluateControlledAccess,
 //         evaluateRestrictedAccess, evaluateSecuredAccess, getAncestors, getDescendants.
 // Phase 6: isGrantActive, resolveGrant, resolveZoneAccess, isDelegateActive.
+// Phase 7: ZoneEntryLog, ZoneVisitorPass, validateEntryLog, validateSecuredZoneEntry, getActiveVisitorPasses.
 
 import { describe, it, expect } from "vitest";
 import {
@@ -16,9 +17,14 @@ import {
   resolveGrant,
   resolveZoneAccess,
   isDelegateActive,
+  validateEntryLog,
+  validateSecuredZoneEntry,
+  getActiveVisitorPasses,
   type ZoneNode,
   type PhysicalAccessGrant,
   type ZoneAccessDelegate,
+  type ZoneEntryLog,
+  type ZoneVisitorPass,
 } from "./model";
 
 // Inline fixtures — no seed.ts imports (D3-13 pattern).
@@ -598,7 +604,13 @@ describe("resolveGrant", () => {
       valid_from: null,
       valid_until: null,
     };
-    const grant = resolveGrant("p-1", Z_CONTROLLED_CHILD, allZonesExt, [G_SITE_CTRL], NOW);
+    const grant = resolveGrant(
+      "p-1",
+      Z_CONTROLLED_CHILD,
+      allZonesExt,
+      [G_SITE_CTRL],
+      NOW,
+    );
     expect(grant).not.toBeNull();
     expect(grant?.id).toBe("g-site-ctrl");
   });
@@ -622,7 +634,13 @@ describe("resolveGrant", () => {
       valid_from: null,
       valid_until: null,
     };
-    const grant = resolveGrant("p-1", Z_CONTROLLED_EXPLICIT, allZonesExt, [G_SITE_CTRL], NOW);
+    const grant = resolveGrant(
+      "p-1",
+      Z_CONTROLLED_EXPLICIT,
+      allZonesExt,
+      [G_SITE_CTRL],
+      NOW,
+    );
     expect(grant).toBeNull();
   });
 });
@@ -812,5 +830,139 @@ describe("resolveZoneAccess", () => {
     expect(result.allow).toBe(false);
     expect(result.gate).toBe("GRANT_LOOKUP");
     expect(result.reason).toBe("NO_GRANT");
+  });
+});
+
+// --- Phase 7: Entry log and visitor pass tests ---
+
+describe("ZoneEntryLog", () => {
+  const ENTRY_CARD: ZoneEntryLog = {
+    id: "log-card-1",
+    person_id: "p-1",
+    zone_id: "z-room1",
+    entry_at: NOW,
+    exit_at: null,
+    method: "CARD",
+    escort_person_id: null,
+  };
+
+  const ENTRY_ESCORT: ZoneEntryLog = {
+    id: "log-escort-1",
+    person_id: "p-visitor",
+    zone_id: "z-room1",
+    entry_at: NOW,
+    exit_at: null,
+    method: "ESCORT",
+    escort_person_id: "p-1",
+  };
+
+  describe("validateEntryLog", () => {
+    it("returns null for valid CARD entry (no escort_person_id)", () => {
+      expect(validateEntryLog(ENTRY_CARD)).toBeNull();
+    });
+    it("returns null for valid ESCORT entry (escort_person_id set)", () => {
+      expect(validateEntryLog(ENTRY_ESCORT)).toBeNull();
+    });
+    it("returns error string for ESCORT entry missing escort_person_id", () => {
+      const badEscort: ZoneEntryLog = {
+        ...ENTRY_ESCORT,
+        escort_person_id: null,
+      };
+      expect(validateEntryLog(badEscort)).toBe(
+        "ESCORT entry requires escort_person_id",
+      );
+    });
+    it("returns error string for CARD entry with unexpected escort_person_id", () => {
+      const badCard: ZoneEntryLog = {
+        ...ENTRY_CARD,
+        escort_person_id: "p-escort",
+      };
+      expect(validateEntryLog(badCard)).toBe(
+        "CARD entry must not have escort_person_id",
+      );
+    });
+  });
+
+  describe("validateSecuredZoneEntry", () => {
+    it("returns null for non-SECURED zone with null entry", () => {
+      // Z_SITE is zone_type: "CONTROLLED"
+      expect(validateSecuredZoneEntry(Z_SITE, null)).toBeNull();
+    });
+    it("returns null for SECURED zone with non-null entry", () => {
+      // Z_BUILDING1 is zone_type: "SECURED"
+      expect(validateSecuredZoneEntry(Z_BUILDING1, ENTRY_CARD)).toBeNull();
+    });
+    it("returns error string for SECURED zone with null entry", () => {
+      expect(validateSecuredZoneEntry(Z_BUILDING1, null)).toBe(
+        "SECURED zone requires a ZoneEntryLog entry",
+      );
+    });
+  });
+});
+
+describe("ZoneVisitorPass", () => {
+  const PASS_ACTIVE: ZoneVisitorPass = {
+    id: "pass-1",
+    entry_log_id: "log-escort-1",
+    escort_person_id: "p-1",
+    zone_id: "z-room1",
+    valid_from: new Date("2026-01-15T10:00:00Z"),
+    valid_until: new Date("2026-01-15T18:00:00Z"),
+  };
+
+  const PASS_EXPIRED: ZoneVisitorPass = {
+    id: "pass-2",
+    entry_log_id: "log-escort-2",
+    escort_person_id: "p-1",
+    zone_id: "z-room1",
+    valid_from: new Date("2026-01-10T10:00:00Z"),
+    valid_until: new Date("2026-01-14T18:00:00Z"),
+  };
+
+  const PASS_FUTURE: ZoneVisitorPass = {
+    id: "pass-3",
+    entry_log_id: "log-escort-3",
+    escort_person_id: "p-1",
+    zone_id: "z-room1",
+    valid_from: new Date("2026-01-16T10:00:00Z"),
+    valid_until: new Date("2026-01-16T18:00:00Z"),
+  };
+
+  const PASS_OTHER_ZONE: ZoneVisitorPass = {
+    id: "pass-4",
+    entry_log_id: "log-escort-4",
+    escort_person_id: "p-1",
+    zone_id: "z-bldg1",
+    valid_from: new Date("2026-01-15T10:00:00Z"),
+    valid_until: new Date("2026-01-15T18:00:00Z"),
+  };
+
+  describe("getActiveVisitorPasses", () => {
+    it("returns active pass within time window", () => {
+      const result = getActiveVisitorPasses("z-room1", [PASS_ACTIVE], NOW);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("pass-1");
+    });
+    it("excludes expired pass (valid_until before now)", () => {
+      const result = getActiveVisitorPasses("z-room1", [PASS_EXPIRED], NOW);
+      expect(result).toHaveLength(0);
+    });
+    it("excludes future pass (valid_from after now)", () => {
+      const result = getActiveVisitorPasses("z-room1", [PASS_FUTURE], NOW);
+      expect(result).toHaveLength(0);
+    });
+    it("returns empty array when allPasses is empty", () => {
+      const result = getActiveVisitorPasses("z-room1", [], NOW);
+      expect(result).toHaveLength(0);
+    });
+    it("filters by zoneId — excludes passes for different zone", () => {
+      const result = getActiveVisitorPasses(
+        "z-room1",
+        [PASS_OTHER_ZONE, PASS_ACTIVE],
+        NOW,
+      );
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe("pass-1");
+    });
   });
 });
