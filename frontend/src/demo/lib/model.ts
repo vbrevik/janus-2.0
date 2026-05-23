@@ -322,6 +322,71 @@ export function isDelegateActive(
   );
 }
 
+// --- Phase 7: Entry log and visitor pass types ---
+
+/**
+ * Records a single zone access event: who entered, which zone, when, and how.
+ * ESCORT entries require escort_person_id; CARD entries must not have one.
+ */
+export interface ZoneEntryLog {
+  id: string;
+  person_id: string;
+  zone_id: string;
+  entry_at: Date;
+  exit_at: Date | null;
+  method: "CARD" | "ESCORT";
+  escort_person_id: string | null;
+}
+
+/**
+ * Visitor pass issued when an escort accompanies a person into a zone.
+ * Linked to its ZoneEntryLog by entry_log_id. valid_from and valid_until
+ * are both required (caller-supplied); neither is nullable.
+ */
+export interface ZoneVisitorPass {
+  id: string;
+  entry_log_id: string;
+  escort_person_id: string;
+  zone_id: string;
+  valid_from: Date;
+  valid_until: Date;
+}
+
+// --- LOG-02: validateEntryLog — ESCORT/CARD method constraint ---
+export function validateEntryLog(entry: ZoneEntryLog): string | null {
+  if (entry.method === "ESCORT" && entry.escort_person_id === null) {
+    return "ESCORT entry requires escort_person_id";
+  }
+  if (entry.method === "CARD" && entry.escort_person_id !== null) {
+    return "CARD entry must not have escort_person_id";
+  }
+  return null;
+}
+
+// --- LOG-03: validateSecuredZoneEntry — SECURED zone mandatory logging ---
+export function validateSecuredZoneEntry(
+  zone: ZoneNode,
+  entry: ZoneEntryLog | null,
+): string | null {
+  if (zone.zone_type !== "SECURED") return null;
+  if (entry !== null) return null;
+  return "SECURED zone requires a ZoneEntryLog entry";
+}
+
+// --- VISIT-03: getActiveVisitorPasses — active pass query ---
+export function getActiveVisitorPasses(
+  zoneId: string,
+  allPasses: ZoneVisitorPass[],
+  now: Date,
+): ZoneVisitorPass[] {
+  return allPasses.filter(
+    (pass) =>
+      pass.zone_id === zoneId &&
+      pass.valid_from <= now &&
+      pass.valid_until >= now,
+  );
+}
+
 // --- D-10: UnitId (the 6 canonical units) is the single entity-id type ---
 // Lifted from obligations.ts:4-19.
 
