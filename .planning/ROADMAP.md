@@ -23,7 +23,7 @@ See `.planning/milestones/v2.0-ROADMAP.md` for full phase details.
 
 - [x] **Phase 5: Zone Model & Access Rules** — Zone hierarchy types, dual org ownership, explicit-auth flag, 5-tier clearance ladder, and NSM-grounded zone-type rules (completed 2026-05-23)
 - [x] **Phase 6: Grants, Resolution & Delegation** — PhysicalAccessGrant with time windows, zone-type-scoped inheritance, explicit-auth overrides, two-gate access resolution, and admin-org delegation (completed 2026-05-23)
-- [ ] **Phase 7: Entry Log & Visitor Passes** — ZoneEntryLog with CARD/ESCORT methods, escort person reference, mandatory-for-SECURED enforcement, and ZoneVisitorPass tied to escort entries
+- [x] **Phase 7: Entry Log & Visitor Passes** — ZoneEntryLog with CARD/ESCORT methods, escort person reference, mandatory-for-SECURED enforcement, and ZoneVisitorPass tied to escort entries (completed 2026-05-23)
 - [ ] **Phase 8: Mock Dataset & Demo UI** — Rich 6-unit mock dataset exercising all model features, Zone Browser tab, Access Resolution Explorer, and Zone Entry Log view
 
 ### v2.2 Platform, Network & Application Access (demo) — PLANNED
@@ -99,7 +99,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 07-02-PLAN.md — physical-access.test.ts: Vitest coverage of all five Phase 7 exports (LOG-01..03, VISIT-01..03)
+- [x] 07-02-PLAN.md — physical-access.test.ts: Vitest coverage of all five Phase 7 exports (LOG-01..03, VISIT-01..03)
 
 ### Phase 8: Mock Dataset & Demo UI
 
@@ -130,7 +130,7 @@ Plans:
 | 4. Demo Shell & Legibility | v2.0 | 2/2 | Complete | 2026-05-22 |
 | 5. Zone Model & Access Rules | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 6. Grants, Resolution & Delegation | v2.1 | 2/2 | Complete   | 2026-05-23 |
-| 7. Entry Log & Visitor Passes | v2.1 | 1/2 | In Progress|  |
+| 7. Entry Log & Visitor Passes | v2.1 | 2/2 | Complete   | 2026-05-23 |
 | 8. Mock Dataset & Demo UI | v2.1 | 0/? | Not started | - |
 | 9. Digital Resource Model | v2.2 | 0/? | Planned | - |
 | 10. Grants, Resolution & Delegation | v2.2 | 0/? | Planned | - |
