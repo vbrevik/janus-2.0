@@ -15,7 +15,7 @@ const rank = (c: Clearance): number => CLEARANCE_RANK[c] ?? -1;
 const tierRank = (
   domain: NonNullable<Requirement["domain"]>,
   tier: string,
-): number => TIERS[domain].indexOf(tier);
+): number => TIERS[domain]?.indexOf(tier) ?? -1;
 
 // Evaluate a request against a principal using a specific entity's release policy.
 // Policy rules are toggleable — needToKnow: false skips NTK; affiliation: false skips affiliation.

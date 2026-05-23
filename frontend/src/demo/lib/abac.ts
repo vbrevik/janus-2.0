@@ -49,7 +49,7 @@ export interface Requirement {
 
 const rank = (c: Clearance): number => CLEARANCE_RANK[c] ?? -1;
 const tierRank = (domain: Domain, tier: string): number =>
-  TIERS[domain].indexOf(tier);
+  TIERS[domain]?.indexOf(tier) ?? -1;
 
 export function hasAgreement(a: UnitId, b: UnitId): boolean {
   if (a === b) return true;
