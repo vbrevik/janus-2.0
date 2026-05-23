@@ -159,14 +159,14 @@ export function getAncestors(zoneId: string, allZones: ZoneNode[]): ZoneNode[] {
   const nodeMap = new Map(allZones.map((z) => [z.id, z]));
   const ancestors: ZoneNode[] = [];
   const visited = new Set<string>();
-  let current = nodeMap.get(zoneId);
-  while (current?.parent_id != null) {
-    if (visited.has(current.id)) break; // cycle guard
-    visited.add(current.id);
-    const parent = nodeMap.get(current.parent_id);
-    if (!parent) break;
-    ancestors.push(parent);
-    current = parent;
+  let currentId: string | null | undefined = nodeMap.get(zoneId)?.parent_id;
+  while (currentId != null) {
+    if (visited.has(currentId)) break; // cycle guard on the node being arrived at
+    visited.add(currentId);
+    const node = nodeMap.get(currentId);
+    if (!node) break;
+    ancestors.push(node);
+    currentId = node.parent_id;
   }
   return ancestors;
 }
