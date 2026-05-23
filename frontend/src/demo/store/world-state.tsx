@@ -21,17 +21,27 @@ import {
   type Domain,
   type Envelope,
   type HubPointer,
+  type PhysicalAccessGrant,
   type Resource,
   type RoleId,
   type Subject,
   type UnitId,
+  type ZoneAccessDelegate,
+  type ZoneEntryLog,
+  type ZoneNode,
+  type ZoneVisitorPass,
 } from "../lib/model";
 import {
   AGREEMENTS,
+  DELEGATES,
+  ENTRY_LOGS,
+  GRANTS,
   HUB_INDEX,
   INITIAL_EVENTS,
   RESOURCES,
   SUBJECTS,
+  VISITOR_PASSES,
+  ZONES,
 } from "../lib/seed";
 import { buildDiscoverEnvelopes, type DetailResult } from "../lib/contract";
 import type { VerifyResult } from "../lib/credential";
@@ -76,6 +86,12 @@ export interface WorldState {
   fedInbox: Partial<Record<UnitId, InboxEntry[]>>;
   fedOutbox: Partial<Record<UnitId, OutboxEntry[]>>;
   fedVerifyResults: { valid: VerifyResult | null; rogue: VerifyResult | null };
+  zones: ZoneNode[];
+  grants: PhysicalAccessGrant[];
+  delegates: ZoneAccessDelegate[];
+  entryLogs: ZoneEntryLog[];
+  visitorPasses: ZoneVisitorPass[];
+  disabledGrantIds: Set<string>;
 }
 
 /** Build the initial world from the frozen seed (lazy-init for useReducer). */
@@ -103,6 +119,12 @@ export function seedWorld(): WorldState {
     fedInbox: {},
     fedOutbox: {},
     fedVerifyResults: { valid: null, rogue: null },
+    zones: ZONES,
+    grants: GRANTS,
+    delegates: DELEGATES,
+    entryLogs: ENTRY_LOGS,
+    visitorPasses: VISITOR_PASSES,
+    disabledGrantIds: new Set<string>(),
   };
 }
 
@@ -149,7 +171,8 @@ export type Action =
       subjectId: string;
       requester: Principal;
     }
-  | { type: "FEDERATION_RESET" };
+  | { type: "FEDERATION_RESET" }
+  | { type: "TOGGLE_GRANT"; grantId: string };
 
 /** Immutable subject clone — new object, new compartments array, new flags object. */
 function cloneSubject(s: Subject): Subject {
@@ -424,6 +447,14 @@ export function reducer(state: WorldState, action: Action): WorldState {
       // D2-06 / Pitfall 7: ONLY clear fedTranscript + reset fedRunStage.
       // fedInbox and fedOutbox are append-only durable history — do NOT clear.
       return { ...state, fedTranscript: [], fedRunStage: "IDLE" };
+
+    case "TOGGLE_GRANT": {
+      // Immutable Set update — new Set() so React re-renders (Pitfall 2 guard).
+      const next = new Set(state.disabledGrantIds);
+      if (next.has(action.grantId)) next.delete(action.grantId);
+      else next.add(action.grantId);
+      return { ...state, disabledGrantIds: next };
+    }
 
     default:
       return state;
