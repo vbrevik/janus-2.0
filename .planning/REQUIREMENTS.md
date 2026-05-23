@@ -76,8 +76,8 @@
 
 ## Demo UI (UI)
 
-- [ ] **UI-01**: Demo includes a Zone Browser tab rendering the Site → … → Room hierarchy with `zone_type` badges (CONTROLLED / RESTRICTED / SECURED).
-- [ ] **UI-02**: Selecting a zone node shows its `admin_org`, `asset_owner_org`, active grants, and delegates.
+- [x] **UI-01**: Demo includes a Zone Browser tab rendering the Site → … → Room hierarchy with `zone_type` badges (CONTROLLED / RESTRICTED / SECURED).
+- [x] **UI-02**: Selecting a zone node shows its `admin_org`, `asset_owner_org`, active grants, and delegates.
 - [ ] **UI-03**: Demo includes an Access Resolution Explorer: select a person + zone, compute ALLOW / DENY with a plain-prose trace.
 - [ ] **UI-04**: Resolution trace shows: grant found (or not), zone_type rule evaluated, clearance check result, escort requirement noted if applicable.
 - [ ] **UI-05**: Demo includes a Zone Entry Log view, filterable by zone and by person.
@@ -136,8 +136,8 @@
 | SEED-07 | Phase 8 | Complete |
 | SEED-08 | Phase 8 | Complete |
 | SEED-09 | Phase 8 | Complete |
-| UI-01 | Phase 8 | Pending |
-| UI-02 | Phase 8 | Pending |
+| UI-01 | Phase 8 | Complete |
+| UI-02 | Phase 8 | Complete |
 | UI-03 | Phase 8 | Pending |
 | UI-04 | Phase 8 | Pending |
 | UI-05 | Phase 8 | Pending |

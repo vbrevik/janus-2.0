@@ -123,7 +123,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08-02-PLAN.md — DemoRoot: 6th Physical Access tab; PhysicalAccessPanel: inner sub-nav; ZoneBrowser: collapsible tree + detail panel
+- [x] 08-02-PLAN.md — DemoRoot: 6th Physical Access tab; PhysicalAccessPanel: inner sub-nav; ZoneBrowser: collapsible tree + detail panel
 - [ ] 08-03-PLAN.md — AccessResolutionExplorer: selectors + ZoneResolutionTrace + TOGGLE_GRANT checkboxes; ZoneEntryLogView: filters + visitor pass badges
 
 ---
