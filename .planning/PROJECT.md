@@ -22,21 +22,35 @@ Multiple entities can **discover and exchange authorization information without 
 every access decision **computed live from attributes** and **fully explainable and auditable** — the
 federated ABAC model is proven. The next milestone transitions this from demo to real build.
 
-## Current Milestone: v2.1 Physical Access Zones (demo)
+## Current State
+
+**Shipped:** v2.1 Physical Access Zones (demo) — 2026-05-23 (Phases 5–8, audit passed). Layers an NSM-grounded physical-access model onto the v2.0 hub: hierarchical zones (CONTROLLED/RESTRICTED/SECURED), a 5-tier clearance ladder, time-windowed grants with zone-type-scoped inheritance and explicit-auth overrides, two-gate access resolution, admin-org delegation, escort-tracked entry logs, and visitor passes — exercised by a 6-unit mock dataset and three new demo views. All demo/mock (`frontend/src/demo/`).
+
+See `.planning/MILESTONES.md` and `.planning/milestones/v2.1-*` for the archived record.
+
+## Next Milestone: v2.2 Platform, Network & Application Access (demo)
+
+**Goal:** Extend the demo with a digital-resource access model — Network → Platform → Application hierarchy, classification tiers (National Restricted, Tactical Secure, NATO levels), dual org ownership, per-resource grants with a prerequisite tier chain, zone-prerequisite link, and delegation. Requirements seeded in `.planning/milestones/v2.2-REQUIREMENTS.md`.
+
+Start with `/gsd-new-milestone` (refresh `REQUIREMENTS.md`, then roadmap Phases 9–11).
+
+<details>
+<summary>v2.1 goal (shipped)</summary>
 
 **Goal:** Extend the v2.0 mock demo with a rich, NSM-grounded physical access model — hierarchical named zones, per-zone authorizations, time-limited grants with inheritance, dual org ownership, delegation, escort tracking, and entry audit logs.
 
-**Target features:**
 - Zone hierarchy: Site → Building → Room; each node has `zone_type` (CONTROLLED / RESTRICTED / SECURED)
 - 5-tier clearance ladder: `UNCLASSIFIED → RESTRICTED → CONFIDENTIAL → SECRET → TOP_SECRET`
 - NSM-grounded access rules per zone type (SEED-003): CONTROLLED = authz only; RESTRICTED = clearance req or escorted; SECURED = SECRET+ + explicit auth + entry logged or escorted + logged
-- Per-zone grants with independent `valid_from`/`valid_until`; parent grant inherits to children; narrower child grant can further restrict
+- Per-zone grants with independent `valid_from`/`valid_until`; parent grant inherits to children
 - Dual org ownership: `admin_org` (controls/delegates) + `asset_owner_org` (owns protected assets)
 - Delegation: admin org can delegate access-granting authority to a named person OR another org
 - `ZoneEntryLog`: method (CARD/ESCORT), escort person ref, timestamps; mandatory for SECURED zones
-- Rich mock dataset demonstrating the full model + demo UI tab for interactive exploration
+- Rich mock dataset + demo UI tab for interactive exploration
 
 **Scope constraint:** Demo/mock only — Rust/PostgreSQL backend defers to a later milestone.
+
+</details>
 
 ## Requirements
 
