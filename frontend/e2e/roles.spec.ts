@@ -1,152 +1,134 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from "@playwright/test";
+import { loginViaUI } from "./helpers/auth";
 
-// Helper function to login
-async function login(page: any) {
-  await page.goto('/login')
-  await page.fill('[name="username"]', 'admin')
-  await page.fill('[name="password"]', 'password123')
-  await page.click('button[type="submit"]')
-  await page.waitForURL(/^\/(personnel|dashboard)/, { timeout: 10000 })
-}
-
-test.describe('Roles & Permissions Management', () => {
+test.describe("Roles & Permissions Management", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
+    await loginViaUI(page);
+  });
 
-  test('should display roles list', async ({ page }) => {
-    // Navigate to roles page
-    await page.goto('/roles')
-    
-    // Should show table with roles
-    await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
-    
-    // Should have table headers
-    const tableHeaders = page.getByRole('table').locator('thead')
-    await expect(tableHeaders).toBeVisible()
-    
-    // Should show at least default roles (admin, manager, operator, viewer)
-    const roleNames = ['admin', 'manager', 'operator', 'viewer']
-    for (const roleName of roleNames) {
-      await expect(page.getByText(new RegExp(roleName, 'i'))).toBeVisible({ timeout: 5000 }).catch(() => {
-        // Some roles might not exist, that's okay
-      })
-    }
-  })
+  test("should display roles list", async ({ page }) => {
+    await page.goto("/admin/roles");
+    await page.waitForURL("**/admin/roles");
 
-  test('should create new role', async ({ page }) => {
-    await page.goto('/roles')
-    await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
-    
-    // Click Create Role button
-    await page.getByRole('button', { name: /create role/i }).click()
-    
-    // Fill in form
-    const timestamp = Date.now()
-    const roleName = `testrole${timestamp}`
-    await page.fill('input[id="role-name"], input[placeholder*="role"], input[placeholder*="name"]', roleName)
-    await page.fill('input[id="role-description"], input[placeholder*="description"]', 'Test role description')
-    
-    // Submit form
-    const createButton = page.getByRole('button', { name: /create|add|save/i }).filter({ hasText: /create|add/i })
-    await createButton.click({ timeout: 5000 })
-    
-    // Dialog should close
-    await page.waitForTimeout(1000)
-    
-    // Should see new role in table
-    await expect(page.getByText(roleName, { exact: false })).toBeVisible({ timeout: 10000 })
-  })
+    // Page heading
+    await expect(
+      page.getByRole("heading", { name: "Roles & Permissions" }),
+    ).toBeVisible({ timeout: 10000 });
 
-  test('should edit existing role', async ({ page }) => {
-    await page.goto('/roles')
-    await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
-    
-    // Find first role with edit button (skip admin if protected)
-    const editButtons = page.locator('button').filter({ has: page.locator('[class*="edit"], svg') })
-    const count = await editButtons.count()
-    
-    if (count > 0) {
-      // Click first edit button
-      await editButtons.first().click({ timeout: 5000 })
-      
-      // Update description
-      const descInput = page.locator('input[placeholder*="description"], input:not([type="hidden"])').last()
-      if (await descInput.isVisible()) {
-        await descInput.fill('Updated description')
-      }
-      
-      // Save changes
-      await page.getByRole('button', { name: /save/i }).click({ timeout: 5000 })
-      
-      // Wait for changes to apply
-      await page.waitForTimeout(1000)
-    }
-  })
+    // Roles table with headers
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+    // Header <th> cells (role engine varies; assert by tag for stability)
+    await expect(page.locator("th", { hasText: "Name" })).toBeVisible();
+    await expect(page.locator("th", { hasText: "Description" })).toBeVisible();
+  });
 
-  test('should open permissions dialog', async ({ page }) => {
-    await page.goto('/roles')
-    await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
-    
-    // Find Permissions button for first role
-    const permissionsButton = page.getByRole('button', { name: /permissions/i }).first()
-    
-    if (await permissionsButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await permissionsButton.click()
-      
-      // Should open dialog with permissions
-      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 })
-      await expect(page.getByText(/permissions/i)).toBeVisible()
-      
-      // Should show permission checkboxes
-      const checkboxes = page.locator('input[type="checkbox"]')
-      const checkboxCount = await checkboxes.count()
-      
-      if (checkboxCount > 0) {
-        await expect(checkboxes.first()).toBeVisible()
-      }
-    }
-  })
+  test("should create new role", async ({ page }) => {
+    await page.goto("/admin/roles");
+    await page.waitForURL("**/admin/roles");
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
 
-  test('should assign permissions to role', async ({ page }) => {
-    await page.goto('/roles')
-    await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
-    
-    // Find Permissions button for first role
-    const permissionsButton = page.getByRole('button', { name: /permissions/i }).first()
-    
-    if (await permissionsButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await permissionsButton.click()
-      
-      // Wait for dialog
-      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 })
-      
-      // Find first unchecked permission checkbox
-      const checkboxes = page.locator('input[type="checkbox"]:not(:checked)')
-      const uncheckedCount = await checkboxes.count()
-      
-      if (uncheckedCount > 0) {
-        // Toggle first permission
-        await checkboxes.first().click()
-        
-        // Save permissions
-        await page.getByRole('button', { name: /save permissions/i }).click({ timeout: 5000 })
-        
-        // Dialog should close
-        await page.waitForTimeout(1000)
-        await expect(page.getByRole('dialog')).not.toBeVisible({ timeout: 5000 }).catch(() => {
-          // Dialog might still be visible if save failed, that's okay
-        })
-      }
-    }
-  })
+    // Open the Create Role dialog
+    await page.getByRole("button", { name: "Create Role" }).click();
 
-  test('should navigate to roles from navigation', async ({ page }) => {
-    // Click Roles & Permissions in navigation
-    await page.getByRole('link', { name: /roles.*permissions|permissions.*roles/i }).click()
-    
-    // Should navigate to roles page
-    await expect(page).toHaveURL('/roles', { timeout: 10000 })
-    await expect(page.getByRole('table')).toBeVisible()
-  })
-})
+    // Dialog inputs (real ids from the component)
+    const timestamp = Date.now();
+    const roleName = `testrole${timestamp}`;
+    await page.locator("input#role-name").fill(roleName);
+    await page.locator("input#role-description").fill("Test role description");
+
+    // Submit — the dialog's submit button is also labelled "Create Role"
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Create Role" })
+      .click();
+
+    // New role should appear in the table
+    await expect(page.getByRole("cell", { name: roleName })).toBeVisible({
+      timeout: 10000,
+    });
+  });
+
+  test("should edit existing role", async ({ page }) => {
+    await page.goto("/admin/roles");
+    await page.waitForURL("**/admin/roles");
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+
+    // Each non-empty role row has an icon-only edit button followed by a
+    // delete button; the edit button is the 2nd ghost action button in the row.
+    // Scope to the first data row and click its edit (pencil) button.
+    const firstRow = page.getByRole("row").nth(1);
+    // The edit button is the middle action button (Permissions | Edit | Delete).
+    const editButton = firstRow.getByRole("button").nth(1);
+    await editButton.click();
+
+    // Inline edit inputs appear in the row; update the description field.
+    const descInput = firstRow.getByPlaceholder("Description (optional)");
+    await expect(descInput).toBeVisible({ timeout: 5000 });
+    await descInput.fill("Updated description");
+
+    // Save inline edit
+    await firstRow.getByRole("button", { name: "Save" }).click();
+
+    // Row returns to display mode (Save button gone)
+    await expect(firstRow.getByRole("button", { name: "Save" })).toHaveCount(
+      0,
+      { timeout: 10000 },
+    );
+  });
+
+  test("should open permissions dialog", async ({ page }) => {
+    await page.goto("/admin/roles");
+    await page.waitForURL("**/admin/roles");
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+
+    // Open Permissions dialog for the first role
+    await page.getByRole("button", { name: "Permissions" }).first().click();
+
+    // Dialog opens with the management title
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(dialog.getByText(/Manage Permissions:/i)).toBeVisible();
+
+    // shadcn/Radix renders checkboxes with role="checkbox" (not input[type=checkbox])
+    await expect(dialog.getByRole("checkbox").first()).toBeVisible();
+  });
+
+  test("should assign permissions to role", async ({ page }) => {
+    await page.goto("/admin/roles");
+    await page.waitForURL("**/admin/roles");
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+
+    // Open Permissions dialog for the first role
+    await page.getByRole("button", { name: "Permissions" }).first().click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    // Each permission is an sr-only <input> inside a styled switch <label>.
+    // Click the visible label (the hidden input itself is not actionable).
+    const firstToggle = dialog.locator("label.cursor-pointer").first();
+    await expect(firstToggle).toBeVisible();
+    await firstToggle.click();
+
+    // Save permissions — real button label is "Save Permissions"
+    await dialog.getByRole("button", { name: "Save Permissions" }).click();
+
+    // Dialog should close after save
+    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+  });
+
+  test("should navigate to roles from navigation", async ({ page }) => {
+    // Start from the admin landing route
+    await page.goto("/admin/dashboard");
+    await page.waitForURL("**/admin/dashboard");
+
+    // Click the 'Roles' nav link (real label/route from layout.tsx)
+    await page.getByRole("link", { name: "Roles" }).click();
+
+    // Should land on the namespaced roles route
+    await page.waitForURL("**/admin/roles");
+    await expect(page).toHaveURL(/\/admin\/roles$/);
+    await expect(
+      page.getByRole("heading", { name: "Roles & Permissions" }),
+    ).toBeVisible();
+  });
+});

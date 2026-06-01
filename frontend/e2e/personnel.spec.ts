@@ -1,97 +1,116 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from "@playwright/test";
+import { loginViaUI } from "./helpers/auth";
 
-// Helper function to login
-async function login(page: any) {
-  await page.goto('/login')
-  await page.fill('[name="username"]', 'admin')
-  await page.fill('[name="password"]', 'password123')
-  await page.click('button[type="submit"]')
-  await page.waitForURL('/personnel', { timeout: 10000 })
-}
+// App reality (post role-namespace pivot):
+// - Login redirects to /admin/dashboard; there is NO /personnel route.
+// - The personnel feature is now "Person Management" at /admin/person.
+// - Create and edit are INLINE table rows (no dialog). shadcn <Input>
+//   elements have no name attribute, so fields are targeted by placeholder.
+// - Clearance is a Radix <Select> (combobox + listbox), not a native <select>.
 
-test.describe('Personnel Management', () => {
+test.describe("Person Management", () => {
   test.beforeEach(async ({ page }) => {
-    await login(page)
-  })
+    await loginViaUI(page);
+    await page.goto("/admin/person");
+  });
 
-  test('should display personnel list', async ({ page }) => {
-    // Should show table with personnel
-    await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
-    
-    // Should have table headers (any of these should be present)
-    const tableHeaders = page.getByRole('table').locator('thead')
-    await expect(tableHeaders).toBeVisible()
-  })
+  test("should display person list", async ({ page }) => {
+    // Heading and table render
+    await expect(
+      page.getByRole("heading", { name: "Person Management" }),
+    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
 
-  test('should create new personnel', async ({ page }) => {
-    // Click Add Personnel button
-    await page.getByRole('button', { name: /add personnel/i }).click()
-    
-    // Fill in form
-    const timestamp = Date.now()
-    await page.fill('[name="first_name"]', 'Test')
-    await page.fill('[name="last_name"]', 'User')
-    await page.fill('[name="email"]', `test.user.${timestamp}@example.com`)
-    await page.fill('[name="phone"]', '555-0000')
-    await page.fill('[name="department"]', 'Testing')
-    await page.fill('[name="position"]', 'Test Engineer')
-    await page.selectOption('[name="clearance_level"]', 'SECRET')
-    
-    // Submit form
-    await page.getByRole('button', { name: /^create$/i }).click()
-    
-    // Dialog should close
-    await expect(page.getByRole('dialog')).not.toBeVisible()
-    
-    // Should see new personnel in table
-    await expect(page.getByText('Test User')).toBeVisible()
-  })
+    // Column headers present
+    await expect(
+      page.getByRole("columnheader", { name: "Name" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "Clearance" }),
+    ).toBeVisible();
+  });
 
-  test('should edit existing personnel', async ({ page }) => {
-    // Wait for table to load
-    await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 })
-    
-    // Click first edit button (look for button with "Edit" text or Pencil icon)
-    const editButtons = page.getByRole('button').filter({ hasText: /edit/i })
-    const count = await editButtons.count()
-    
-    if (count > 0) {
-      await editButtons.first().click({ timeout: 5000 })
-      
-      // Update position
-      await page.fill('[name="position"]', 'Updated Position', { timeout: 5000 })
-      
-      // Save changes
-      await page.getByRole('button', { name: /save|update/i }).click({ timeout: 5000 })
-      
-      // Wait for dialog to close
-      await page.waitForTimeout(1000)
+  test("should create new person", async ({ page }) => {
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+
+    // Toggle the inline create row
+    await page.getByRole("button", { name: /add person/i }).click();
+
+    // Fill inline fields (Inputs have no name attr -> target by placeholder)
+    const timestamp = Date.now();
+    await page.getByPlaceholder("First name").fill("Test");
+    await page.getByPlaceholder("Last name").fill("User");
+    await page
+      .getByPlaceholder("Email")
+      .fill(`test.user.${timestamp}@example.com`);
+    await page.getByPlaceholder("Department").fill("Testing");
+    await page.getByPlaceholder("Position").fill("Test Engineer");
+
+    // Clearance is a Radix Select: open the combobox, pick an option
+    await page.getByRole("combobox").click();
+    await page.getByRole("option", { name: "Secret", exact: true }).click();
+
+    // Submit the inline row (button labeled "Add", with a check icon)
+    await page.getByRole("button", { name: /^add$/i }).click();
+
+    // The new person should appear in the table
+    await expect(page.getByText("Test User")).toBeVisible({ timeout: 10000 });
+  });
+
+  test("should edit existing person", async ({ page }) => {
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+
+    // Skip if the list is empty (nothing to edit)
+    const dataRows = page.getByRole("table").locator("tbody tr");
+    const rowCount = await dataRows.count();
+    if (rowCount === 0) {
+      test.skip(true, "No persons in the list to edit");
     }
-  })
 
-  test('should show pagination when there are multiple pages', async ({ page }) => {
-    // Check if pagination controls exist
-    const paginationText = page.getByText(/page \d+ of \d+/i)
-    
-    // If there are multiple pages, test pagination
-    if (await paginationText.isVisible()) {
-      const currentPageText = await paginationText.textContent()
-      
-      // Click Next button if not on last page
-      const nextButton = page.getByRole('button', { name: /next/i })
+    const firstRow = dataRows.first();
+
+    // Edit is an inline icon-only (Pencil) ghost button. It is the first
+    // action button in the row; the second is the delete (trash) button.
+    await firstRow.getByRole("button").first().click();
+
+    // In edit mode the row's inputs are, in order:
+    // 0 first_name, 1 last_name, 2 email, 3 department, 4 position.
+    // (Clearance is a Radix Select, not an <input>.)
+    const positionInput = firstRow.locator("input").nth(4);
+    await positionInput.fill("Updated Position");
+
+    // Save the inline edit (button labeled "Save")
+    await firstRow.getByRole("button", { name: /save/i }).click();
+
+    // Row returns to read mode -> Save button no longer present
+    await expect(firstRow.getByRole("button", { name: /save/i })).toHaveCount(
+      0,
+      { timeout: 10000 },
+    );
+  });
+
+  test("should show pagination when there are multiple pages", async ({
+    page,
+  }) => {
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+
+    // Pagination text ("Page X of Y") only renders when total_pages > 1
+    const paginationText = page.getByText(/page \d+ of \d+/i);
+
+    if (await paginationText.isVisible().catch(() => false)) {
+      const currentPageText = await paginationText.textContent();
+
+      const nextButton = page.getByRole("button", { name: /next/i });
       if (!(await nextButton.isDisabled())) {
-        await nextButton.click()
-        
-        // Page number should have changed
-        await expect(paginationText).not.toHaveText(currentPageText || '')
+        await nextButton.click();
+        await expect(paginationText).not.toHaveText(currentPageText || "");
       }
     }
-  })
+  });
 
-  test('should filter personnel with search', async ({ page }) => {
-    // Note: This test will pass even if search is not implemented yet
-    // as it's just checking the structure
-    await expect(page.getByRole('table')).toBeVisible()
-  })
-})
-
+  // APP GAP: there is no search/filter input on the Person Management page.
+  test.fixme(
+    true,
+    "APP GAP: Person Management page has no search/filter control",
+  );
+});
