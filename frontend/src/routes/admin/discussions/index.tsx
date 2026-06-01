@@ -1,11 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { Layout } from '@/components/layout'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Layout } from "@/components/layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -13,7 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -21,44 +21,48 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 // Using native textarea element
-import { MessageSquare, Plus, Eye } from 'lucide-react'
+import { MessageSquare, Plus, Eye } from "lucide-react";
 import {
   useDiscussionsList,
   useDiscussion,
   useCreateDiscussion,
   useCreateReply,
-} from '@/hooks/use-discussions'
-import { usePersonList } from '@/hooks/use-person'
-import type { Discussion, CreateDiscussionRequest } from '@/types/discussion'
+} from "@/hooks/use-discussions";
+import { usePersonList } from "@/hooks/use-person";
+import type { Discussion, CreateDiscussionRequest } from "@/types/discussion";
 
-export const Route = createFileRoute('/admin/discussions/')({
+export const Route = createFileRoute("/admin/discussions/")({
   component: DiscussionsList,
-})
+});
 
 function DiscussionsList() {
-  const [showCreate, setShowCreate] = useState(false)
-  const [selectedDiscussion, setSelectedDiscussion] = useState<number | null>(null)
-  const [personFilter, setPersonFilter] = useState<number | undefined>(undefined)
-  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [showCreate, setShowCreate] = useState(false);
+  const [selectedDiscussion, setSelectedDiscussion] = useState<number | null>(
+    null,
+  );
+  const [personFilter, setPersonFilter] = useState<number | undefined>(
+    undefined,
+  );
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const { data, isLoading, error } = useDiscussionsList({
     person_id: personFilter,
-    status: statusFilter || undefined,
-  })
+    status: statusFilter !== "ALL" ? statusFilter : undefined,
+  });
 
-  const { data: persons } = usePersonList(1, 100)
+  const { data: persons } = usePersonList(1, 100);
 
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={["admin"]}>
       <Layout>
         <div className="space-y-6">
           {/* Header */}
@@ -83,14 +87,16 @@ function DiscussionsList() {
             <div className="flex-1">
               <Label>Filter by Person</Label>
               <Select
-                value={personFilter?.toString() || ''}
-                onValueChange={(v) => setPersonFilter(v ? parseInt(v) : undefined)}
+                value={personFilter?.toString() || "ALL"}
+                onValueChange={(v) =>
+                  setPersonFilter(v && v !== "ALL" ? parseInt(v) : undefined)
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All persons" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All persons</SelectItem>
+                  <SelectItem value="ALL">All persons</SelectItem>
                   {persons?.items.map((person) => (
                     <SelectItem key={person.id} value={person.id.toString()}>
                       {person.first_name} {person.last_name} ({person.email})
@@ -106,7 +112,7 @@ function DiscussionsList() {
                   <SelectValue placeholder="All statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All statuses</SelectItem>
+                  <SelectItem value="ALL">All statuses</SelectItem>
                   <SelectItem value="OPEN">Open</SelectItem>
                   <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
                   <SelectItem value="RESOLVED">Resolved</SelectItem>
@@ -114,12 +120,12 @@ function DiscussionsList() {
                 </SelectContent>
               </Select>
             </div>
-            {(personFilter || statusFilter) && (
+            {(personFilter || statusFilter !== "ALL") && (
               <Button
                 variant="outline"
                 onClick={() => {
-                  setPersonFilter(undefined)
-                  setStatusFilter('')
+                  setPersonFilter(undefined);
+                  setStatusFilter("ALL");
                 }}
               >
                 Clear Filters
@@ -158,7 +164,10 @@ function DiscussionsList() {
                   <TableBody>
                     {data.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell
+                          colSpan={7}
+                          className="text-center py-8 text-muted-foreground"
+                        >
                           No discussions found.
                         </TableCell>
                       </TableRow>
@@ -196,45 +205,45 @@ function DiscussionsList() {
         </div>
       </Layout>
     </ProtectedRoute>
-  )
+  );
 }
 
 function DiscussionRow({
   discussion,
   onView,
 }: {
-  discussion: Discussion
-  onView: () => void
+  discussion: Discussion;
+  onView: () => void;
 }) {
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case 'OPEN':
-        return 'default'
-      case 'IN_PROGRESS':
-        return 'warning'
-      case 'RESOLVED':
-        return 'secondary'
-      case 'CLOSED':
-        return 'destructive'
+      case "OPEN":
+        return "default";
+      case "IN_PROGRESS":
+        return "warning";
+      case "RESOLVED":
+        return "secondary";
+      case "CLOSED":
+        return "destructive";
       default:
-        return 'default'
+        return "default";
     }
-  }
+  };
 
   const getPriorityBadgeVariant = (priority: string) => {
     switch (priority) {
-      case 'URGENT':
-        return 'destructive'
-      case 'HIGH':
-        return 'warning'
-      case 'NORMAL':
-        return 'default'
-      case 'LOW':
-        return 'secondary'
+      case "URGENT":
+        return "destructive";
+      case "HIGH":
+        return "warning";
+      case "NORMAL":
+        return "default";
+      case "LOW":
+        return "secondary";
       default:
-        return 'default'
+        return "default";
     }
-  }
+  };
 
   return (
     <TableRow>
@@ -253,41 +262,48 @@ function DiscussionRow({
         </Badge>
       </TableCell>
       <TableCell>Person #{discussion.person_id}</TableCell>
-      <TableCell>{new Date(discussion.created_at).toLocaleDateString()}</TableCell>
+      <TableCell>
+        {new Date(discussion.created_at).toLocaleDateString()}
+      </TableCell>
       <TableCell className="text-right">
         <Button variant="ghost" size="sm" onClick={onView}>
           <Eye className="h-4 w-4" />
         </Button>
       </TableCell>
     </TableRow>
-  )
+  );
 }
 
 function CreateDiscussionDialog({
   open,
   onClose,
 }: {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }) {
-  const createMutation = useCreateDiscussion()
+  const createMutation = useCreateDiscussion();
   const [form, setForm] = useState<CreateDiscussionRequest>({
-    subject: '',
-    message: '',
-    type: 'discussion',
-    priority: 'NORMAL',
-  })
+    subject: "",
+    message: "",
+    type: "discussion",
+    priority: "NORMAL",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     try {
-      await createMutation.mutateAsync(form)
-      setForm({ subject: '', message: '', type: 'discussion', priority: 'NORMAL' })
-      onClose()
+      await createMutation.mutateAsync(form);
+      setForm({
+        subject: "",
+        message: "",
+        type: "discussion",
+        priority: "NORMAL",
+      });
+      onClose();
     } catch (error) {
-      console.error('Failed to create discussion:', error)
+      console.error("Failed to create discussion:", error);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -328,7 +344,7 @@ function CreateDiscussionDialog({
             <div>
               <Label htmlFor="priority">Priority</Label>
               <Select
-                value={form.priority || 'NORMAL'}
+                value={form.priority || "NORMAL"}
                 onValueChange={(v) => setForm({ ...form, priority: v })}
               >
                 <SelectTrigger>
@@ -359,13 +375,13 @@ function CreateDiscussionDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? 'Creating...' : 'Create Discussion'}
+              {createMutation.isPending ? "Creating..." : "Create Discussion"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function ViewDiscussionDialog({
@@ -373,32 +389,32 @@ function ViewDiscussionDialog({
   open,
   onClose,
 }: {
-  discussionId: number
-  open: boolean
-  onClose: () => void
+  discussionId: number;
+  open: boolean;
+  onClose: () => void;
 }) {
-  const { data: discussionData } = useDiscussion(discussionId)
-  const createReplyMutation = useCreateReply()
-  const [replyText, setReplyText] = useState('')
+  const { data: discussionData } = useDiscussion(discussionId);
+  const createReplyMutation = useCreateReply();
+  const [replyText, setReplyText] = useState("");
 
   const handleReply = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!replyText.trim()) return
+    e.preventDefault();
+    if (!replyText.trim()) return;
 
     try {
       await createReplyMutation.mutateAsync({
         id: discussionId,
         data: { message: replyText },
-      })
-      setReplyText('')
+      });
+      setReplyText("");
     } catch (error) {
-      console.error('Failed to add reply:', error)
+      console.error("Failed to add reply:", error);
     }
-  }
+  };
 
-  if (!discussionData) return null
+  if (!discussionData) return null;
 
-  const { discussion, replies } = discussionData
+  const { discussion, replies } = discussionData;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -406,7 +422,8 @@ function ViewDiscussionDialog({
         <DialogHeader>
           <DialogTitle>{discussion.subject}</DialogTitle>
           <DialogDescription>
-            Discussion ID: {discussion.id} | Created: {new Date(discussion.created_at).toLocaleString()}
+            Discussion ID: {discussion.id} | Created:{" "}
+            {new Date(discussion.created_at).toLocaleString()}
           </DialogDescription>
         </DialogHeader>
 
@@ -450,13 +467,15 @@ function ViewDiscussionDialog({
               placeholder="Type your reply here..."
               className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             />
-            <Button type="submit" disabled={createReplyMutation.isPending || !replyText.trim()}>
-              {createReplyMutation.isPending ? 'Sending...' : 'Send Reply'}
+            <Button
+              type="submit"
+              disabled={createReplyMutation.isPending || !replyText.trim()}
+            >
+              {createReplyMutation.isPending ? "Sending..." : "Send Reply"}
             </Button>
           </form>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

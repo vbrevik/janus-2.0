@@ -1,79 +1,77 @@
-import * as React from "react"
-import { X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface DialogProps {
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-  children: React.ReactNode
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  children: React.ReactNode;
 }
 
 interface DialogContextValue {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const DialogContext = React.createContext<DialogContextValue | undefined>(
-  undefined
-)
+  undefined,
+);
 
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
-  const [internalOpen, setInternalOpen] = React.useState(false)
+  const [internalOpen, setInternalOpen] = React.useState(false);
 
-  const isControlled = open !== undefined
-  const isOpen = isControlled ? open : internalOpen
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
 
   const handleOpenChange = React.useCallback(
     (newOpen: boolean) => {
       if (!isControlled) {
-        setInternalOpen(newOpen)
+        setInternalOpen(newOpen);
       }
-      onOpenChange?.(newOpen)
+      onOpenChange?.(newOpen);
     },
-    [isControlled, onOpenChange]
-  )
+    [isControlled, onOpenChange],
+  );
 
   return (
-    <DialogContext.Provider value={{ open: isOpen, onOpenChange: handleOpenChange }}>
+    <DialogContext.Provider
+      value={{ open: isOpen, onOpenChange: handleOpenChange }}
+    >
       {children}
     </DialogContext.Provider>
-  )
+  );
 }
 
 export function DialogTrigger({
   children,
   asChild,
 }: {
-  children: React.ReactNode
-  asChild?: boolean
+  children: React.ReactNode;
+  asChild?: boolean;
 }) {
-  const context = React.useContext(DialogContext)
-  if (!context) throw new Error("DialogTrigger must be used within Dialog")
+  const context = React.useContext(DialogContext);
+  if (!context) throw new Error("DialogTrigger must be used within Dialog");
 
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(children, {
       onClick: () => context.onOpenChange(true),
-    } as any)
+    } as any);
   }
 
-  return (
-    <button onClick={() => context.onOpenChange(true)}>
-      {children}
-    </button>
-  )
+  return <button onClick={() => context.onOpenChange(true)}>{children}</button>;
 }
 
 export function DialogContent({
   children,
   className,
 }: {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }) {
-  const context = React.useContext(DialogContext)
-  if (!context) throw new Error("DialogContent must be used within Dialog")
+  const context = React.useContext(DialogContext);
+  if (!context) throw new Error("DialogContent must be used within Dialog");
 
-  if (!context.open) return null
+  if (!context.open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -85,9 +83,11 @@ export function DialogContent({
 
       {/* Content */}
       <div
+        role="dialog"
+        aria-modal="true"
         className={cn(
           "relative z-50 w-full max-w-lg mx-4 bg-card rounded-lg shadow-lg border",
-          className
+          className,
         )}
       >
         {children}
@@ -100,7 +100,7 @@ export function DialogContent({
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 export function DialogHeader({
@@ -111,11 +111,11 @@ export function DialogHeader({
     <div
       className={cn(
         "flex flex-col space-y-1.5 text-center sm:text-left p-6 pb-4",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 export function DialogTitle({
@@ -126,11 +126,11 @@ export function DialogTitle({
     <h2
       className={cn(
         "text-lg font-semibold leading-none tracking-tight",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
 export function DialogDescription({
@@ -138,11 +138,8 @@ export function DialogDescription({
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p
-      className={cn("text-sm text-muted-foreground", className)}
-      {...props}
-    />
-  )
+    <p className={cn("text-sm text-muted-foreground", className)} {...props} />
+  );
 }
 
 export function DialogFooter({
@@ -153,10 +150,9 @@ export function DialogFooter({
     <div
       className={cn(
         "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 p-6 pt-4",
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
-

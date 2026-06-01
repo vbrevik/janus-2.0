@@ -1,26 +1,34 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiFetch } from '@/lib/api';
-import type { VendorRelation, CreateVendorRelationRequest, VendorHierarchy } from '@/types/vendor-relation';
-import type { ApiResponse } from '@/types/api';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
+import type {
+  VendorRelation,
+  CreateVendorRelationRequest,
+  VendorHierarchy,
+} from "@/types/vendor-relation";
+import type { ApiResponse } from "@/types/api";
 
 // Query Keys
 export const vendorRelationKeys = {
-  all: ['vendor-relations'] as const,
+  all: ["vendor-relations"] as const,
   vendor: (vendorId: number) => [...vendorRelationKeys.all, vendorId] as const,
-  hierarchy: (vendorId: number) => [...vendorRelationKeys.all, 'hierarchy', vendorId] as const,
+  hierarchy: (vendorId: number) =>
+    [...vendorRelationKeys.all, "hierarchy", vendorId] as const,
 };
 
 // List vendor relations
-export function useVendorRelations(vendorId: number, options?: { enabled?: boolean }) {
+export function useVendorRelations(
+  vendorId: number,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: vendorRelationKeys.vendor(vendorId),
     queryFn: async () => {
       const response = await apiFetch<ApiResponse<VendorRelation[]>>(
-        `/vendors/${vendorId}/relations`
+        `/api/vendors/${vendorId}/relations`,
       );
       return response.data;
     },
-    enabled: vendorId > 0 && (options?.enabled !== false),
+    enabled: vendorId > 0 && options?.enabled !== false,
   });
 }
 
@@ -30,7 +38,7 @@ export function useVendorHierarchy(vendorId: number) {
     queryKey: vendorRelationKeys.hierarchy(vendorId),
     queryFn: async () => {
       const response = await apiFetch<ApiResponse<VendorHierarchy[]>>(
-        `/vendors/${vendorId}/hierarchy`
+        `/api/vendors/${vendorId}/hierarchy`,
       );
       return response.data;
     },
@@ -44,15 +52,22 @@ export function useCreateVendorRelation() {
 
   return useMutation({
     mutationFn: async (data: CreateVendorRelationRequest) => {
-      const response = await apiFetch<ApiResponse<VendorRelation>>('/vendors/relations', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      });
+      const response = await apiFetch<ApiResponse<VendorRelation>>(
+        "/api/vendors/relations",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        },
+      );
       return response.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: vendorRelationKeys.vendor(variables.vendor_id) });
-      queryClient.invalidateQueries({ queryKey: vendorRelationKeys.hierarchy(variables.vendor_id) });
+      queryClient.invalidateQueries({
+        queryKey: vendorRelationKeys.vendor(variables.vendor_id),
+      });
+      queryClient.invalidateQueries({
+        queryKey: vendorRelationKeys.hierarchy(variables.vendor_id),
+      });
     },
   });
 }
@@ -63,14 +78,16 @@ export function useDeleteVendorRelation() {
 
   return useMutation({
     mutationFn: async (relationId: number) => {
-      return await apiFetch<ApiResponse<string>>(`/vendors/relations/${relationId}`, {
-        method: 'DELETE',
-      });
+      return await apiFetch<ApiResponse<string>>(
+        `/api/vendors/relations/${relationId}`,
+        {
+          method: "DELETE",
+        },
+      );
     },
     onSuccess: () => {
       // Note: You'll need to pass vendorId when calling this hook
-      queryClient.invalidateQueries({ queryKey: ['vendor-relations'] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-relations"] });
     },
   });
 }
-

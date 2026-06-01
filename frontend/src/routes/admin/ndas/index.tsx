@@ -1,11 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
-import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { Layout } from '@/components/layout'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Layout } from "@/components/layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -13,7 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -21,46 +21,50 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { FileText, Plus, Eye, Ban } from 'lucide-react'
+} from "@/components/ui/select";
+import { FileText, Plus, Eye, Ban } from "lucide-react";
 import {
   useNDAList,
   useCreateNDA,
   useDeleteNDA,
   useNDA,
-} from '@/hooks/use-nda'
-import { usePersonList } from '@/hooks/use-person'
-import type { NDA, NDAStatus, CreateNDARequest } from '@/types/nda'
-import type { Person } from '@/types/person'
-import { Link } from '@tanstack/react-router'
+} from "@/hooks/use-nda";
+import { usePersonList } from "@/hooks/use-person";
+import type { NDA, NDAStatus, CreateNDARequest } from "@/types/nda";
+import type { Person } from "@/types/person";
+import { Link } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/admin/ndas/')({
+export const Route = createFileRoute("/admin/ndas/")({
   component: NDAManagement,
-})
+});
 
 function NDAManagement() {
-  const [statusFilter, setStatusFilter] = useState<string>('')
-  const [showCreate, setShowCreate] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [showCreate, setShowCreate] = useState(false);
 
   // Query all NDAs (no filter to get all)
-  const { data: ndas, isLoading, error, refetch } = useNDAList(
-    statusFilter ? { status: statusFilter } : undefined
-  )
+  const {
+    data: ndas,
+    isLoading,
+    error,
+    refetch,
+  } = useNDAList(statusFilter !== "ALL" ? { status: statusFilter } : undefined);
 
   // Filter NDAs by status if filter is set
-  const filteredNDAs = statusFilter
-    ? (ndas || []).filter((nda: NDA) => nda.status === statusFilter)
-    : ndas || []
+  const filteredNDAs =
+    statusFilter !== "ALL"
+      ? (ndas || []).filter((nda: NDA) => nda.status === statusFilter)
+      : ndas || [];
 
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={["admin"]}>
       <Layout>
         <div className="space-y-6">
           {/* Header */}
@@ -74,7 +78,11 @@ function NDAManagement() {
                 </p>
               </div>
             </div>
-            <CreateNDADialog open={showCreate} onOpenChange={setShowCreate} onSuccess={() => refetch()} />
+            <CreateNDADialog
+              open={showCreate}
+              onOpenChange={setShowCreate}
+              onSuccess={() => refetch()}
+            />
           </div>
 
           {/* Filters */}
@@ -86,7 +94,7 @@ function NDAManagement() {
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="ALL">All Statuses</SelectItem>
                   <SelectItem value="PENDING">Pending</SelectItem>
                   <SelectItem value="ACTIVE">Active</SelectItem>
                   <SelectItem value="SIGNED">Signed</SelectItem>
@@ -97,8 +105,8 @@ function NDAManagement() {
             </div>
             <Button
               variant="outline"
-              onClick={() => setStatusFilter('')}
-              disabled={!statusFilter}
+              onClick={() => setStatusFilter("ALL")}
+              disabled={statusFilter === "ALL"}
             >
               Clear Filter
             </Button>
@@ -137,13 +145,22 @@ function NDAManagement() {
                 <TableBody>
                   {filteredNDAs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                        {statusFilter ? `No NDAs with status "${statusFilter}"` : 'No NDAs found. Create your first NDA!'}
+                      <TableCell
+                        colSpan={8}
+                        className="text-center py-8 text-muted-foreground"
+                      >
+                        {statusFilter !== "ALL"
+                          ? `No NDAs with status "${statusFilter}"`
+                          : "No NDAs found. Create your first NDA!"}
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredNDAs.map((nda: NDA) => (
-                      <NDARow key={nda.id} nda={nda} onDeleted={() => refetch()} />
+                      <NDARow
+                        key={nda.id}
+                        nda={nda}
+                        onDeleted={() => refetch()}
+                      />
                     ))
                   )}
                 </TableBody>
@@ -153,45 +170,44 @@ function NDAManagement() {
         </div>
       </Layout>
     </ProtectedRoute>
-  )
+  );
 }
 
 function NDARow({ nda, onDeleted }: { nda: NDA; onDeleted: () => void }) {
-  const [showDetail, setShowDetail] = useState(false)
-  const deleteNDA = useDeleteNDA()
+  const [showDetail, setShowDetail] = useState(false);
+  const deleteNDA = useDeleteNDA();
 
   const getStatusBadge = (status: NDAStatus) => {
-    const variants: Record<NDAStatus, 'default' | 'secondary' | 'warning' | 'destructive' | 'success'> = {
-      PENDING: 'warning',
-      ACTIVE: 'default',
-      SIGNED: 'success' as any,
-      EXPIRED: 'secondary',
-      REVOKED: 'destructive',
-    }
+    const variants: Record<
+      NDAStatus,
+      "default" | "secondary" | "warning" | "destructive" | "success"
+    > = {
+      PENDING: "warning",
+      ACTIVE: "default",
+      SIGNED: "success" as any,
+      EXPIRED: "secondary",
+      REVOKED: "destructive",
+    };
 
-    return (
-      <Badge variant={variants[status] || 'secondary'}>
-        {status}
-      </Badge>
-    )
-  }
+    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
+  };
 
   const formatDate = (date: string | null | undefined) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleDateString()
-  }
+    if (!date) return "N/A";
+    return new Date(date).toLocaleDateString();
+  };
 
   const handleDelete = async () => {
     if (confirm(`Are you sure you want to revoke NDA "${nda.title}"?`)) {
       try {
-        await deleteNDA.mutateAsync(nda.id)
-        onDeleted()
+        await deleteNDA.mutateAsync(nda.id);
+        onDeleted();
       } catch (error) {
-        console.error('Error deleting NDA:', error)
-        alert('Failed to delete NDA')
+        console.error("Error deleting NDA:", error);
+        alert("Failed to delete NDA");
       }
     }
-  }
+  };
 
   return (
     <TableRow>
@@ -208,15 +224,15 @@ function NDARow({ nda, onDeleted }: { nda: NDA; onDeleted: () => void }) {
         </Link>
       </TableCell>
       <TableCell>{formatDate(nda.issued_at)}</TableCell>
-      <TableCell>{nda.signed_at ? formatDate(nda.signed_at) : 'Not signed'}</TableCell>
-      <TableCell>{nda.expires_at ? formatDate(nda.expires_at) : 'No expiry'}</TableCell>
+      <TableCell>
+        {nda.signed_at ? formatDate(nda.signed_at) : "Not signed"}
+      </TableCell>
+      <TableCell>
+        {nda.expires_at ? formatDate(nda.expires_at) : "No expiry"}
+      </TableCell>
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDetail(true)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setShowDetail(true)}>
             <Eye className="h-4 w-4" />
           </Button>
           <Button
@@ -230,10 +246,14 @@ function NDARow({ nda, onDeleted }: { nda: NDA; onDeleted: () => void }) {
         </div>
       </TableCell>
       {showDetail && (
-        <NDADetailDialog ndaId={nda.id} open={showDetail} onOpenChange={setShowDetail} />
+        <NDADetailDialog
+          ndaId={nda.id}
+          open={showDetail}
+          onOpenChange={setShowDetail}
+        />
       )}
     </TableRow>
-  )
+  );
 }
 
 function NDADetailDialog({
@@ -241,25 +261,23 @@ function NDADetailDialog({
   open,
   onOpenChange,
 }: {
-  ndaId: number
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  ndaId: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const { data: nda, isLoading } = useNDA(ndaId)
+  const { data: nda, isLoading } = useNDA(ndaId);
 
   const formatDate = (date: string | null | undefined) => {
-    if (!date) return 'N/A'
-    return new Date(date).toLocaleString()
-  }
+    if (!date) return "N/A";
+    return new Date(date).toLocaleString();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{nda?.title || 'NDA Details'}</DialogTitle>
-          <DialogDescription>
-            View complete NDA information
-          </DialogDescription>
+          <DialogTitle>{nda?.title || "NDA Details"}</DialogTitle>
+          <DialogDescription>View complete NDA information</DialogDescription>
         </DialogHeader>
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
@@ -277,7 +295,9 @@ function NDADetailDialog({
                 <p className="font-medium">{nda.status}</p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Personnel ID</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Personnel ID
+                </Label>
                 <p className="font-medium">
                   <Link
                     to="/admin/person/$personId"
@@ -289,32 +309,44 @@ function NDADetailDialog({
                 </p>
               </div>
               <div>
-                <Label className="text-xs text-muted-foreground">Issued At</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Issued At
+                </Label>
                 <p className="font-medium">{formatDate(nda.issued_at)}</p>
               </div>
               {nda.signed_at && (
                 <div>
-                  <Label className="text-xs text-muted-foreground">Signed At</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Signed At
+                  </Label>
                   <p className="font-medium">{formatDate(nda.signed_at)}</p>
                 </div>
               )}
               {nda.expires_at && (
                 <div>
-                  <Label className="text-xs text-muted-foreground">Expires At</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Expires At
+                  </Label>
                   <p className="font-medium">{formatDate(nda.expires_at)}</p>
                 </div>
               )}
               {nda.sent_at && (
                 <div>
-                  <Label className="text-xs text-muted-foreground">Sent At</Label>
+                  <Label className="text-xs text-muted-foreground">
+                    Sent At
+                  </Label>
                   <p className="font-medium">{formatDate(nda.sent_at)}</p>
                 </div>
               )}
             </div>
             {nda.rejection_reason && (
               <div>
-                <Label className="text-xs text-muted-foreground">Rejection Reason</Label>
-                <p className="font-medium text-destructive">{nda.rejection_reason}</p>
+                <Label className="text-xs text-muted-foreground">
+                  Rejection Reason
+                </Label>
+                <p className="font-medium text-destructive">
+                  {nda.rejection_reason}
+                </p>
               </div>
             )}
             <div>
@@ -325,7 +357,9 @@ function NDADetailDialog({
             </div>
             {nda.signature && (
               <div>
-                <Label className="text-xs text-muted-foreground">Signature</Label>
+                <Label className="text-xs text-muted-foreground">
+                  Signature
+                </Label>
                 <p className="font-mono text-sm">{nda.signature}</p>
               </div>
             )}
@@ -335,7 +369,7 @@ function NDADetailDialog({
         )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 function CreateNDADialog({
@@ -343,45 +377,47 @@ function CreateNDADialog({
   onOpenChange,
   onSuccess,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSuccess: () => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
 }) {
   const [formData, setFormData] = useState<CreateNDARequest>({
     person_id: 0,
-    title: '',
-    content: '',
+    title: "",
+    content: "",
     version: undefined,
     expires_at: undefined,
     sent_by_vendor_id: undefined,
-  })
-  const createNDA = useCreateNDA()
-  const { data: personData } = usePersonList(1, 1000) // Get all persons for dropdown (changed from personnelData)
+  });
+  const createNDA = useCreateNDA();
+  const { data: personData } = usePersonList(1, 1000); // Get all persons for dropdown (changed from personnelData)
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!formData.title || !formData.content || !formData.person_id) {
-      alert('Please fill in all required fields')
-      return
+      alert("Please fill in all required fields");
+      return;
     }
 
     try {
-      await createNDA.mutateAsync(formData)
+      await createNDA.mutateAsync(formData);
       setFormData({
         person_id: 0,
-        title: '',
-        content: '',
+        title: "",
+        content: "",
         version: undefined,
         expires_at: undefined,
         sent_by_vendor_id: undefined,
-      })
-      onOpenChange(false)
-      onSuccess()
+      });
+      onOpenChange(false);
+      onSuccess();
     } catch (error) {
-      console.error('Error creating NDA:', error)
-      alert(`Error creating NDA: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      console.error("Error creating NDA:", error);
+      alert(
+        `Error creating NDA: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -402,7 +438,7 @@ function CreateNDADialog({
           <div>
             <Label htmlFor="nda-personnel">Personnel *</Label>
             <Select
-              value={formData.person_id ? String(formData.person_id) : ''}
+              value={formData.person_id ? String(formData.person_id) : ""}
               onValueChange={(value) =>
                 setFormData({ ...formData, person_id: parseInt(value) })
               }
@@ -424,7 +460,9 @@ function CreateNDADialog({
             <Input
               id="nda-title"
               value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, title: e.target.value })
+              }
               placeholder="e.g., Standard NDA 2025"
               required
             />
@@ -433,9 +471,12 @@ function CreateNDADialog({
             <Label htmlFor="nda-version">Version</Label>
             <Input
               id="nda-version"
-              value={formData.version || ''}
+              value={formData.version || ""}
               onChange={(e) =>
-                setFormData({ ...formData, version: e.target.value || undefined })
+                setFormData({
+                  ...formData,
+                  version: e.target.value || undefined,
+                })
               }
               placeholder="e.g., 1.0"
             />
@@ -445,9 +486,12 @@ function CreateNDADialog({
             <Input
               id="nda-expires"
               type="date"
-              value={formData.expires_at || ''}
+              value={formData.expires_at || ""}
               onChange={(e) =>
-                setFormData({ ...formData, expires_at: e.target.value || undefined })
+                setFormData({
+                  ...formData,
+                  expires_at: e.target.value || undefined,
+                })
               }
             />
           </div>
@@ -457,22 +501,27 @@ function CreateNDADialog({
               id="nda-content"
               className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, content: e.target.value })
+              }
               placeholder="Enter NDA content..."
               required
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={createNDA.isPending}>
-              {createNDA.isPending ? 'Creating...' : 'Create NDA'}
+              {createNDA.isPending ? "Creating..." : "Create NDA"}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

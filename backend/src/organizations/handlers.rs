@@ -1,15 +1,15 @@
 // Organization HTTP handlers
-use rocket::{State, get, post, put, delete, http::Status};
 use rocket::serde::json::Json;
+use rocket::{delete, get, http::Status, post, put, State};
 use sqlx::PgPool;
 use validator::Validate;
 
-use super::models::{Organization, CreateOrganizationRequest, UpdateOrganizationRequest};
+use super::models::{CreateOrganizationRequest, Organization, UpdateOrganizationRequest};
 use crate::auth::middleware::AuthGuard;
-use crate::shared::response::PaginatedResponse;
 use crate::shared::pagination::PaginationParams;
+use crate::shared::response::PaginatedResponse;
 
-#[get("/api/organizations?<page>&<per_page>&<top_level_only>")]
+#[get("/?<page>&<per_page>&<top_level_only>")]
 pub async fn list_organizations(
     page: Option<i32>,
     per_page: Option<i32>,
@@ -24,7 +24,7 @@ pub async fn list_organizations(
 
     // Determine if filtering for top-level organizations only
     let filter_top_level = top_level_only.unwrap_or(false);
-    
+
     // Conditional SQL based on filter
     let (total_sql, organizations_sql) = if filter_top_level {
         (
@@ -45,12 +45,13 @@ pub async fn list_organizations(
         .map_err(|_| Status::InternalServerError)?;
 
     // Get organizations with pagination
-    let organizations: Vec<Organization> = sqlx::query_as::<sqlx::Postgres, Organization>(organizations_sql)
-        .bind(pagination.limit())
-        .bind(pagination.offset())
-        .fetch_all(db.inner())
-        .await
-        .map_err(|_| Status::InternalServerError)?;
+    let organizations: Vec<Organization> =
+        sqlx::query_as::<sqlx::Postgres, Organization>(organizations_sql)
+            .bind(pagination.limit())
+            .bind(pagination.offset())
+            .fetch_all(db.inner())
+            .await
+            .map_err(|_| Status::InternalServerError)?;
 
     Ok(Json(PaginatedResponse {
         items: organizations,
@@ -61,7 +62,7 @@ pub async fn list_organizations(
     }))
 }
 
-#[get("/api/organizations/<id>")]
+#[get("/<id>")]
 pub async fn get_organization(
     id: i32,
     db: &State<PgPool>,
@@ -85,14 +86,16 @@ pub async fn get_organization(
     Ok(Json(organization))
 }
 
-#[post("/api/organizations", data = "<organization_request>")]
+#[post("/", data = "<organization_request>")]
 pub async fn create_organization(
     organization_request: Json<CreateOrganizationRequest>,
     db: &State<PgPool>,
     _auth: AuthGuard,
 ) -> Result<Json<Organization>, Status> {
     // Validate input
-    organization_request.validate().map_err(|_| Status::BadRequest)?;
+    organization_request
+        .validate()
+        .map_err(|_| Status::BadRequest)?;
 
     // Insert organization
     let organization = sqlx::query_as!(
@@ -122,7 +125,7 @@ pub async fn create_organization(
     Ok(Json(organization))
 }
 
-#[put("/api/organizations/<id>", data = "<organization_request>")]
+#[put("/<id>", data = "<organization_request>")]
 pub async fn update_organization(
     id: i32,
     organization_request: Json<UpdateOrganizationRequest>,
@@ -130,7 +133,9 @@ pub async fn update_organization(
     _auth: AuthGuard,
 ) -> Result<Json<Organization>, Status> {
     // Validate input
-    organization_request.validate().map_err(|_| Status::BadRequest)?;
+    organization_request
+        .validate()
+        .map_err(|_| Status::BadRequest)?;
 
     // Check if organization exists and is not deleted
     let exists = sqlx::query_scalar!(
@@ -183,7 +188,7 @@ pub async fn update_organization(
 
     // Execute update with dynamic parameters
     let mut query_builder = sqlx::query_as::<_, Organization>(&query);
-    
+
     if let Some(ref company_name) = organization_request.company_name {
         query_builder = query_builder.bind(company_name);
     }
@@ -205,7 +210,7 @@ pub async fn update_organization(
     if let Some(ref department) = organization_request.department {
         query_builder = query_builder.bind(department);
     }
-    
+
     query_builder = query_builder.bind(id);
 
     let organization = query_builder
@@ -216,7 +221,7 @@ pub async fn update_organization(
     Ok(Json(organization))
 }
 
-#[delete("/api/organizations/<id>")]
+#[delete("/<id>")]
 pub async fn delete_organization(
     id: i32,
     db: &State<PgPool>,
@@ -256,7 +261,7 @@ mod tests {
             clearance_level: "SECRET".to_string(),
             contract_number: "CTR-2024-001".to_string(),
         };
-        
+
         assert!(valid_request.validate().is_ok());
     }
 
@@ -270,7 +275,7 @@ mod tests {
             clearance_level: "SECRET".to_string(),
             contract_number: "CTR-2024-001".to_string(),
         };
-        
+
         assert!(invalid_request.validate().is_err());
     }
 }
