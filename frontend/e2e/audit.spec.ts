@@ -10,16 +10,9 @@ test.describe("Audit Logs (Admin)", () => {
       page.getByRole("heading", { name: "Audit Logs" }),
     ).toBeVisible();
 
-    // APP GAP: the audit page is a stub ("Audit logs viewer will be implemented
-    // here...") — there is no table and no 'Username' columnheader yet. Restore
-    // this assertion once the audit table is implemented.
-    test.fixme(
-      true,
-      "APP GAP: audit page is a placeholder stub — no table / Username columnheader exists",
-    );
-    await expect(
-      page.getByRole("columnheader", { name: "Username" }),
-    ).toBeVisible();
+    // Audit table renders with a Username column (assert by <th> tag — this PW
+    // version's role engine maps these <th> to "cell", not "columnheader").
+    await expect(page.locator("th", { hasText: "Username" })).toBeVisible();
   });
 
   test("RBAC: viewer cannot access audit logs", async ({ page }) => {
