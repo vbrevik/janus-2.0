@@ -112,7 +112,6 @@ test.describe("Login Redirects", () => {
   });
 
   test("Enduser login redirects to /enduser/tasks", async ({ page }) => {
-    test.fixme(true, "APP GAP: no enduser seed user");
     await loginViaApi(
       page,
       TEST_CREDENTIALS.enduser.username,
@@ -124,7 +123,6 @@ test.describe("Login Redirects", () => {
   });
 
   test("Official login redirects to /official/dashboard", async ({ page }) => {
-    test.fixme(true, "APP GAP: no official seed user");
     await loginViaApi(
       page,
       TEST_CREDENTIALS.official.username,
