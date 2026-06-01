@@ -1,19 +1,20 @@
 // Person HTTP handlers - unified handlers for person entities
-use rocket::{State, get, post, put, delete, http::Status};
+use bcrypt::{hash, DEFAULT_COST};
 use rocket::serde::json::Json;
+use rocket::{delete, get, http::Status, post, put, State};
 use sqlx::PgPool;
 use validator::Validate;
-use bcrypt::{hash, DEFAULT_COST};
 
-use super::models::{Person, CreatePersonRequest, UpdatePersonRequest};
+use super::models::{CreatePersonRequest, Person, UpdatePersonRequest};
 use crate::auth::middleware::AuthGuard;
-use crate::shared::response::PaginatedResponse;
 use crate::shared::pagination::PaginationParams;
+use crate::shared::response::PaginatedResponse;
 
-#[get("/?<page>&<per_page>")]
+#[get("/?<page>&<per_page>&<search>")]
 pub async fn list_persons(
     page: Option<i32>,
     per_page: Option<i32>,
+    search: Option<String>,
     db: &State<PgPool>,
     _auth: AuthGuard,
 ) -> Result<Json<PaginatedResponse<Person>>, Status> {
@@ -26,36 +27,67 @@ pub async fn list_persons(
     // Validate pagination
     pagination.validate().map_err(|_| Status::BadRequest)?;
 
-    // Get total count (excluding soft-deleted)
-    let total: Option<i64> = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM person WHERE deleted_at IS NULL"
-    )
-    .fetch_optional(db.inner())
-    .await
-    .map_err(|_| Status::InternalServerError)?;
+    // Optional case-insensitive search across name, email, and username.
+    // Only the fixed clause is concatenated; the value is bound as $1.
+    let search_pattern = search
+        .as_ref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| format!("%{}%", s));
+    let filter_sql = if search_pattern.is_some() {
+        " AND (first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1 OR username ILIKE $1)"
+    } else {
+        ""
+    };
+
+    // Get total count (excluding soft-deleted), with the optional search filter.
+    let count_sql = format!(
+        "SELECT COUNT(*) FROM person WHERE deleted_at IS NULL{}",
+        filter_sql
+    );
+    let mut count_query = sqlx::query_scalar::<_, i64>(&count_sql);
+    if let Some(ref pattern) = search_pattern {
+        count_query = count_query.bind(pattern);
+    }
+    let total: Option<i64> = count_query
+        .fetch_optional(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?;
     let total = total.unwrap_or(0);
 
     // Get paginated persons - order by last_name, first_name, or username/email if no name
-    let persons = sqlx::query_as::<_, Person>(
+    // LIMIT/OFFSET placeholders shift when the search filter occupies $1.
+    let (limit_ph, offset_ph) = if search_pattern.is_some() {
+        ("$2", "$3")
+    } else {
+        ("$1", "$2")
+    };
+    let select_sql = format!(
         r#"
-        SELECT id, first_name, last_name, email, phone, 
+        SELECT id, first_name, last_name, email, phone,
                username, password_hash, role,
                clearance_level, department, position,
                deleted_at, created_at, updated_at
-        FROM person 
-        WHERE deleted_at IS NULL
-        ORDER BY 
-            COALESCE(last_name, ''), 
-            COALESCE(first_name, ''), 
+        FROM person
+        WHERE deleted_at IS NULL{}
+        ORDER BY
+            COALESCE(last_name, ''),
+            COALESCE(first_name, ''),
             COALESCE(username, email, '')
-        LIMIT $1 OFFSET $2
-        "#
-    )
-    .bind(pagination.limit())
-    .bind(pagination.offset())
-    .fetch_all(db.inner())
-    .await
-    .map_err(|_| Status::InternalServerError)?;
+        LIMIT {} OFFSET {}
+        "#,
+        filter_sql, limit_ph, offset_ph
+    );
+    let mut select_query = sqlx::query_as::<_, Person>(&select_sql);
+    if let Some(ref pattern) = search_pattern {
+        select_query = select_query.bind(pattern);
+    }
+    let persons = select_query
+        .bind(pagination.limit())
+        .bind(pagination.offset())
+        .fetch_all(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?;
 
     // Calculate total pages
     let total_pages = ((total as f64) / (pagination.per_page as f64)).ceil() as i32;
@@ -83,7 +115,7 @@ pub async fn get_person(
                deleted_at, created_at, updated_at
         FROM person 
         WHERE id = $1 AND deleted_at IS NULL
-        "#
+        "#,
     )
     .bind(id)
     .fetch_optional(db.inner())
@@ -104,10 +136,11 @@ pub async fn create_person(
     person_request.validate().map_err(|_| Status::BadRequest)?;
 
     // Validate that person has at least some identity
-    if person_request.first_name.is_none() 
-        && person_request.last_name.is_none() 
-        && person_request.email.is_none() 
-        && person_request.username.is_none() {
+    if person_request.first_name.is_none()
+        && person_request.last_name.is_none()
+        && person_request.email.is_none()
+        && person_request.username.is_none()
+    {
         return Err(Status::BadRequest);
     }
 
@@ -151,7 +184,7 @@ pub async fn create_person(
                   username, password_hash, role,
                   clearance_level, department, position,
                   deleted_at, created_at, updated_at
-        "#
+        "#,
     )
     .bind(&person_request.first_name)
     .bind(&person_request.last_name)
@@ -185,7 +218,7 @@ pub async fn update_person(
 
     // Check if person exists and is not deleted
     let exists: bool = sqlx::query_scalar::<_, bool>(
-        "SELECT EXISTS(SELECT 1 FROM person WHERE id = $1 AND deleted_at IS NULL)"
+        "SELECT EXISTS(SELECT 1 FROM person WHERE id = $1 AND deleted_at IS NULL)",
     )
     .bind(id)
     .fetch_one(db.inner())
@@ -273,7 +306,7 @@ pub async fn update_person(
 
     // Use runtime query builder for dynamic updates
     let mut query_builder = sqlx::query_as::<_, Person>(&query);
-    
+
     if let Some(ref first_name) = person_request.first_name {
         query_builder = query_builder.bind(first_name);
     }
@@ -304,7 +337,7 @@ pub async fn update_person(
     if let Some(ref position) = person_request.position {
         query_builder = query_builder.bind(position);
     }
-    
+
     query_builder = query_builder.bind(id);
 
     let person = query_builder
@@ -327,7 +360,7 @@ pub async fn delete_person(
         UPDATE person 
         SET deleted_at = CURRENT_TIMESTAMP 
         WHERE id = $1 AND deleted_at IS NULL
-        "#
+        "#,
     )
     .bind(id)
     .execute(db.inner())
@@ -355,4 +388,3 @@ mod tests {
         assert_eq!(params.limit(), 20);
     }
 }
-

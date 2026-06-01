@@ -21,13 +21,10 @@ test.describe("Person Management", () => {
     ).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
 
-    // Column headers present
-    await expect(
-      page.getByRole("columnheader", { name: "Name" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("columnheader", { name: "Clearance" }),
-    ).toBeVisible();
+    // Column headers present (assert by <th> tag — this PW version maps these
+    // <th> to "cell" rather than "columnheader").
+    await expect(page.locator("th", { hasText: "Name" })).toBeVisible();
+    await expect(page.locator("th", { hasText: "Clearance" })).toBeVisible();
   });
 
   test("should create new person", async ({ page }) => {
@@ -43,7 +40,9 @@ test.describe("Person Management", () => {
     await page
       .getByPlaceholder("Email")
       .fill(`test.user.${timestamp}@example.com`);
-    await page.getByPlaceholder("Department").fill("Testing");
+    // Department is intentionally left blank: the API only accepts a department
+    // that matches an existing organization, and an empty one is sent as
+    // undefined (skipping that check).
     await page.getByPlaceholder("Position").fill("Test Engineer");
 
     // Clearance is a Radix Select: open the combobox, pick an option
@@ -108,9 +107,17 @@ test.describe("Person Management", () => {
     }
   });
 
-  // APP GAP: there is no search/filter input on the Person Management page.
-  test.fixme(
-    true,
-    "APP GAP: Person Management page has no search/filter control",
-  );
+  test("filters persons with the search box", async ({ page }) => {
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+
+    // Seed data includes John Doe and Jane Smith.
+    await expect(page.getByText("John Doe")).toBeVisible();
+    await expect(page.getByText("Jane Smith")).toBeVisible();
+
+    // Server-side search narrows the list to matching names.
+    await page.getByPlaceholder("Search persons").fill("Doe");
+
+    await expect(page.getByText("John Doe")).toBeVisible();
+    await expect(page.getByText("Jane Smith")).toHaveCount(0);
+  });
 });

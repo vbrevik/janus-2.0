@@ -8,7 +8,6 @@ import { loginViaApi } from "./helpers/auth";
 
 const TEST_CREDENTIALS = {
   admin: { username: "admin", password: "password123" },
-  // APP GAP: no enduser/official seed users exist — see test.fixme below.
   enduser: { username: "enduser", password: "password123" },
   official: { username: "official", password: "password123" },
 };
