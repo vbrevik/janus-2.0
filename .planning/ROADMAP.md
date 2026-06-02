@@ -56,7 +56,12 @@ See `.planning/milestones/v2.1-ROADMAP.md` for full phase details. Audit: `.plan
   5. `canIssueResourceGrant(actor, resource, now)` returns `true` for an active ADMIN-org actor and for an active delegate, `false` for non-ADMIN/no-delegate and expired-delegate actors (delegation enforced — closes the v2.1 DELEG-03 gap)
   6. `seed.ts` contains a policy-shift example resource (RSRC-SEED-06) and a non-baseline-policy example resource (RSRC-SEED-07), each resolved by a passing test
   7. `npm run test` passes with zero failures and zero TypeScript errors after all Phase 9 additions to `model.ts`, `seed.ts`, and the new `digital-resource.test.ts`
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [ ] 09-01-PLAN.md — Digital-resource types + pure data helpers (nodes, org_links, policy/grant/delegate types, window/classification/policy-selector/validator helpers)
+- [ ] 09-02-PLAN.md — Gate evaluators + resolveResourceAccess dispatcher + canIssueResourceGrant (fail-closed, no cross-tier inheritance, advisory non-blocking)
+- [ ] 09-03-PLAN.md — digital-resource.test.ts blocking Vitest suite (one named test per acceptance criterion)
+- [ ] 09-04-PLAN.md — SEED-06 policy-shift + SEED-07 non-baseline fixtures in seed.ts + seed-resolution tests
 
 ### Phase 10: Mock Dataset & WorldState
 **Goal**: A realistic 6-unit mock dataset is loaded into `WorldState` via a `DigitalResourceWorld` sub-object, covering all required data shapes (active/expired/future grants, policy shift over time, non-baseline policy, zone-prereq link to v2.1).
