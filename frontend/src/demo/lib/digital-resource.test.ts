@@ -47,6 +47,9 @@ import {
   type ZoneNode,
   type PhysicalAccessGrant,
 } from "./model";
+// Seed integration tests (the SEED-06/07 cases) — the ONE place this file imports
+// real seed fixtures. Unit tests above stay inline (D3-13 pattern).
+import { RESOURCE_NODES, RESOURCE_GRANTS } from "./seed";
 
 // --- Shared fixed clock ---
 // Plain NOW for the inline unit fixtures (mirrors physical-access.test.ts line 214).
@@ -865,5 +868,87 @@ describe("explainable-trace", () => {
     // policyVersion matches the selected assignment's window.
     expect(result.policyVersion?.valid_from).toEqual(assignment.valid_from);
     expect(result.policyVersion?.valid_until).toEqual(assignment.valid_until);
+  });
+});
+
+// --- Seed integration tests (req 11 / RSRC-SEED-06 + RSRC-SEED-07) ---
+// These resolve the REAL seed fixtures (RESOURCE_NODES / RESOURCE_GRANTS from
+// ./seed), proving the time-versioned + parameterized-gate engine against seeded
+// data, not just inline unit fixtures. NOW_A (Feb, window A) and NOW_B (Apr,
+// window B) straddle the 2026-03-01 incident boundary (D-04). subj-1 (Dana,
+// MILITARY_1, SECRET) is the seeded subject.
+describe("seed integration: digital-resource fixtures", () => {
+  const milnet = RESOURCE_NODES.find((n) => n.name === "MilNet")!;
+  const intelnet = RESOURCE_NODES.find((n) => n.name === "IntelNet")!;
+
+  it("seed-06-shift-resolves: ALLOW before / DENY after the incident date (same person)", () => {
+    // Window A (Feb): baseline policy — subj-1 has clearance (SECRET >= SECRET) and
+    // an own-tier grant; a Network has no parent => PARENT_TIER passes. => ALLOW.
+    const before = resolveResourceAccess(
+      "subj-1",
+      "SECRET",
+      "MILITARY_1",
+      milnet,
+      RESOURCE_NODES,
+      [],
+      RESOURCE_GRANTS,
+      [],
+      [],
+      NOW_A,
+    );
+    expect(before.allow).toBe(true);
+    expect(before.gates.some((g) => g.kind === "REQUIRED_ROLE")).toBe(false);
+
+    // Window B (Apr): tightened policy adds REQUIRED_ROLE:SECURITY_APPROVAL.
+    // MILITARY_1 holds only an ADMIN org_link on MilNet (no SECURITY_APPROVAL),
+    // so the same person now fails the extra gate. => DENY.
+    const after = resolveResourceAccess(
+      "subj-1",
+      "SECRET",
+      "MILITARY_1",
+      milnet,
+      RESOURCE_NODES,
+      [],
+      RESOURCE_GRANTS,
+      [],
+      [],
+      NOW_B,
+    );
+    expect(after.allow).toBe(false);
+    const roleGate = after.gates.find((g) => g.kind === "REQUIRED_ROLE");
+    expect(roleGate).toBeDefined();
+    expect(roleGate!.pass).toBe(false);
+    expect(roleGate!.reason).toBe("MISSING_REQUIRED_ROLE");
+
+    // The two resolutions selected DIFFERENT policy windows, and the gate sets differ.
+    expect(after.policyVersion).not.toEqual(before.policyVersion);
+    expect(before.policyVersion?.valid_until).toEqual(SHIFT_BOUNDARY);
+    expect(after.policyVersion?.valid_from).toEqual(SHIFT_BOUNDARY);
+    expect(after.gates.length).toBeGreaterThan(before.gates.length);
+  });
+
+  it("seed-07-non-baseline-applied: non-baseline policy (REQUIRED_ROLE) is the one resolved", () => {
+    // IntelNet's single active policy is the non-baseline one: the REQUIRED_ROLE
+    // gate must appear in the trace (not the baseline three-gate set). MILITARY_1
+    // holds an active SECURITY_APPROVAL org_link here, so the gate is satisfied.
+    const result = resolveResourceAccess(
+      "subj-1",
+      "SECRET",
+      "MILITARY_1",
+      intelnet,
+      RESOURCE_NODES,
+      [],
+      RESOURCE_GRANTS,
+      [],
+      [],
+      NOW_A,
+    );
+    const roleGate = result.gates.find((g) => g.kind === "REQUIRED_ROLE");
+    expect(roleGate).toBeDefined();
+    expect(roleGate!.pass).toBe(true);
+    expect(roleGate!.reason).toBe("REQUIRED_ROLE_PRESENT");
+    // The non-baseline policy has the baseline three gates PLUS the role gate.
+    expect(result.gates).toHaveLength(BASELINE_GATES.length + 1);
+    expect(result.allow).toBe(true);
   });
 });
