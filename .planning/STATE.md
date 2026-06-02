@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Platform, Network & Application Access
 status: planning
-last_updated: "2026-06-02T05:48:21.547Z"
+last_updated: "2026-06-02"
 last_activity: 2026-06-02
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -17,30 +17,30 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-23 for v2.1 milestone)
+See: .planning/PROJECT.md (updated 2026-06-02 for v2.2 milestone)
 
-**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — the federated ABAC model is proven. v2.1 deepens the physical access domain with NSM-grounded zone hierarchy, delegation, and entry logging.
-**Current focus:** v2.1 archived (2026-06-01). Next milestone v2.2 Platform/Network/App Access (demo) — run `/gsd-new-milestone` to refresh requirements and roadmap Phases 9–11.
+**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — federated ABAC model proven through v2.1.
+**Current focus:** v2.2 Phase 9 — Digital Resource Model & Policy Engine (ready to plan)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-06-02 — Milestone v2.2 started
+Phase: 9 of 11 (Digital Resource Model & Policy Engine)
+Plan: — (not yet planned)
+Status: Ready to plan
+Last activity: 2026-06-02 — Roadmap created for v2.2 Phases 9–11
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
 **Velocity:**
-
-- Total plans completed: 4 (2 from phase 8)
+- Total plans completed: 4 (from Phase 8)
 - Average duration: ~8 min
-- Total execution time: ~16 min (phase 8)
+- Total execution time: ~16 min (Phase 8)
 
-| Phase | Plan | Duration | Tasks | Files |
-|-------|------|----------|-------|-------|
-| 08 | 01 | 8 min | 2 | 2 |
-| 08 | 02 | 7 min | 2 | 5 |
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| 08 | 2 | ~16 min | ~8 min |
 
 *Updated after each plan completion*
 
@@ -49,26 +49,18 @@ Last activity: 2026-06-02 — Milestone v2.2 started
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-Carried forward from v2.0:
 
-- All 9 spikes VALIDATED (2026-05-20/21) — every mechanism in the 6-unit scenario proven
-- Demo is frontend-mock-first; no new Rust/backend work required for v2.1
-- Spike code stays isolated in `frontend/src/spikes/` behind `/spikes.html` entry; no routeTree changes
-- Demo stays in `frontend/src/demo/` isolation — no routeTree.gen.ts changes for v2.1
-
-v2.1 decisions:
-
-- Physical access zones: demo/mock only — Rust/PostgreSQL backend defers to later milestone
-- Clearance ladder extended from 4 to 5 tiers: UNCLASSIFIED → RESTRICTED → CONFIDENTIAL → SECRET → TOP_SECRET
-- Zone access rules grounded in NSM (SEED-003): CONTROLLED = authz only, RESTRICTED = clearance req, SECURED = SECRET+ + per-zone auth
-- Escorted persons receive visitor passes (trackable; tied to escort + entry log entry)
-- Site-level grants are rare in practice — mock dataset should be primarily Building + Room level; Site grants reserved for edge cases (e.g. site commander, top-level security officer)
-- Inheritance model: zone-type scoped + explicit overrides. A grant covers children of the SAME zone_type only. Children with a higher zone_type (RESTRICTED/SECURED) never inherit — they always require explicit grants. Additionally, individual zones can carry `requires_explicit_auth: true` to force explicit grants even within the same zone_type.
-- Zone_type ceiling per level: SECURED zones never exist at the SITE level — too broad a scope. Sites can be CONTROLLED or RESTRICTED. SECURED is only valid at Building or Room level.
+v2.2 key decisions (from research/ARCHITECTURE.md and PITFALLS.md):
+- Application has NO `classification` field — inherited from Platform at resolution time (anti-pattern 2)
+- Zone-prerequisite is advisory (non-blocking `zoneAdvisory` field, never affects `allow`) — see Pitfall 2
+- Cross-tier inheritance is explicitly blocked — Gate 2 checks exact-resource grant, Gate 3 checks parent tier independently — see Pitfall 1
+- WorldState extension uses `digitalResources: DigitalResourceWorld` sub-object, not flat fields — see Pitfall 4
+- Digital-resource types appended to existing `lib/model.ts` (not a new file) to avoid circular imports with zone-prereq wiring
+- `TOGGLE_RESOURCE_GRANT` uses `resourceGrantId` field (not `grantId`) to avoid collision with physical `TOGGLE_GRANT`
 
 ### Pending Todos
 
-None yet.
+None.
 
 ### Blockers/Concerns
 
@@ -76,7 +68,7 @@ None.
 
 ## Deferred Items
 
-Items deferred from v2.0, carried forward:
+Items deferred from v2.0/v2.1, carried forward:
 
 | Category | Item | Status |
 |----------|------|--------|
@@ -86,17 +78,16 @@ Items deferred from v2.0, carried forward:
 | seed | 006-nda-requirements | dormant |
 | seed | 007-taushetserklaering-form | dormant |
 | seed | 008-clearance-import-mapping | dormant |
-| seed | 009-info-system-security-requirements | dormant |
+| seed | 009-info-system-security-requirements | active (SEED-009 grounds v2.2) |
 | seed | 010-personnel-security-annotations | dormant |
 | seed | 011-demo-to-fullstack-transition | dormant |
 | seed | 001-pob-form-engine | dormant |
-| seed | 003-access-requirements-crosswalk | **active — selected for v2.1** |
 | stretch | AUDIT-03 leak/anomaly indicator | future/stretch |
 | stretch | CTX-04 home guard territorial scoping | future/stretch |
 | stretch | SCOPE-01 real data-level ownership scoping | future/stretch |
 
 ## Session Continuity
 
-Last session: 2026-05-23T21:37:27.333Z
-Stopped at: Completed 08-02-PLAN.md
+Last session: 2026-06-02
+Stopped at: Roadmap written — Phases 9–11 defined, REQUIREMENTS.md traceability filled
 Resume file: None

@@ -93,4 +93,32 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _(filled by roadmap)_ | | |
+| RSRC-01 | Phase 9 | Pending |
+| RSRC-02 | Phase 9 | Pending |
+| RSRC-03 | Phase 9 | Pending |
+| RSRC-04 | Phase 9 | Pending |
+| RSRC-05 | Phase 9 | Pending |
+| RSRC-POLICY-01 | Phase 9 | Pending |
+| RSRC-POLICY-02 | Phase 9 | Pending |
+| RSRC-POLICY-03 | Phase 9 | Pending |
+| RSRC-POLICY-04 | Phase 9 | Pending |
+| RSRC-POLICY-05 | Phase 9 | Pending |
+| RSRC-ACCESS-01 | Phase 9 | Pending |
+| RSRC-ACCESS-02 | Phase 9 | Pending |
+| RSRC-ACCESS-03 | Phase 9 | Pending |
+| RSRC-ACCESS-04 | Phase 9 | Pending |
+| RSRC-ACCESS-05 | Phase 9 | Pending |
+| RSRC-GRANT-01 | Phase 9 | Pending |
+| RSRC-GRANT-02 | Phase 9 | Pending |
+| RSRC-GRANT-03 | Phase 9 | Pending |
+| RSRC-DELEG-01 | Phase 9 | Pending |
+| RSRC-SEED-01 | Phase 10 | Pending |
+| RSRC-SEED-02 | Phase 10 | Pending |
+| RSRC-SEED-03 | Phase 10 | Pending |
+| RSRC-SEED-04 | Phase 10 | Pending |
+| RSRC-SEED-05 | Phase 10 | Pending |
+| RSRC-SEED-06 | Phase 10 | Pending |
+| RSRC-SEED-07 | Phase 10 | Pending |
+| RSRC-UI-01 | Phase 11 | Pending |
+| RSRC-UI-02 | Phase 11 | Pending |
+| RSRC-UI-03 | Phase 11 | Pending |
