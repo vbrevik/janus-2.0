@@ -1052,3 +1052,116 @@ export function evaluateGate(
     }
   }
 }
+
+// resolveResourceAccess (req 5/7/8/9, D-03): the gate-loop dispatcher. Mirrors the
+// resolveZoneAccess signature style — explicit `now: Date`, explicit subject
+// personId/clearance/orgId, arrays passed in. Pure: no Date.now()/new Date().
+//
+// Steps:
+//   1. selectActivePolicy(now) — null => fail-closed NO_ACTIVE_POLICY DENY (D-03).
+//   2. effectiveClassification(resource) once (single-hop for Applications).
+//   3. Loop policy.gates IN LIST ORDER, evaluateGate each, collect a trace entry;
+//      allow = AND of every gate.pass.
+//   4. If policy.zone_prereq_id !== null, call the REUSED resolveZoneAccess
+//      UNCHANGED and attach to zoneAdvisory — which NEVER feeds `allow` (req 8).
+//   5. policyVersion = the selected assignment's window (req 9).
+export function resolveResourceAccess(
+  subject: string,
+  subjectClearance: Clearance,
+  subjectOrgId: string,
+  resource: NetworkNode | PlatformNode | ApplicationNode,
+  allNetworks: NetworkNode[],
+  allPlatforms: PlatformNode[],
+  allGrants: ResourceAccessGrant[],
+  allZones: ZoneNode[],
+  allPhysicalGrants: PhysicalAccessGrant[],
+  now: Date,
+): ResourceAccessResult {
+  // Step 1: select the active policy. Uncovered timestamp => fail-closed DENY (D-03).
+  const assignment = selectActivePolicy(resource.policy_assignments, now);
+  if (assignment === null) {
+    return {
+      allow: false,
+      gates: [],
+      zoneAdvisory: null,
+      policyVersion: null,
+      reason: "NO_ACTIVE_POLICY",
+    };
+  }
+  const policy = assignment.policy;
+
+  // Step 2: derive the effective classification once (single-hop for Applications).
+  const effectiveClass = effectiveClassification(resource, allPlatforms);
+  const ctx: GateContext = {
+    subject,
+    subjectClearance,
+    subjectOrgId,
+    effectiveClassification: effectiveClass,
+    resource,
+    allNetworks,
+    allPlatforms,
+    grants: allGrants,
+    now,
+  };
+
+  // Step 3: evaluate gates in list order; allow = AND of all gate pass values.
+  const gates: ResourceGateResult[] = policy.gates.map((gate) =>
+    evaluateGate(gate, ctx),
+  );
+  const allow = gates.every((g) => g.pass);
+
+  // Step 4: advisory zone prerequisite (req 8). Reuse resolveZoneAccess UNCHANGED;
+  // attach independently. zoneAdvisory NEVER changes `allow`.
+  let zoneAdvisory: ZoneAccessResult | null = null;
+  if (policy.zone_prereq_id !== null) {
+    const zone = allZones.find((z) => z.id === policy.zone_prereq_id);
+    if (zone) {
+      zoneAdvisory = resolveZoneAccess(
+        subject,
+        zone,
+        subjectClearance,
+        /* hasValidEscort */ false,
+        allZones,
+        allPhysicalGrants,
+        now,
+      );
+    }
+  }
+
+  // Step 5: explainable trace with the applied policy version.
+  return {
+    allow,
+    gates,
+    zoneAdvisory,
+    policyVersion: {
+      valid_from: assignment.valid_from,
+      valid_until: assignment.valid_until,
+    },
+  };
+}
+
+// canIssueResourceGrant (req 10 — closes the v2.1 DELEG-03 gap, which was type-only).
+// True iff the actor org holds an active ADMIN org_link on the resource OR an active
+// matching ResourceAccessDelegate (ORG delegate matching actorOrgId). Non-ADMIN /
+// no-delegate actors and expired delegates => false. Pure, explicit `now`.
+export function canIssueResourceGrant(
+  actorOrgId: string,
+  resource: NetworkNode | PlatformNode | ApplicationNode,
+  allDelegates: ResourceAccessDelegate[],
+  now: Date,
+): boolean {
+  // ADMIN path: an active ADMIN org_link held by the actor org.
+  const adminLinks = activeOrgLinksForRole(resource.org_links, "ADMIN", now);
+  if (adminLinks.some((link) => link.org_id === actorOrgId)) {
+    return true;
+  }
+  // Delegate path: an active matching ResourceAccessDelegate for this resource and
+  // actor org (ORG delegate). Expired delegates fail the isWindowActive check.
+  return allDelegates.some(
+    (d) =>
+      d.resource_id === resource.id &&
+      d.delegate_type === "ORG" &&
+      d.delegate_org_id === actorOrgId &&
+      isWindowActive(d.valid_from, d.valid_until, now),
+  );
+}
