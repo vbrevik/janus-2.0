@@ -793,3 +793,108 @@ export interface ResourceAccessResult {
   policyVersion: { valid_from: Date | null; valid_until: Date | null } | null;
   reason?: string;
 }
+
+// --- Phase 9 pure helpers (v2.2) ---
+// Every time-dependent helper takes an explicit `now: Date`; NONE call
+// Date.now()/new Date() internally (Constraint, PITFALLS #5) so point-in-time
+// tests stay deterministic.
+
+// The SINGLE shared active-window helper for ALL Phase 9 time windows
+// (org_links, policy_assignments, and Plan 02's grant/delegate checks).
+// Reproduces isGrantActive's rule EXACTLY: both boundaries inclusive, null =
+// unbounded on that side. Do NOT introduce a divergent <,> convention.
+export function isWindowActive(
+  valid_from: Date | null,
+  valid_until: Date | null,
+  now: Date,
+): boolean {
+  return (
+    (valid_from === null || valid_from <= now) &&
+    (valid_until === null || valid_until >= now)
+  );
+}
+
+// Active org-role links at `now` (RSRC-04, req 3) — windowed via isWindowActive.
+export function activeOrgLinks(orgLinks: OrgLink[], now: Date): OrgLink[] {
+  return orgLinks.filter((link) =>
+    isWindowActive(link.valid_from, link.valid_until, now),
+  );
+}
+
+// Active org-role links matching an exact role at `now` (RSRC-04, req 3).
+export function activeOrgLinksForRole(
+  orgLinks: OrgLink[],
+  role: string,
+  now: Date,
+): OrgLink[] {
+  return activeOrgLinks(orgLinks, now).filter((link) => link.role === role);
+}
+
+// Effective classification (RSRC-02, req 2). Network/Platform return their own
+// stored classification. Application has NO stored classification — derive it via
+// a SINGLE-HOP app -> platform lookup (NOT the multi-hop getAncestors walk, which
+// would leak cross-tier inheritance, req 7 / T-09-01). Fail closed if the host
+// Platform is missing: throw a clear seed-config error rather than returning a
+// permissive default.
+export function effectiveClassification(
+  node: NetworkNode | PlatformNode | ApplicationNode,
+  allPlatforms: PlatformNode[],
+): Clearance {
+  if (node.tier === "APPLICATION") {
+    const platform = allPlatforms.find((p) => p.id === node.platform_id);
+    if (!platform) {
+      // Fail closed: an Application with no resolvable host Platform is a seed
+      // integrity error; never silently treat it as low-classification.
+      throw new Error(
+        `effectiveClassification: platform "${node.platform_id}" not found for application "${node.id}"`,
+      );
+    }
+    return platform.classification;
+  }
+  return node.classification;
+}
+
+// Select the single policy assignment whose window contains `now`
+// (RSRC-POLICY-02; boundary rule consistent with isGrantActive). Returns null
+// when no assignment covers the timestamp — the Plan 02 resolver turns null into
+// the fail-closed NO_ACTIVE_POLICY DENY (D-03 / T-09-02). Selector itself never
+// throws and never returns a baseline default.
+export function selectActivePolicy(
+  policy_assignments: PolicyAssignment[],
+  now: Date,
+): PolicyAssignment | null {
+  return (
+    policy_assignments.find((a) =>
+      isWindowActive(a.valid_from, a.valid_until, now),
+    ) ?? null
+  );
+}
+
+// Seed-config validator (req 4 / T-09-04): returns a descriptive error string if
+// any two policy-assignment windows overlap (using the inclusive boundary rule),
+// else null. Mirrors validateEntryLog's `string | null` contract — never throws.
+// This is a seed-data check, NOT a resolver path.
+export function validatePolicyWindows(
+  policy_assignments: PolicyAssignment[],
+): string | null {
+  for (let i = 0; i < policy_assignments.length; i++) {
+    for (let j = i + 1; j < policy_assignments.length; j++) {
+      const a = policy_assignments[i];
+      const b = policy_assignments[j];
+      // Inclusive overlap: a.from <= b.until && b.from <= a.until, with null =
+      // unbounded on the respective side.
+      const aStartsBeforeBEnds =
+        a.valid_from === null ||
+        b.valid_until === null ||
+        a.valid_from <= b.valid_until;
+      const bStartsBeforeAEnds =
+        b.valid_from === null ||
+        a.valid_until === null ||
+        b.valid_from <= a.valid_until;
+      if (aStartsBeforeBEnds && bStartsBeforeAEnds) {
+        return `overlapping policy windows: "${a.policy.id}" and "${b.policy.id}"`;
+      }
+    }
+  }
+  return null;
+}
