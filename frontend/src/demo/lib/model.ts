@@ -898,3 +898,157 @@ export function validatePolicyWindows(
   }
   return null;
 }
+
+// --- Phase 9 gate-dispatch engine (v2.2, Plan 02) ---
+//
+// Data-driven, time-versioned, fail-closed authorization with an explainable
+// trace. Each baseline gate kind maps to ONE pure evaluator; resolveResourceAccess
+// loops the active policy's gates in list order and dispatches by kind. Three
+// structural invariants are enforced here (see PITFALLS / threat register):
+//   - OWN_TIER_GRANT is a FLAT resource_id match — NO getAncestors/resolveGrant
+//     ancestor walk (req 7 / T-09-06: no cross-tier inheritance leak).
+//   - zoneAdvisory is attached separately and NEVER feeds `allow` (req 8 / T-09-07).
+//   - unknown gate kind + no-active-policy both FAIL CLOSED (req 5 / D-03 / T-09-05/08).
+// All functions are pure with an explicit `now: Date` — no Date.now()/new Date().
+
+// Evaluation context (req 5 extension point): everything a gate evaluator needs.
+// Adding a gate kind = adding one evaluator + one `case` in evaluateGate — no
+// runtime plugin registry. `effectiveClassification` is pre-derived once by the
+// resolver (single-hop app->platform for Applications) so evaluators never walk.
+export interface GateContext {
+  subject: string; // subject personId
+  subjectClearance: Clearance;
+  subjectOrgId: string; // subject's org, for REQUIRED_ROLE membership
+  effectiveClassification: Clearance; // pre-derived resource classification
+  resource: NetworkNode | PlatformNode | ApplicationNode;
+  allNetworks: NetworkNode[];
+  allPlatforms: PlatformNode[];
+  grants: ResourceAccessGrant[];
+  now: Date;
+}
+
+// CLEARANCE gate (req 6): subject clearance rank >= effective resource classification.
+// Mirrors evaluateSecuredAccess's CLEARANCE_RANK comparison.
+export function evaluateClearanceGate(ctx: GateContext): ResourceGateResult {
+  const pass =
+    CLEARANCE_RANK[ctx.subjectClearance] >=
+    CLEARANCE_RANK[ctx.effectiveClassification];
+  return {
+    kind: "CLEARANCE",
+    pass,
+    reason: pass ? "CLEARANCE_OK" : "INSUFFICIENT_CLEARANCE",
+  };
+}
+
+// OWN_TIER_GRANT gate (req 6, req 7): pass iff an active ResourceAccessGrant exists
+// for THIS subject on THIS resource id. FLAT match only — deliberately NO ancestor
+// walk (no getAncestors/resolveGrant): a Network grant must NOT satisfy a Platform's
+// own-tier gate (cross-tier-inheritance-blocked, T-09-06).
+export function evaluateOwnTierGrantGate(ctx: GateContext): ResourceGateResult {
+  const grant = ctx.grants.find(
+    (g) =>
+      g.person_id === ctx.subject &&
+      g.resource_id === ctx.resource.id &&
+      isWindowActive(g.valid_from, g.valid_until, ctx.now),
+  );
+  return {
+    kind: "OWN_TIER_GRANT",
+    pass: grant !== undefined,
+    reason: grant !== undefined ? "OWN_TIER_GRANT_FOUND" : "NO_OWN_TIER_GRANT",
+  };
+}
+
+// PARENT_TIER_GRANT gate (req 6): a SEPARATE explicit check on the single parent id
+// (Platform -> network_id, Application -> platform_id). Network has no parent and
+// passes trivially. This is the parent prerequisite that the own-tier gate must NOT
+// fold in (keeps cross-tier inheritance structurally impossible, req 7).
+export function evaluateParentTierGrantGate(
+  ctx: GateContext,
+): ResourceGateResult {
+  const resource = ctx.resource;
+  if (resource.tier === "NETWORK") {
+    // No parent — trivially satisfied.
+    return {
+      kind: "PARENT_TIER_GRANT",
+      pass: true,
+      reason: "NO_PARENT_TIER",
+    };
+  }
+  const parentId =
+    resource.tier === "PLATFORM" ? resource.network_id : resource.platform_id;
+  const grant = ctx.grants.find(
+    (g) =>
+      g.person_id === ctx.subject &&
+      g.resource_id === parentId &&
+      isWindowActive(g.valid_from, g.valid_until, ctx.now),
+  );
+  return {
+    kind: "PARENT_TIER_GRANT",
+    pass: grant !== undefined,
+    reason:
+      grant !== undefined ? "PARENT_TIER_GRANT_FOUND" : "NO_PARENT_TIER_GRANT",
+  };
+}
+
+// REQUIRED_ROLE gate (D-02, needed by SEED-06/07): pass iff the subject's org holds
+// an active org_link on the resource with the descriptor's `role` (via
+// activeOrgLinksForRole). Open-vocabulary role string per D-01.
+export function evaluateRequiredRoleGate(
+  gate: { kind: "REQUIRED_ROLE"; role: string },
+  ctx: GateContext,
+): ResourceGateResult {
+  const matches = activeOrgLinksForRole(
+    ctx.resource.org_links,
+    gate.role,
+    ctx.now,
+  );
+  const pass = matches.some((link) => link.org_id === ctx.subjectOrgId);
+  return {
+    kind: "REQUIRED_ROLE",
+    pass,
+    reason: pass ? "REQUIRED_ROLE_PRESENT" : "MISSING_REQUIRED_ROLE",
+  };
+}
+
+// Compile-time exhaustiveness guard over the KNOWN baseline gate-kind union. This
+// is the type-level layer (PATTERNS "two layers"); the runtime fail-closed layer is
+// evaluateGate's `default` branch, which catches injected unknown string kinds.
+function assertNeverGateKind(x: never): never {
+  throw new Error(`Unhandled gate kind: ${String(x)}`);
+}
+
+// Gate dispatcher (req 5): switch on the descriptor kind, routing each baseline
+// kind to its evaluator. The `default` branch FAILS CLOSED for any unknown/injected
+// kind — { pass: false, reason: 'UNKNOWN_GATE_KIND' }, never a silent ALLOW
+// (T-09-05). Adding a gate kind = adding one `case` + one evaluator.
+export function evaluateGate(
+  gate: GateDescriptor,
+  ctx: GateContext,
+): ResourceGateResult {
+  switch (gate.kind) {
+    case "CLEARANCE":
+      return evaluateClearanceGate(ctx);
+    case "OWN_TIER_GRANT":
+      return evaluateOwnTierGrantGate(ctx);
+    case "PARENT_TIER_GRANT":
+      return evaluateParentTierGrantGate(ctx);
+    case "REQUIRED_ROLE":
+      return evaluateRequiredRoleGate(
+        gate as { kind: "REQUIRED_ROLE"; role: string },
+        ctx,
+      );
+    default: {
+      // Runtime fail-closed for injected unknown kinds (req 5). The
+      // assertNeverGateKind call documents compile-time exhaustiveness over the
+      // baseline union; the open `string & {}` member makes `gate.kind` reachable
+      // here at runtime, so we MUST return an explicit DENY (never pass: true).
+      const known = gate as { kind: never };
+      void assertNeverGateKind;
+      return {
+        kind: (known as unknown as { kind: string }).kind,
+        pass: false,
+        reason: "UNKNOWN_GATE_KIND",
+      };
+    }
+  }
+}
