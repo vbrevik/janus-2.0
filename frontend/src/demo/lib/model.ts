@@ -647,3 +647,149 @@ export interface Credential {
   payload: AttrClaims;
   sig: string; // base64 HMAC-SHA256 over canonical(payload)
 }
+
+// --- Phase 9: Digital Resource hierarchy model (v2.2) ---
+//
+// Append-only. Mirrors the v2.1 zone model exactly: flat interfaces, string-FK
+// links, the inclusive/null active-window rule (isGrantActive), and structured
+// {allow, gate, reason}-style results. Resolver + tests live in Plans 02/03.
+//
+// Strict tree (RSRC-05): NetworkNode -> PlatformNode (one network_id) ->
+// ApplicationNode (one platform_id). NetworkNode/PlatformNode carry a
+// `classification: Clearance`; ApplicationNode deliberately carries NONE — an
+// Application's effective classification is DERIVED from its host Platform at
+// resolution time (RSRC-02, req 2), never stored on the node.
+
+// Resource-tier discriminator for the three-tier hierarchy.
+export type ResourceTier = "NETWORK" | "PLATFORM" | "APPLICATION";
+
+// Baseline org-link roles. The role vocabulary is OPEN (RSRC-04, D-discretion):
+// `(string & {})` keeps the union open at the type edge while preserving
+// autocomplete on the four baseline values.
+export type BaselineOrgRole =
+  | "ADMIN"
+  | "ASSET_OWNER"
+  | "OPERATOR"
+  | "SECURITY_APPROVAL";
+
+// A time-windowed role-tagged org association on a resource node (RSRC-04, req 3).
+// Generalizes v2.1's fixed admin_org_id/asset_owner_org_id into a list. `org_id`
+// is a plain string and accepts UnitId values (e.g. "MILITARY_1", "INTEL").
+// Window semantics are the v2.1 inclusive/null rule (see isWindowActive).
+export interface OrgLink {
+  org_id: string;
+  role: BaselineOrgRole | (string & {});
+  valid_from: Date | null;
+  valid_until: Date | null;
+}
+
+// Parameterized gate descriptor (D-01/D-02). Baseline kinds carry no params;
+// REQUIRED_ROLE carries a role param. The union is kept OPEN at the type edge
+// via `{ kind: string & {}; [k: string]: unknown }` so a runtime-injected unknown
+// kind is representable (req 5) — the Plan 02 resolver fails closed on it.
+//
+// Param-pattern example (NOT in the union; deferred per A2 — SEED-06/07 do not
+// need it): `{ kind: 'CLEARANCE_FLOOR'; min: Clearance }`. Add a member + one
+// evaluator function only if a future seed fixture requires it.
+export type GateDescriptor =
+  | { kind: "CLEARANCE" }
+  | { kind: "OWN_TIER_GRANT" }
+  | { kind: "PARENT_TIER_GRANT" }
+  | { kind: "REQUIRED_ROLE"; role: string }
+  | { kind: string & {}; [k: string]: unknown };
+
+// A named, ordered gate list. `zone_prereq_id` declares the OPTIONAL advisory
+// zone prerequisite on the POLICY (req 8, A1: policy-level, not node-level);
+// null = no advisory zone. The advisory never changes the allow boolean.
+export interface ResourcePolicy {
+  id: string;
+  label: string;
+  gates: GateDescriptor[];
+  zone_prereq_id: string | null;
+}
+
+// A time-versioned policy binding (RSRC-POLICY-02/03/05). Reuses the grant
+// window shape; the active assignment is selected by timestamp (selectActivePolicy).
+export interface PolicyAssignment {
+  policy: ResourcePolicy;
+  valid_from: Date | null;
+  valid_until: Date | null;
+}
+
+// Network — top of the tree. Carries its own classification (req 1).
+export interface NetworkNode {
+  id: string;
+  name: string;
+  tier: "NETWORK";
+  classification: Clearance;
+  org_links: OrgLink[];
+  policy_assignments: PolicyAssignment[];
+}
+
+// Platform — one parent Network (network_id, single-valued strict tree, RSRC-05).
+// Carries its own classification (req 1).
+export interface PlatformNode {
+  id: string;
+  name: string;
+  tier: "PLATFORM";
+  classification: Clearance;
+  network_id: string;
+  org_links: OrgLink[];
+  policy_assignments: PolicyAssignment[];
+}
+
+// Application — one parent Platform (platform_id, single-valued strict tree).
+// NO `classification` field (RSRC-02, req 2): effective classification is derived
+// from the host Platform via effectiveClassification(), never stored here.
+export interface ApplicationNode {
+  id: string;
+  name: string;
+  tier: "APPLICATION";
+  platform_id: string;
+  org_links: OrgLink[];
+  policy_assignments: PolicyAssignment[];
+}
+
+// Person↔resource grant (RSRC-GRANT-01). Mirrors PhysicalAccessGrant field-for-
+// field, swapping zone_id -> resource_id. Window = inclusive/null (isWindowActive).
+export interface ResourceAccessGrant {
+  id: string;
+  person_id: string;
+  resource_id: string;
+  valid_from: Date | null;
+  valid_until: Date | null;
+}
+
+// Delegation of authority to issue ResourceAccessGrants (RSRC-DELEG-01). Mirrors
+// ZoneAccessDelegate exactly, swapping zone_id -> resource_id. Feeds
+// canIssueResourceGrant (Plan 02).
+export interface ResourceAccessDelegate {
+  id: string;
+  resource_id: string;
+  delegate_type: "PERSON" | "ORG";
+  delegate_person_id: string | null;
+  delegate_org_id: string | null;
+  granted_by_org_id: string;
+  valid_from: Date | null;
+  valid_until: Date | null;
+}
+
+// Per-gate trace entry (req 9): one per evaluated gate, in policy list order.
+export interface ResourceGateResult {
+  kind: string;
+  pass: boolean;
+  reason: string;
+}
+
+// Explainable resolver result (req 9). `gates` records each gate's outcome;
+// `zoneAdvisory` carries the unchanged v2.1 ZoneAccessResult (advisory only —
+// never affects `allow`); `policyVersion` is the selected assignment's window,
+// or null when no policy covered the timestamp; the optional top-level `reason`
+// carries 'NO_ACTIVE_POLICY' on the fail-closed no-policy DENY (D-03).
+export interface ResourceAccessResult {
+  allow: boolean;
+  gates: ResourceGateResult[];
+  zoneAdvisory: ZoneAccessResult | null;
+  policyVersion: { valid_from: Date | null; valid_until: Date | null } | null;
+  reason?: string;
+}
