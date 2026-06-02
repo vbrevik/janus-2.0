@@ -1,420 +1,365 @@
 # Pitfalls Research
 
-**Domain:** Federated ABAC Authorization Hub — DEMO/MOCK integration of 9 validated spikes
-**Researched:** 2026-05-21
-**Confidence:** HIGH (derived directly from spike findings, AUTH-MODEL.md, and project constraints)
+**Domain:** Adding Network→Platform→Application digital-resource access to an existing demo with a parallel Physical Access Zone model (v2.1)
+**Researched:** 2026-06-02
+**Confidence:** HIGH — grounded in the actual v2.1 source files (`model.ts`, `physical-access.test.ts`, `world-state.tsx`, `seed.ts`, `access-resolution-explorer.tsx`), requirements (`v2.2-REQUIREMENTS.md`), and project decisions (`PROJECT.md`).
+
+> **Scope note:** This file covers pitfalls specific to v2.2 (Phases 9–11). The v2.0/v2.1 pitfall record
+> (over-engineering toward production, hollow mock, audit replay, mock HMAC conflation, etc.) was
+> written 2026-05-21 and remains valid for the full demo. This file focuses on the incremental risks
+> introduced by adding a parallel digital-resource model to an already-shipped zone model.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Over-engineering toward production — adding real crypto/transport/persistence
+### Pitfall 1: Cross-Tier Inheritance Confusion — Grant on Network Silently Satisfies Platform Check
 
 **What goes wrong:**
-A developer wires up real asymmetric credentials (WebAuthn, real PKI), a real HTTP transport between
-"entities", or a PostgreSQL persistence layer for the evaluation log because "it's already there". The
-demo accumulates production concerns: key management, TLS, migration scripts, secret rotation. Build
-time balloons; the demo never ships.
+The v2.1 zone resolver (`resolveGrant` in `model.ts`) walks up the ancestor tree and inherits grants
+from matching-zone-type ancestors. If the v2.2 `resolveResourceGrant` copies this pattern naively, a
+Network grant propagates down to Platform and Application. RSRC-GRANT-02 forbids this explicitly:
+"each tier always requires explicit authorization — no automatic inheritance across tiers." The
+demo would pass a Platform access check whenever a Network grant exists, without the person holding
+a Platform-specific grant.
 
 **Why it happens:**
-The brownfield substrate has a real Rocket + Postgres backend, real JWT auth, and real bcrypt — it
-*invites* using them. The gap between "spike in `spikes.html`" and "wired to the real API" is small
-enough that it feels free. The signed-credential spike (006) used HMAC-SHA256 via Web Crypto, which
-looks almost production-grade and tempts a real key-distribution layer.
+`resolveGrant` is the most prominent resolver in `model.ts` with a clear, readable loop. It looks like
+the natural template. The v2.1 zone-type-matching guard (`ancestor.zone_type === zone.zone_type`) is
+what blocks cross-type inheritance there; but for digital resource tiers there is no analogous "same
+tier type" check that can be applied — Network and Platform are different tiers, not the same type
+at different levels.
 
 **How to avoid:**
-Treat the demo/mock boundary as a hard constraint, not a style preference. Per AUTH-MODEL §10:
-clearance feed = seeded JSON, transport = in-process Network object, persistence = in-memory/seed.
-Implement `verifyCredential` with a mock key registry (the spike already does this). Label every
-simulated boundary with an explicit `// MOCK: ...` comment naming what a real build would replace.
-Never swap an in-process `Network` for a real fetch without a phase gate that explicitly scopes it.
+Write `resolveResourceGrant` without any ancestor-walk. It simply finds an active grant for the
+exact resource ID. The tier prerequisite chain (Network grant required before Platform resolution
+proceeds) is evaluated as an independent gate inside `resolveResourceAccess`, not by walking the
+hierarchy in the grant-lookup step. Enforce with a unit test: person holds only a Network grant →
+`resolveResourceAccess(person, platform, ...)` returns `allow: false`, reason
+`PREREQUISITE_NOT_MET` — this test must exist and pass before any UI is built.
 
 **Warning signs:**
-- A PR adds a new backend endpoint to serve federation messages.
-- `credential.ts` starts importing a real JWKS URL.
-- Database migrations appear for evaluation log tables before the demo is done.
-- "Just hooking it to the real API" is spoken without a phase gate.
+- `resolveResourceGrant` contains a loop that iterates over `parent_id` chain.
+- No Vitest test named something like `cross-tier-inheritance-blocked` or `network-grant-does-not-satisfy-platform`.
+- The resolution trace says "Grant resolved" for a Platform when only a Network grant exists in the seed.
 
-**Phase to address:**
-Phase 1 (foundation / data model) — establish the demo/mock boundary contract in code before any
-integration work begins. A `MockNetwork` wrapper and `MockClearanceFeed` must exist before any spike
-is wired into the app.
+**Phase to address:** Phase 9 (model + engine). Define the function and the blocking test before any
+resolver logic is written.
 
 ---
 
-### Pitfall 2: The opposite — a mock so hollow it proves nothing
+### Pitfall 2: Advisory Zone-Prerequisite Rendered as a Hard Gate in the UI Trace
 
 **What goes wrong:**
-To avoid over-engineering, the developer swings too far: all ABAC decisions are hardcoded
-`return 'ALLOW'`, entity "federation" is just switching a dropdown with no policy evaluation, and the
-demo only proves "the UI can show a colored badge." A non-technical viewer cannot distinguish this from
-a lookup table with a nice skin. The 9 spikes proved nothing if the demo re-mocks them with stubs.
+PROJECT.md records the decision: "zone-prerequisite link is advisory — non-blocking warning in trace."
+If the digital resource resolution trace renders the zone-prerequisite check as a standard gate row
+(red X = failure that contributes to DENY), the demo will show DENY when a person lacks zone access,
+contradicting the model decision. A demo audience cannot distinguish "advisory warning rendered amber"
+from "hard gate rendered red" unless the UI makes the distinction explicit.
 
 **Why it happens:**
-"It's just a demo" becomes "just fake it" under time pressure. The isolation of spikes behind
-`spikes.html` means a developer integrating them into the app rewrites the logic from scratch instead
-of lifting the validated spike code, and takes shortcuts.
+The existing `ZoneResolutionTrace` component in `access-resolution-explorer.tsx` uses a two-symbol
+pass/fail pattern: green check or red X. It is typed to `ZoneAccessResult`. When building the digital
+resource trace, a developer copies this pattern and adds the zone-prerequisite as a third row using
+the same styling. The `allow` flag then gets set to `false` when the zone check fails, because that
+is how every other gate row works.
 
 **How to avoid:**
-The spike code is the implementation, not the prototype to be thrown away. When wiring a spike into
-the app, lift `abac.ts`, `auditlog.ts`, `policy.ts`, `obligations.ts` from `sources/code/lib/`
-directly — do not rewrite them. The ABAC engine must run real conjunctive evaluation with per-domain
-tiers, deny overrides, and an explanation trace. The credential path must call `verifyCredential`
-(even against a mock registry) — a demo that skips verification doesn't prove the trust model.
-Define a "convincing demo" checklist before build starts: what must the evaluator be able to observe
-live (not scripted) to accept the mechanism as validated?
+The `resolveResourceAccess` return type must separate the advisory from the gates. Use a shape like:
+
+```typescript
+interface ResourceAccessResult {
+  allow: boolean;
+  gates: ResourceGateResult[];       // clearance + tier grants — these determine allow
+  zoneAdvisory?: {                   // zone-prereq: present only when applicable
+    satisfied: boolean;
+    detail: string;
+  };
+}
+```
+
+The `allow` flag must never be influenced by `zoneAdvisory.satisfied`. Build a distinct
+`ZonePrerequisiteAdvisory` sub-component with amber/yellow styling that explicitly labels itself
+"Advisory (non-blocking)." Write the test before the UI: `resolveResourceAccess` where zone prereq is
+unsatisfied must return `allow: true`.
 
 **Warning signs:**
-- Decision functions return a constant or flip based on a boolean prop.
-- The "handshake" flow skips ABAC evaluation and just toggles a state variable.
-- `verifyCredential` is bypassed with `if (DEV_MODE) return true`.
-- No `DecisionTrace` component is visible in the federation flow.
+- `resolveResourceAccess` return type has zone check inside the same `gates` array as clearance and grant gates.
+- Resolution trace renders the zone row in red (same tone as a hard gate failure) when zone access is missing.
+- No Vitest test covering "zone prerequisite unsatisfied → still ALLOW."
+- The `allow` flag is `false` in any case where only the zone advisory is unsatisfied.
 
-**Phase to address:**
-Phase 1 (foundation) — define the "convincing demo" acceptance criteria. Phase 2 (integration) — each
-wired mechanism has a test verifying real spike logic is called, not stubbed.
+**Phase to address:** Phase 9 (define return type and write test) and Phase 11 (render advisory
+distinctly from hard gates). Both phases must hold the same contract.
 
 ---
 
-### Pitfall 3: Audit-replay performance trap — replaying the full event log on every query
+### Pitfall 3: Application Classification Override — App's minClearance Diverges from Its Platform
 
 **What goes wrong:**
-`whoCanAccess(requirement, events, asOf)` reconstructs every subject by replaying from event 0 on
-every query. With the demo's seeded data this is invisible. If the demo scales to a timeline-slider
-interaction (spike 007's real deliverable), the full replay on every slider tick causes visible
-jank — ruining the legibility of the audit UI for a live audience.
+PROJECT.md records the decision: "Application inherits its Platform's classification." The `Resource`
+interface in `model.ts` carries `minClearance` as a field set per-resource. If the v2.2 seed or type
+definition allows an Application to carry an independently-authored `minClearance` that differs from
+its Platform, the resolution engine silently evaluates clearance against the wrong threshold. A seed
+author writing `minClearance: "CONFIDENTIAL"` on an Application whose Platform is `SECRET` creates a
+scenario the model explicitly forbids — and the demo will show someone with CONFIDENTIAL clearance
+accessing a resource that should require SECRET.
 
 **Why it happens:**
-The spike reference (`audit.md`) already flags this: "Full replay per query won't scale — materialize
-a 'current access' projection." But it's easy to defer the projection and ship the naive replay,
-especially when seeded data is small and the problem is invisible in development.
+TypeScript cannot enforce cross-record constraints at the type level. Seed records are written by
+hand. Without an explicit validator (like v2.1's `isValidZoneTypeCombination`), nothing prevents
+the inconsistency from being seeded.
 
 **How to avoid:**
-Materialize a `currentProjection` map (`subjectId → attributes`) that is incrementally updated as
-events are appended. `whoCanAccess` at `asOf = now` hits the projection, not the raw log. The full
-replay path (`reconstructSubject` from log) is retained for historical point-in-time queries (the
-slider going back in time). For the demo, "now" queries must be O(1) against the projection; slider
-queries replay only the subject being inspected, not all subjects.
+Add a `validateResourceClassification(resource: DigitalResource, allResources: DigitalResource[])` 
+function to `model.ts` that returns an error string when an Application's `minClearance` differs from
+its parent Platform. Call it from the seed test file for every Application in the seed.
+Consider a builder function `makeApplication(platform: Platform, name: string, ...)` that sets
+`minClearance` by reference from the Platform record, making manual override require deliberate
+circumvention. Document the constraint in a seed comment: "Application minClearance MUST equal
+parent Platform minClearance — do not set independently."
 
 **Warning signs:**
-- Timeline slider causes React profiler frames above 100 ms.
-- `whoCanAccess` is called inside a `useMemo` with `events` as a dependency and no derived projection.
-- No `currentProjection` state exists alongside the event log.
+- Application seed records have `minClearance` literals typed by hand rather than derived from parent.
+- No test asserting `app.minClearance === platform.minClearance` for every Application.
+- Resolution trace shows different clearance requirements for Platform vs Application in the same hierarchy.
 
-**Phase to address:**
-Phase 2 (audit integration) — build the projection alongside the log from day one; do not defer.
+**Phase to address:** Phase 9 (define validation function in model.ts) and Phase 10 (seed authoring —
+use builder functions, run validators against every Application record).
 
 ---
 
-### Pitfall 4: Conflating the demo's mock HMAC signature with real credential trust
+### Pitfall 4: WorldState Explosion — Six New Top-Level Arrays Added Without Grouping
 
 **What goes wrong:**
-A non-technical viewer (or a future engineer) sees a "Verified credential" badge in the demo and
-interprets it as real cryptographic trust. The demo uses symmetric HMAC with a mock key registry — if
-the issuer key is seeded client-side, anyone can forge a credential. The demo then ships as a
-reference, and the next engineer copies the HMAC pattern into a production integration, believing it
-provides the stated guarantees.
+`WorldState` in `world-state.tsx` currently has `zones`, `grants`, `delegates`, `entryLogs`,
+`visitorPasses`, and `disabledGrantIds` for the physical access model. If v2.2 adds `networks`,
+`platforms`, `applications`, `resourceGrants`, `resourceDelegates`, and `disabledResourceGrantIds`
+as six more top-level fields, the reducer grows proportionally: `seedWorld()` becomes ~80+ lines, the
+`Action` union accumulates 4–6 more cases, and the reducer switch is harder to read. `Set<string>`
+fields (the `disabledGrantIds` pattern) are not serializable; doubling them doubles the fragility.
+v2.3 (datasets) will apply the same pressure again.
 
 **Why it happens:**
-The UI renders "VERIFIED" in green for a credential that passes the mock check. There is no visible
-signal that the verification is demo-grade. The spike (006) validated the *flow*, not the *security
-level*. Readers of the code see `verifyCredential(credential, MOCK_KEY_REGISTRY)` and assume the
-registry is the only missing piece before production.
+v2.1 was added incrementally and each type was appended to `WorldState` across phases. The same
+incremental pattern applied to v2.2 has more entity types and produces proportionally more sprawl.
 
 **How to avoid:**
-Every credential-verification UI must carry an explicit `[MOCK]` label in the demo — not just a
-comment in code but visible in the rendered UI. The `MockKeyRegistry` must be named unmistakably
-(never `keyRegistry` or `trustedIssuers`). Add a "What this demo simulates vs. what a real build
-needs" panel to the federation flow — mirroring the "what the hub does NOT store" panel already
-prescribed in spike 002. In code, the mock credential path is gated behind a `DEMO_MODE` flag, not
-just `DEV_MODE`, so it can never accidentally reach a production bundle.
+Group v2.2 additions into a `DigitalResourceWorld` sub-object:
+```typescript
+interface DigitalResourceWorld {
+  networks: Network[];
+  platforms: Platform[];
+  applications: Application[];
+  resourceGrants: ResourceAccessGrant[];
+  resourceDelegates: ResourceAccessDelegate[];
+  disabledResourceGrantIds: Set<string>;
+}
+```
+The reducer handles `SET_DIGITAL_RESOURCE_WORLD` and `TOGGLE_RESOURCE_GRANT` as targeted actions on
+this sub-object. `seedWorld()` initializes it from a single `SEED_DIGITAL_RESOURCES` import.
+v2.3 can add a `DatasetWorld` sub-object without touching `zones` or resource fields.
 
 **Warning signs:**
-- The credential-verify badge renders without a `[MOCK]` qualifier.
-- `MOCK_KEY_REGISTRY` is renamed or extracted to a shared file alongside real config.
-- The spike's `credential.ts` is imported by a non-spike, non-demo path in the app.
+- `WorldState` interface has more than 20 top-level fields.
+- `Action` union has more than 25 cases.
+- `seedWorld()` function body exceeds ~50 lines.
+- A `TOGGLE_RESOURCE_GRANT` action reuses the `grantId` field name also used by `TOGGLE_GRANT`
+  (name collision risk across two different grant collections).
 
-**Phase to address:**
-Phase 2 (federation integration) — the demo/mock labeling must be present the moment the credential
-UI renders. Phase 4 (demo polish) — verify every trust signal in the UI carries a visible scope label.
+**Phase to address:** Phase 9 (WorldState structure design, before writing any reducer cases).
 
 ---
 
-### Pitfall 5: Data-model impedance — ABAC subject/resource model vs. 6-unit deployment scenario
+### Pitfall 5: Prerequisite Chain Uses Unstable `now` — Interactive Explorer Shows Inconsistent Decisions
 
 **What goes wrong:**
-The spike ABAC engine models `principal` and `requirement` as generic objects
-(`{ clearance, domain, compartments, flags, entity }`). The 6-unit deployment scenario maps real
-units (Military A, Intel, Industry, etc.) onto these generic attributes. When integrating, a developer
-creates two parallel data models: one `Person` type from the Rust/Postgres substrate (with `id`,
-`clearance_level`, `org_id`) and one `ABACSubject` type in the spike (with `clearance`, `domains`,
-`compartments`, `entity`). Inconsistency accumulates: the same person has different clearance values
-in the two models, and queries that join them return contradictory decisions.
+The v2.2 gate chain (RSRC-ACCESS-05) evaluates: (1) clearance, (2) explicit grant per tier,
+(3) prerequisite tier grants active. Step 3 means calling `isGrantActive(networkGrant, now)` when
+resolving Platform access. If `now` is computed as `new Date()` at call time inside the resolver —
+rather than from a stable `useMemo(() => new Date(), [])` at the component level — a grant expiring
+at midnight causes inconsistent ALLOW/DENY flickers during interactive exploration. Worse, test
+fixtures that do not use a fixed constant will become non-deterministic on grant-boundary dates.
 
 **Why it happens:**
-The spikes lived in `src/spikes/` behind a separate entry point and were never forced to use the
-substrate's data shape. When integration starts, the convenient path is to keep both models in
-parallel and write a mapping function — but that mapping function becomes a bug multiplier every time
-either model changes.
+The existing `AccessResolutionExplorer` has a comment `// Stable now — once per mount, no
+re-evaluation drift (Pitfall 4 guard)`. This is easy to miss when writing a new
+`DigitalResourceExplorer` component from scratch. The resolver function itself is stateless and
+correct; the problem is always in the caller.
 
 **How to avoid:**
-Define a single canonical `ABACSubject` interface at the start of Phase 1 that is the output of
-transforming the substrate `Person` record. There is no "ABAC subject object" that exists
-independently — it is always derived from the canonical record via a pure function
-`toABACSubject(person: Person): ABACSubject`. The spike's data.ts `SUBJECTS` seed is replaced by
-derived transformations over the same seeded Person records used by the demo. Compartments and flags
-live in their own event-sourced log, not as fields on both models simultaneously.
+Keep the pattern already established in v2.1: all resolver and grant-check functions take `now: Date`
+as an explicit parameter (this is already true for `isGrantActive`, `resolveGrant`,
+`resolveZoneAccess`, `isDelegateActive` in `model.ts`). In the new explorer component, use
+`const now = useMemo(() => new Date(), [])`. Unit tests use a fixed constant (as
+`physical-access.test.ts` uses `const NOW = new Date("2026-01-15T12:00:00Z")`).
 
 **Warning signs:**
-- Two files named `subjects.ts` and `persons.ts` (or similar) with overlapping fields.
-- A `mappingUtils.ts` or similar bridge file grows beyond ~30 lines.
-- A clearance value differs between the hub view and the ABAC decision trace for the same person.
-- Spike components import from their own `data.ts` rather than from the app's data layer.
+- Any resolver or grant-check function calls `new Date()` internally instead of receiving `now`.
+- The digital resource explorer component does not have a `useMemo(() => new Date(), [])` call.
+- Test fixtures use `new Date()` without a fixed date string.
 
-**Phase to address:**
-Phase 1 (foundation / data model) — define the canonical transform before any spike is wired. Make
-the spike's `data.ts` seed a test fixture only; never import it from app routes.
+**Phase to address:** Phase 9 (resolver function signatures and test fixture pattern) and Phase 11
+(explorer component).
 
 ---
 
-### Pitfall 6: Obligation rules conflated with stored grants or static attributes
+### Pitfall 6: Pattern Drift — Parallel Abstractions for the Same Concept
 
 **What goes wrong:**
-The deployment-driven support obligation ("unit A is abroad → supporting units gain access") gets
-implemented as a stored grant row or a static boolean attribute on the subject. When the deployment
-ends, someone must remember to revoke the grant. The whole point of obligation rules is that they turn
-OFF automatically when context changes. A stored grant turns a dynamic, context-sensitive access into
-a persistent one — the audit log can no longer answer "would this person have access if they were NOT
-deployed abroad?" and the demo fails to prove the obligation mechanism.
+v2.1 established precise names for its patterns: `PhysicalAccessGrant`, `ZoneAccessDelegate`,
+`isGrantActive`, `isDelegateActive`, `resolveGrant`. If v2.2 introduces parallel types and functions
+with slightly different names or semantics for the same concept — for example, `ResourceGrant` vs
+`ResourceAccessGrant`, or `isActive` vs `isGrantActive` — the codebase accumulates conceptual
+synonyms. A future developer reading `model.ts` cannot tell which functions are the canonical
+implementation and which are the variant. This is especially acute for the time-window logic: if
+`isGrantActive` is duplicated as a slightly different `isResourceGrantActive` with different boundary
+semantics (e.g., exclusive `<` instead of inclusive `<=`), the two models will disagree on boundary
+cases.
 
 **Why it happens:**
-Stored grants are the natural solution pattern for "give person X access to Y". The brownfield
-substrate has a real access-grant table. The obligation spike (009) was isolated and the developer
-wiring it into the app reaches for the familiar pattern.
+Developers naturally rename concepts when they feel the domain is "different enough." The physical
+and digital resource models are structurally parallel but vocabulary-distinct, encouraging fresh
+naming. Boundary semantics are particularly easy to accidentally diverge — the `<=` boundary
+comparison in `isGrantActive` is a deliberate, tested choice that is invisible in a copy-paste.
 
 **How to avoid:**
-Obligation rules must be implemented as a rule *class* in the ABAC engine — a `GRANT` effect that
-fires only when `context.deploymentStatus === 'ABROAD' && requester.hasObligation === true`.
-`hasObligation` itself is a context attribute derived from the deployment registry, not stored on the
-subject. The ABAC engine evaluates it live. The demo must show the decision flip: switch deployment
-status to 'HOME', re-run evaluation, observe DENY (and the trace must explain why the obligation did
-not fire). If the demo cannot show the flip live, the mechanism is not demonstrated.
+Before Phase 9 begins, write a one-page naming convention that explicitly maps v2.1 concepts to v2.2
+equivalents: `PhysicalAccessGrant → ResourceAccessGrant`, `ZoneNode → DigitalResource (with tier
+discriminator)`, `isGrantActive` (reuse, do not copy). Prefer reusing `isGrantActive` directly for
+`ResourceAccessGrant` if the interface is compatible, rather than writing a separate function.
+If a new function is necessary, name it explicitly to distinguish it (e.g.,
+`isResourceGrantActive`) and document which v2.1 function it parallels.
 
 **Warning signs:**
-- An `obligation_grants` table or array is created that persists beyond a session.
-- "Obligation" appears as a field on `Person` or `Subject` alongside clearance.
-- The demo has no UI affordance to toggle deployment status and observe the decision change.
+- `model.ts` has two functions with similar signatures but different names for the same time-window check.
+- The `<=` boundary in `isGrantActive` is changed to `<` in a v2.2-specific copy.
+- TypeScript interfaces for `ResourceAccessGrant` and `PhysicalAccessGrant` have the same fields with
+  different field names (`resource_id` vs `zone_id` is intentional; `grantedUntil` instead of
+  `valid_until` is drift).
 
-**Phase to address:**
-Phase 3 (context / obligations) — the obligation rule and its toggle must be built and verified
-together; never defer the toggle to a later phase.
+**Phase to address:** Phase 9 (define naming convention and type shapes before writing implementations).
 
 ---
 
-### Pitfall 7: Demo legibility — a technically correct demo that a non-technical viewer cannot follow
+### Pitfall 7: Demo Isolation Breach — Adding a New Route Instead of a New DemoRoot Tab
 
 **What goes wrong:**
-The demo shows an ABAC decision trace with five rule rows, two entity names, three domain labels, and
-a HMAC badge — and a non-technical viewer concludes "it seems to work" without understanding *why* the
-access was denied or *what* the hub is protecting. The whole point of the demo is to prove the model
-to stakeholders who cannot read TypeScript. If they cannot trace a decision from cause to effect, the
-demo has failed its purpose even if technically correct.
+A developer, wanting to surface the new digital resource panel quickly, adds a new file to
+`frontend/src/routes/` (or creates a new `_component.tsx` under an existing route). TanStack file-based
+routing regenerates `routeTree.gen.ts` the moment any route file changes, which is a generated file
+that must never be hand-edited. This breaks the demo isolation constraint established from v2.0 and
+held through v2.1: "Demo stays isolated — demo in `frontend/src/demo/`; no `routeTree.gen.ts`
+changes until fullstack integration."
 
 **Why it happens:**
-Engineers optimize for correctness, not legibility. The `DecisionTrace` component from the spikes
-renders the raw rule objects. Labels come from internal identifiers
-(`CLEAR_HOLD`, `GRANT_COMPARTMENT`, etc.). The 6-unit names are shortened to ids. There is no
-narrative layer.
+The demo's `DemoRoot.tsx` tab-based navigation is not obvious to a developer who joins mid-milestone.
+The TanStack routes directory pattern is the canonical app navigation pattern and the first thing
+developers reach for. The existing Physical Access tab in `DemoRoot.tsx` is the only prior example
+of the correct approach, and it may not be seen before a new route file is created.
 
 **How to avoid:**
-Separate the display layer from the evaluation layer before Phase 4 (demo polish). Every rule trace
-must render in plain prose: "Denied: subject's Computer domain tier (2) is below the required
-threshold (3)." Every entity must show its full scenario name (e.g., "Military Unit A",
-"Intelligence Agency"), not an internal id. The demo script must include a live walkthrough where
-one non-developer witnesses it and can narrate back what happened — if they cannot, the labels need
-work before the demo is considered done. Build in a "scenario card" for each of the 6 units explaining
-its access profile in one sentence.
+The correct pattern is: add a `"digital-access"` entry to the `ActiveView` type in `DemoRoot.tsx`,
+add a button to the tab bar, add a branch in the conditional render. Do not create any file under
+`frontend/src/routes/`. Document this in the Phase 11 UI spec task description. Add a pre-flight
+check in the phase review: `git diff frontend/src/routeTree.gen.ts` must be empty.
 
 **Warning signs:**
-- Rule trace strings contain camelCase identifiers or enum values.
-- Entity identifiers are UUIDs or short codes in the UI.
-- The demo walkthrough requires verbal explanation beyond what is shown on screen.
-- No "what this means" plain-language annotation exists for each mechanism.
+- Any new file appears under `frontend/src/routes/` during Phases 9–11.
+- `routeTree.gen.ts` has a diff after Phase 11 completes.
+- A developer runs `npm run dev` and sees a new route in the TanStack router tree for the digital resource panel.
 
-**Phase to address:**
-Phase 4 (demo polish) — allocate dedicated time for a legibility pass. Do not defer to "we'll explain
-it live" — that is a risk, not a plan.
-
----
-
-### Pitfall 8: Security theater — a demo that implies production guarantees it does not have
-
-**What goes wrong:**
-The demo presents a "deny" decision with a green lock icon, a "verified credential" badge, and an
-audit log — and a viewer concludes the system *is* secure, not that it *demonstrates a security
-model*. If the demo is then cited in procurement, a security review, or a contract as evidence of
-production-grade authorization, it creates liability and false expectations. The inverse also harms:
-a reviewer dismisses the demo as "just a mock" because they cannot see where the real enforcement
-boundary is.
-
-**Why it happens:**
-The line between "demonstrates a concept" and "provides a guarantee" is architectural, not visual.
-The demo's UI intentionally mimics production UI (shadcn/ui components, realistic labels). No visible
-scope warning exists.
-
-**How to avoid:**
-Add a persistent, non-dismissable "DEMO / MOCK" banner to the demo entry point — not just a footer
-note but a top-bar element that renders on every demo page. The federation flow and credential-verify
-flow each have a "What this simulates / what a real build requires" expandable panel (the spike 002
-pattern). Never use lock icons or "Secure" language without a `[DEMO]` qualifier. The demo README
-and any slide deck must include an explicit "what this proves" vs. "what this does not prove" section.
-Code-level: all mock boundaries (`MockNetwork`, `MockClearanceFeed`, `MockKeyRegistry`) are in a
-`mock/` subdirectory that is excluded from any production build configuration.
-
-**Warning signs:**
-- Lock icons or "Secure" badges render without a `[MOCK]` qualifier.
-- The demo entry point looks identical to a production app (no demo banner).
-- `MockNetwork` is in `lib/` rather than `mock/`.
-- A slide deck has a screenshot with the word "VERIFIED" and no scope annotation.
-
-**Phase to address:**
-Phase 1 (foundation) — establish the mock/ boundary and the demo banner in the first usable slice.
-Phase 4 (demo polish) — verify scope labels are present and accurate throughout.
-
----
-
-### Pitfall 9: Directional shielding implemented as symmetric deny — intel data leaks outward
-
-**What goes wrong:**
-The directional shielding mechanism (spike 009) for intel and industry data is implemented as a
-symmetric access restriction — "intel can't access industry data AND industry can't access intel
-data." The spec requires *directional* shielding: intel reads broadly (most entities' data), but
-intel's own data is shielded from most entities. A symmetric implementation means intel loses read
-access it should have, and the demo fails to show the directional asymmetry — which is the most
-novel part of the access model for the 6-unit scenario.
-
-**Why it happens:**
-Symmetric deny is simpler to implement (one flag on the resource: `shielded = true`). The directional
-nature requires resource-side default-deny plus explicit allowlisting per requester — an asymmetric
-policy that is easy to implement as symmetric when rushing.
-
-**How to avoid:**
-The shield policy must specify a direction: `shieldedOwner` (who owns the protected resource) plus
-an `allowlist` (who may access it despite the shield). A requester NOT on the allowlist is denied
-intel/industry resources; the same requester accessing non-shielded resources is unaffected by the
-shield. The demo must show both directions live: intel person queries military data (ALLOW), military
-person queries intel data (DENY — shielded), allowlisted security officer queries intel data (ALLOW).
-All three decisions must be observable in one demo flow.
-
-**Warning signs:**
-- Shield logic is a single `isShielded` boolean on the requirement without an allowlist.
-- Intel entity cannot access military unit data in the demo.
-- The three-direction test (intel→military, military→intel, allowlisted→intel) does not exist as a
-  Vitest test case.
-
-**Phase to address:**
-Phase 3 (context / policy integration) — the shield implementation must include the allowlist and
-the three-direction test before the phase is complete.
+**Phase to address:** Phase 11 (UI). The spec for the new tab must explicitly call out the `DemoRoot.tsx`
+pattern and prohibit route files.
 
 ---
 
 ## Technical Debt Patterns
 
-Shortcuts that seem reasonable but create long-term problems.
-
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Keep spike's own `data.ts` as the source of truth | No migration effort | Two data models diverge; ABAC decisions don't reflect real Person records | Never — replace with derived transform in Phase 1 |
-| Inline policy rules as hardcoded TypeScript constants | Fast to write | Per-entity policy divergence (spike 008) requires runtime variation; hardcoded rules make it impossible | Never for the 6-unit scenario; acceptable for single-entity spike isolation only |
-| Full audit log replay on every query | Correct and simple | Visible jank in timeline-slider UI; kills demo legibility for the audit mechanism | Acceptable only for historical point-in-time queries, never for "access right now" |
-| Symmetric shield flag instead of directional allowlist | Simpler data model | Breaks intel's read-broad behavior; misrepresents the model to viewers | Never — directional asymmetry is the differentiating mechanism |
-| `if (DEV_MODE) skip verification` for credentials | Removes crypto setup friction | Any DEV_MODE deployment (e.g., staging) silently skips trust verification; future engineer copies the pattern | Never — use `MOCK_KEY_REGISTRY` instead, which runs the verification path with mock data |
-| Flat role list for scoped roles (Manager/Sponsor/Subject) | Simpler implementation | Auth-MODEL §6 requires data-level ownership scoping; flat list cannot express "own team" | Acceptable for demo Phase 1–3 with explicit "TODO: scoping" marker; must be resolved in Phase 4 demo polish or flagged as out-of-scope |
+| Copy `resolveGrant` and rename to `resolveResourceGrant` without removing ancestor-walk | Faster scaffolding | Silently enables cross-tier inheritance (Pitfall 1) — broken model | Never |
+| Put Networks/Platforms/Applications in the flat `Resource[]` array with a `tier` discriminator | Reuses existing `Resource` type | Loses strict tree; parent/child queries become O(n) scans; tree browser UI cannot be built cleanly | Never — strict tree requires typed nodes with typed parent refs |
+| `new Date()` inside resolver for `now` | One fewer function parameter | Non-deterministic tests; explorer flickers on grant-boundary dates (Pitfall 5) | Never in test code; never in resolver internals |
+| Inline zone-advisory as a boolean flag inside the main gate chain | One return type instead of two | Flag gets lost across refactors; UI renders advisory as hard gate (Pitfall 2) | Never — the advisory/hard distinction is a model decision |
+| Share `ZoneResolutionTrace` for digital resources by adding a prop | Reuse existing component | Component is typed to `ZoneAccessResult`; the `zoneAdvisory` field gets dropped; trace is structurally different | Acceptable to extract a shared `GateRow` primitive; never to reuse the whole trace component |
+| Seed Application `minClearance` as hand-typed literals | Simple seed authoring | App can diverge from Platform classification silently (Pitfall 3) | Never — derive from Platform or validate at seed load |
+| Add resource data as 6 new top-level `WorldState` fields | Straightforward to write | Reducer sprawl; `seedWorld()` bloat; v2.3 worsens it (Pitfall 4) | Never — use sub-object grouping |
 
 ---
 
 ## Integration Gotchas
 
-Common mistakes when connecting spike components to the app.
-
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| Spike ABAC engine → app routes | Rewrites `abac.ts` from scratch to "fit the app shape" | Lift `sources/code/lib/abac.ts` directly; adapt the input type at the boundary, not the engine |
-| Audit log → React state | Store `events[]` as plain useState; derive projection on every render | Keep `events[]` + `projection` as co-evolving state; update projection incrementally on append |
-| Federation handshake → app navigation | Wire the "Request detail" button to a route change | The handshake is a *modal flow* within the current route — navigating away loses in-progress state |
-| Obligation context → deployment status | Read deployment status from the Person record | Deployment status is a context attribute external to the person — comes from a `MockDeploymentFeed`, not from `person.deploymentStatus` |
-| Per-entity policy → UI toggle | Gate entire entity views behind a policy toggle | Policy divergence is a runtime property of the *evaluation*, not a view toggle; the same UI must show different decisions for different requesting entities |
-| Mock boundaries → real backend calls | Use `apiFetch` for any federation or clearance data | All federation + clearance paths go through `MockNetwork` / `MockClearanceFeed` in `src/mock/`; never route through `src/lib/api.ts` |
+| v2.1 zone model → zone-prerequisite link | Importing `resolveZoneAccess` directly inside `resolveResourceAccess` | Pass the zone grant result in as a computed parameter; keep zone and resource resolvers independent; zone result becomes `zoneAdvisory` on the resource result |
+| `WorldState` `TOGGLE_GRANT` vs `TOGGLE_RESOURCE_GRANT` | Reusing the `grantId` field name in the new action type | Use distinct field names: `grantId` for physical, `resourceGrantId` for digital — same `Set<string>` pattern but named separately |
+| `seed.ts` → adding digital resource exports | Appending more named exports to `seed.ts` forces all current `seed.ts` importers to re-evaluate | Group digital resource seed into `SEED_DIGITAL_RESOURCES` or a dedicated `seed-digital.ts` imported separately by `world-state.tsx` |
+| `DemoRoot.tsx` → surfacing the new panel | Adding a route file under `src/routes/` | Add `"digital-access"` to `ActiveView`, add tab button, add conditional render branch — no route file (Pitfall 7) |
+| `isGrantActive` reuse for `ResourceAccessGrant` | Writing a separate `isResourceGrantActive` with subtly different boundary logic | If `ResourceAccessGrant` has the same `valid_from`/`valid_until: Date \| null` shape, pass it directly to the existing `isGrantActive` — do not copy |
 
 ---
 
 ## Performance Traps
 
-Patterns that work at small scale but break in the demo context.
-
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Full replay `whoCanAccess` per render | Timeline slider causes visible lag | Materialize projection; replay only for slider historical queries | With >50 events and a slider interaction |
-| Re-evaluating all subjects on every ABAC query | CPU spike when switching "requesting entity" | Evaluate only the subject under inspection; batch only for "who can access" full-list views | With >20 subjects and frequent role/entity switching |
-| Rendering full `DecisionTrace` for every row in a list | Long list of persons all with expanded traces causes DOM bloat | Collapse traces by default; expand on click | With >10 items in a list |
-| Importing all spike components into the main app bundle | Initial load slow; confuses the TanStack router | Spike components stay behind `spikes.html` entry; only extracted lib code (`abac.ts`, etc.) enters the app bundle | From day one of integration |
+| Recomputing full 3-gate prerequisite chain on every keystroke | Perceptible lag in the explorer | All resolution is O(n) over in-memory arrays; at demo scale (~30 resources, ~50 grants) this is negligible — no optimization needed | Not applicable at demo scale |
+| Building the resource tree from flat arrays on every render | Minor flicker during tree expansion | `useMemo` over `getChildren` analog keyed on the typed resource arrays | Not applicable at demo scale |
+| Resolving zone prerequisites by importing `resolveZoneAccess` into render code (not a `useMemo`) | Re-runs zone resolution on every parent render, not just when selections change | Keep zone advisory in the same `useMemo` block as the resource resolution result | Minimal impact at demo scale, but architectural correctness matters |
 
 ---
 
 ## Security Mistakes
 
-Demo-specific security issues (not production hardening, but demo correctness and non-misrepresentation).
+This is a demo-only milestone — "security mistakes" means model correctness and non-misrepresentation.
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Seeding the mock key registry client-side in a JS bundle | Anyone can forge a "verified" credential by extracting the key; the demo's "verification" claim is false even for a demo | Keep mock keys as symbolic labels (e.g., `'MOCK_KEY_UNIT_A'`) that only the mock registry resolves — no real key material in the bundle |
-| Storing clearance values in localStorage or URL params | A demo viewer can elevate their own clearance by editing browser state; the demo then "proves" an elevated-privilege path was correctly authorized | Clearance is seeded server-side (Rust API seed) or in-memory read-only; never mutable from the browser |
-| Applying deny overrides only at UI layer | A direct API call bypasses the UI guard; the backend demo API returns ALLOW for a revoked subject | Deny override evaluation is in the TypeScript engine (frontend mock) AND any backend endpoint that surfaces access decisions must re-evaluate — not trust UI state |
-| Confusing operating-role RBAC with ABAC resource authorization | Access Approver role gate in the UI does not guarantee ABAC evaluation occurred | Operating roles gate which *actions* are available (spike 004); ABAC gates the *decision* — both must be present; one does not substitute for the other |
+| Advisory rendered as denial in the UI (Pitfall 2) | Demo audience concludes the model is wrong; zone access appears to block network access when it should not | Test first: `resolveResourceAccess` returns `allow: true` with unsatisfied zone advisory before UI is built |
+| Seeding Application `minClearance` below its parent Network's classification | Demonstrates an impossible scenario — a SECRET network accessible from a CONFIDENTIAL platform | Validation function in `model.ts` (Pitfall 3); seed test asserts the invariant |
+| Omitting expired/future grant examples from the mock seed | RSRC-GRANT-03 (time-limited grants) is invisible in the demo; the time-window mechanism appears unvalidated | RSRC-SEED-05 requires active + expired + future grants across all three resource tiers; at least 2 seed grants per tier must fail `isGrantActive(g, NOW)` |
+| Presenting the zone-advisory as "zone access required" in the trace label | Viewer concludes zone access is mandatory for all digital resources | Label the advisory row: "Zone access (advisory)" with a clear non-blocking annotation |
 
 ---
 
 ## UX Pitfalls
 
-Common user experience mistakes specific to this demo domain.
-
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Showing raw ABAC rule identifiers (`GRANT_COMPARTMENT`, `securityHold`) in decision traces | Non-technical viewer cannot interpret the trace | Render trace in plain prose: "Denied: security hold is active." Never expose internal event type names |
-| Collapsing all 6 unit scenarios into one generic "entity" view | Viewer cannot see the policy divergence — the most important differentiator | Each unit has a named scenario card; the demo explicitly switches between them to show different outcomes for the same request |
-| Rendering ALLOW/DENY as identical-weight text in a list | Viewer loses track of which outcomes were denies | DENY rows use a visually distinct style (not just color — also icon or indentation) so the audit review is scannable |
-| Hiding the hub's "what we do NOT store" boundary | Viewer assumes the hub holds sensitive data (violating the privacy model) | Show an explicit "hub contains: subject ID + entity + domain. Hub does NOT contain: clearance, tier, compartments." panel as designed in spike 002 |
-| No undo / state reset in the demo | A live demo that goes wrong mid-walkthrough cannot recover | Provide a "Reset scenario" button that returns to seeded state; never demo without it |
+| Advisory zone row styled identically to hard gate failure (Pitfall 2) | Viewer is confused: "why DENY when no zone requirement applies to this scenario?" | Amber/yellow "warning" row with explicit "Advisory (non-blocking)" label vs. red for hard gates |
+| Flat dropdown listing all Networks/Platforms/Applications | Viewer cannot tell which Platform belongs to which Network | Tree-indented select or cascaded selectors: selecting Network first filters Platform dropdown (mirrors zone browser depth-indented pattern) |
+| Resolution trace gate rows unlabelled per tier | 3-tier chain produces 3×3 gates; which clearance check is for which tier? | Group trace rows by tier: "Network gate", "Platform gate", "Application gate" as labeled sections |
+| Grant toggle panel listing all resource grants across all tiers | Overwhelming; ~50 grants makes the panel unreadable | Filter to grants relevant to selected resource and its prerequisite chain (mirrors `relevantZoneIds` pattern from `access-resolution-explorer.tsx`) |
+| No visual distinction between expired/future grants and active grants in the detail panel | Viewer cannot tell which grants are currently active | Show expired grants with strikethrough or gray; future grants with a clock icon and "Starts: [date]" |
 
 ---
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **ABAC engine wired:** Verify `evaluate()` is called with a real `ABACSubject` derived from app data — not a hardcoded object. Check that `DecisionTrace` renders visible rule rows for both ALLOW and DENY paths.
-- [ ] **Audit log with projection:** Verify a `currentProjection` map exists and is updated incrementally. Check that `whoCanAccess(asOf = now)` hits the projection, not a full replay.
-- [ ] **Credential verification:** Verify `verifyCredential` is called before any ABAC evaluation on a cross-entity credential. The `[MOCK]` label must be visible in the UI at the verification result.
-- [ ] **Obligation flip observable:** Verify the demo has a deployment-status toggle. Toggle to HOME, verify the obligation GRANT rule does not fire, verify the trace explains why.
-- [ ] **Directional shield observable:** Verify three paths exist in the demo: requester → shielded resource (DENY), shielded-owner → other resource (ALLOW), allowlisted requester → shielded resource (ALLOW).
-- [ ] **Per-entity policy divergence:** Verify the same request submitted as Military Unit A vs. Intelligence vs. Industry produces different decisions, and the trace identifies the policy difference.
-- [ ] **SoD enforced:** Verify Admin role cannot trigger `approve_attribute` or `revoke_attribute` actions. Verify Manager role can `request_attribute` but not approve. Verify the UI renders an explicit "no access-decision authority" state, not just a missing button.
-- [ ] **Demo/mock labeling:** Verify every mock boundary (credential, clearance feed, network) renders a `[MOCK]` label in the UI. Verify the demo banner is persistent and non-dismissable.
-- [ ] **Scenario reset:** Verify a "Reset scenario" control exists and returns the demo to seeded state cleanly.
-- [ ] **Scoped roles flagged:** Verify that Manager/Supervisor, Org Sponsor, and End User/Subject scoped behaviors have explicit "TODO: data-level scoping" labels where flat-role approximations are used.
+- [ ] **Cross-tier inheritance blocked:** Vitest test exists: person has only a Network grant → Platform resolution = DENY with reason `PREREQUISITE_NOT_MET`. Test passes.
+- [ ] **Advisory rendered as advisory:** `resolveResourceAccess` test asserts `allow: true` when zone prerequisite is unsatisfied. UI renders it amber/yellow with "advisory" label. Overall verdict is ALLOW.
+- [ ] **Application classification validated:** Seed test calls `validateResourceClassification` for every Application record. Every Application's `minClearance` equals its parent Platform's.
+- [ ] **Time-window coverage in seed:** At least one expired grant and one future grant exist per resource tier (RSRC-SEED-05). `isGrantActive(g, NOW)` returns `false` for at least 2 seed grants per tier.
+- [ ] **Stable `now`:** Digital resource explorer uses `const now = useMemo(() => new Date(), [])`. No resolver function calls `new Date()` internally.
+- [ ] **No `routeTree.gen.ts` changes:** `git diff frontend/src/routeTree.gen.ts` is empty after Phase 11.
+- [ ] **Full prerequisite chain in trace:** Resolution trace for an Application shows clearance gate, Network grant gate, Platform grant gate, Application grant gate — not only the final tier.
+- [ ] **Zone advisory never causes DENY:** Manually check the explorer: select a person with no zone grants, select a Network terminal resource with a zone prerequisite → verdict must be ALLOW with amber advisory row.
+- [ ] **WorldState sub-object clean:** `WorldState` interface has a `digitalResources: DigitalResourceWorld` field, not 6 new top-level fields.
+- [ ] **Demo builds clean:** `npm run build` produces zero TypeScript errors after Phase 11.
 
 ---
 
 ## Recovery Strategies
 
-When pitfalls occur despite prevention, how to recover.
-
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Two parallel data models (ABAC subjects + Person substrate) have diverged | HIGH | Define canonical `toABACSubject(person)` transform; migrate spike usages one at a time; add a test that the same person ID returns identical attributes from both paths before deleting the old model |
-| Audit replay performance is unacceptable | MEDIUM | Add `currentProjection` map alongside existing log state; update incrementally on every `appendEvent` call; regression-test that projection matches full replay result for the same `asOf = last seq` |
-| Obligation is stored as a grant row | HIGH | Delete grant rows; implement obligation as a context-attribute rule in the ABAC engine; add the deployment-toggle UI; verify the flip before considering recovery complete |
-| Mock credential boundary removed or bypassed | MEDIUM | Reintroduce `MockKeyRegistry` in `src/mock/`; add a lint rule or code-search CI check that `DEMO_MODE` bypass patterns do not exist outside `src/mock/` |
-| Demo legibility fails in live walkthrough | LOW | Run a label-and-prose pass: replace all rule identifiers with plain English strings; add scenario cards for each of the 6 units; re-validate with one non-developer before the next walkthrough |
-| Security theater — demo cited as production evidence | HIGH | Add the persistent `[DEMO / MOCK]` banner and "what this proves / does not prove" panel immediately; communicate scope explicitly in any external-facing material that references the demo |
+| Cross-tier inheritance (discovered late in Phase 11) | HIGH | Rewrite `resolveResourceGrant` (trivial — remove loop); rewrite affected tests; manually verify all seed grant scenarios produce the correct tier verdicts |
+| Advisory rendered as hard gate (discovered in demo review) | MEDIUM | Extract `ZonePrerequisiteAdvisory` component; change `resolveResourceAccess` return type to separate `zoneAdvisory`; update all callers |
+| Application classification diverged in seed | LOW | Fix seed literals or introduce builder functions; run validator; no model change needed |
+| WorldState sprawl already in reducer | MEDIUM | Introduce `DigitalResourceWorld` sub-object; refactor `seedWorld()` and reducer `digitalResources.*` access; update all `useWorld()` callsites |
+| Unstable `now` causing test flicker | LOW | Remove `new Date()` from resolver internals; add `useMemo` to explorer component |
+| Route isolation breach | MEDIUM | Delete the route file; move component to `DemoRoot.tsx` tab pattern; regenerate `routeTree.gen.ts`; verify clean diff |
 
 ---
 
@@ -422,28 +367,29 @@ When pitfalls occur despite prevention, how to recover.
 
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Over-engineering toward production | Phase 1 — establish mock/ boundary and demo constraints | No non-mock backend endpoints exist for federation or clearance paths after Phase 1 |
-| Mock so hollow it proves nothing | Phase 1 — define "convincing demo" criteria; Phase 2 — verify real spike logic called | Vitest tests call actual `evaluate()` with real subject data, not stubs |
-| Audit replay performance trap | Phase 2 — build projection alongside log | Timeline slider renders under 100 ms measured with React DevTools profiler |
-| Mock signature conflated with real trust | Phase 2 — add [MOCK] labels to credential UI | Every credential result in the UI has a visible [MOCK] scope label |
-| Data-model impedance (ABAC vs. substrate) | Phase 1 — canonical `toABACSubject` transform defined | No second definition of "subject attributes" exists outside the transform |
-| Obligation conflated with stored grant | Phase 3 — obligation rule implemented; deployment toggle required | Deployment toggle changes decision outcome; no obligation_grants table or array exists |
-| Demo legibility | Phase 4 — legibility pass with non-developer witness | One non-developer can narrate the decision from ALLOW/DENY trace without verbal coaching |
-| Security theater | Phase 1 (banner); Phase 4 (full scope label audit) | Persistent demo banner visible; every mock boundary labeled in UI |
-| Directional shielding implemented as symmetric | Phase 3 — three-direction Vitest test | `shield.test.ts` covers intel→military ALLOW, military→intel DENY, allowlisted→intel ALLOW |
+| Cross-tier inheritance | Phase 9: `resolveResourceGrant` defined without ancestor-walk; failing test before passing impl | Test named `cross-tier-inheritance-blocked` is green |
+| Advisory vs hard gate | Phase 9: `ResourceAccessResult` type has `zoneAdvisory` separate field; test `allow: true` with unsatisfied zone; Phase 11: amber rendering, no DENY when only zone unsatisfied | Both test and visual check pass |
+| Application classification override | Phase 9: `validateResourceClassification` in `model.ts`; Phase 10: seed test calls it for all Applications | Seed test green; no Application with mismatched `minClearance` |
+| WorldState explosion | Phase 9: `DigitalResourceWorld` sub-object defined before any reducer cases | `WorldState` interface review at Phase 9 review gate; field count check |
+| Unstable `now` | Phase 9: resolver signatures take explicit `now: Date`; test fixtures use fixed constant; Phase 11: explorer component has `useMemo` | All resolver tests use fixed `NOW`; explorer component reviewed |
+| Pattern drift (naming/boundary) | Phase 9: naming convention documented before types are written | No duplicate time-window function exists in `model.ts`; no `valid_until` renamed to something else |
+| Route isolation breach | Phase 11: UI spec explicitly prohibits route files; review gate includes `git diff routeTree.gen.ts` check | `routeTree.gen.ts` diff is empty |
+| Seed missing expired/future grants | Phase 10: RSRC-SEED-05 checklist item with explicit count | At least 2 grants per tier where `isGrantActive(g, NOW)` is `false` |
 
 ---
 
 ## Sources
 
-- Spike findings skill: `.claude/skills/spike-findings-janus-2.0/` (references/abac-engine.md, references/audit.md, references/federation.md, references/policy-and-context.md, references/roles-sod.md)
-- AUTH-MODEL.md: `.planning/AUTH-MODEL.md` — sections §3 (pure-computed ABAC), §8 (SoD), §10 (demo/mock implications), §12 (6-unit deployment scenario)
-- PROJECT.md: `.planning/PROJECT.md` — demo/mock constraints, out-of-scope list
-- Spike 007 audit reference constraint: "Full replay per query won't scale — materialize a 'current access' projection from the log for hot queries"
-- Spike 006 trust constraint: "Demo uses symmetric HMAC + a mock key registry; a real build uses asymmetric/verifiable credentials + real key distribution"
-- Spike 009 policy constraint: "Obligations need a real deployment/posting feed + time-bounding + auto-revocation on return"
-- Spike 002 hub constraint: "If you find yourself wanting clearance/compartments in the hub, that belongs at the entity, reached via handshake"
+- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/lib/model.ts` — v2.1 model: `resolveGrant` ancestor-walk pattern, `isValidZoneTypeCombination`, `isGrantActive` boundary semantics (`<=`), `ZoneAccessResult` type, `PhysicalAccessGrant`/`ZoneAccessDelegate` interface shapes
+- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/lib/physical-access.test.ts` — v2.1 test suite: `const NOW` fixed constant pattern, D3-13 inline-fixture pattern, cross-type-inheritance-blocked tests, boundary-inclusive tests
+- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/store/world-state.tsx` — `WorldState` interface current shape, `seedWorld()` function, `Action` union, stable `now` pattern comment in `AccessResolutionExplorer`
+- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/components/access-resolution-explorer.tsx` — "Stable now — once per mount" comment, `ZoneResolutionTrace` gate rendering pattern, `relevantZoneIds` filter pattern
+- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/components/physical-access-panel.tsx` — sub-tab navigation pattern inside a parent panel
+- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/DemoRoot.tsx` — `ActiveView` type, tab-button navigation, `WorldProvider` wrapping — the correct pattern for adding a new demo panel
+- `/Users/vidarbrevik/projects/janus-2.0/.planning/milestones/v2.2-REQUIREMENTS.md` — RSRC-ACCESS-05 (gate chain), RSRC-GRANT-02 (no cross-tier inheritance), RSRC-ACCESS-04 (zone-prerequisite), RSRC-SEED-05 (time-window coverage)
+- `/Users/vidarbrevik/projects/janus-2.0/.planning/PROJECT.md` — Key Decisions: "Application inherits Platform classification" and "zone-prerequisite is advisory non-blocking"; demo isolation constraint
+- `/Users/vidarbrevik/projects/janus-2.0/CLAUDE.md` — Demo stays isolated (`frontend/src/demo/`); no `routeTree.gen.ts` changes until fullstack integration
 
 ---
-*Pitfalls research for: Janus 2.0 — Federated ABAC Authorization Hub DEMO*
-*Researched: 2026-05-21*
+*Pitfalls research for: v2.2 Network→Platform→Application digital-resource access added to Janus 2.0 demo*
+*Researched: 2026-06-02*

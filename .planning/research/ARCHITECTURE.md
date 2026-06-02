@@ -1,8 +1,8 @@
 # Architecture Research
 
-**Domain:** Federated ABAC authorization-hub demo (in-memory, simulated transport, React SPA)
-**Researched:** 2026-05-21
-**Confidence:** HIGH — derived directly from 9 validated spikes; no external sources needed
+**Domain:** v2.2 Digital-Resource Access Demo (Network → Platform → Application)
+**Researched:** 2026-06-02
+**Confidence:** HIGH — derived from direct inspection of actual v2.1 demo code
 
 ---
 
@@ -11,486 +11,500 @@
 ### System Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                       DEMO SHELL  (React SPA)                        │
-│  ┌────────────────┐  ┌─────────────────┐  ┌───────────────────────┐  │
-│  │  Hub Console   │  │  Entity Console │  │  Audit / Log Console  │  │
-│  │  (god-view)    │  │  (per-entity)   │  │  (time-slider view)   │  │
-│  └───────┬────────┘  └────────┬────────┘  └──────────┬────────────┘  │
-│          │                   │                       │               │
-├──────────┴───────────────────┴───────────────────────┴───────────────┤
-│                    DEMO CONTEXT  (React context / store)             │
-│  ┌───────────────────────────────────────────────────────────────┐   │
-│  │  WorldState: subjects, resources, units, subunits, hubIndex,  │   │
-│  │             auditLog, unitPolicies, deploymentCtx             │   │
-│  └─────────────────────────┬─────────────────────────────────────┘   │
-│                            │ dispatch(WorldAction)                    │
-├────────────────────────────┼─────────────────────────────────────────┤
-│                    PURE LOGIC LAYER  (framework-free)                │
-│  ┌──────────┐  ┌─────────┐  ┌───────────┐  ┌──────┐  ┌──────────┐   │
-│  │ abac.ts  │  │contract │  │credential │  │audit │  │ policy/  │   │
-│  │          │  │  .ts    │  │   .ts     │  │log.ts│  │obligs.ts │   │
-│  └──────────┘  └─────────┘  └───────────┘  └──────┘  └──────────┘   │
-├────────────────────────────┬─────────────────────────────────────────┤
-│                    WORLD DATA  (seeded, in-memory)                   │
-│  ┌──────────────────────────────────────────────────────────────┐    │
-│  │  world.ts: Subject[], Resource[], Unit[], Subunit[],         │    │
-│  │            HubPointer[], EntityPolicy[], SupportObligation[] │    │
-│  └──────────────────────────────────────────────────────────────┘    │
-└──────────────────────────────────────────────────────────────────────┘
+frontend/src/demo/                   ← demo island (no routeTree.gen.ts dependency)
+├── main.tsx                         ← separate Vite entry; WorldProvider wraps tree
+├── DemoRoot.tsx                     ← tab switcher; add "Digital Resources" tab here
+├── lib/
+│   ├── model.ts                     ← SHARED types + pure functions (FROZEN seed head)
+│   │                                   v2.1 adds: ZoneNode, PhysicalAccessGrant,
+│   │                                             ZoneAccessDelegate, ZoneEntryLog,
+│   │                                             ZoneVisitorPass + resolver fns
+│   │                                   v2.2 adds: NetworkNode, PlatformNode, ApplicationNode,
+│   │                                             ResourceAccessGrant, ResourceAccessDelegate,
+│   │                                             gate-chain resolver fns
+│   ├── seed.ts                      ← v2.1 adds ZONES/GRANTS/DELEGATES/ENTRY_LOGS/VISITOR_PASSES
+│   │                                   v2.2 adds: NETWORKS/PLATFORMS/APPLICATIONS,
+│   │                                             RESOURCE_GRANTS/RESOURCE_DELEGATES
+│   ├── physical-access.test.ts      ← v2.1 unit tests for zone model (UNMODIFIED)
+│   └── digital-resource.test.ts    ← NEW — unit tests for gate-chain functions
+├── store/
+│   └── world-state.tsx              ← single useReducer; v2.2 extends WorldState +
+│                                       Action union + reducer cases
+└── components/
+    ├── physical-access-panel.tsx    ← v2.1 outer shell (UNMODIFIED)
+    │   sub-views: zone-browser.tsx, access-resolution-explorer.tsx,
+    │              zone-entry-log-view.tsx
+    ├── digital-resources-panel.tsx  ← NEW v2.2 outer shell (mirrors PhysicalAccessPanel)
+    │   sub-views: resource-browser.tsx, resource-resolution-explorer.tsx
+    └── ui.tsx                       ← shared Pill, Card, Field, Select, MockTag (UNMODIFIED)
 ```
 
 ### Component Responsibilities
 
-| Component | Responsibility | Location |
-|-----------|----------------|----------|
-| `WorldState` context | Single source of truth for all mutable demo state; dispatches actions that append to the audit log and update subject attributes | `demo/context/world.tsx` |
-| `world.ts` | Seeded initial data; the unified mock dataset reconciling both data models | `demo/lib/world.ts` |
-| `abac.ts` | Pure ABAC evaluator — `evaluate()`, `evaluateWithPolicy()`, `evaluateSubunitAccess()`, `evaluateResourceAccess()` | `demo/lib/abac.ts` (merged from spikes) |
-| `contract.ts` | `Network` class — typed envelope routing, transcript recording, the only inter-entity channel | `demo/lib/contract.ts` (reused) |
-| `credential.ts` | `issueCredential` / `verifyCredential` — HMAC signing + trusted-issuer check | `demo/lib/credential.ts` (reused) |
-| `auditlog.ts` | `reconstructSubject`, `whoCanAccess`, `AttrEvent` log — append-only, time-indexed | `demo/lib/auditlog.ts` (reused) |
-| `policy.ts` + `obligations.ts` | Per-entity policy evaluation; obligation grants + directional shielding | `demo/lib/policy.ts`, `obligations.ts` (reused) |
-| Hub Console view | God-view: pointer index, who-holds-what, no sensitive detail visible; also shows the Network transcript | `demo/views/HubView.tsx` |
-| Entity Console view | Per-entity perspective: operate as one entity, request detail from others, see ABAC trace, manage role SoD actions | `demo/views/EntityView.tsx` |
-| Audit Console view | Timeline slider, point-in-time reconstruction, who-can-access queries, leak/anomaly indicator | `demo/views/AuditView.tsx` |
-| Context Console view | 6-unit deployment scenario, subunit deployment toggle, obligation grants, directional shielding traces | `demo/views/ContextView.tsx` |
-| `DecisionTrace` | Shared UI: renders rule list + overrides for any `Decision` object | `demo/components/DecisionTrace.tsx` (from spike `ui.tsx`) |
+| Component | Responsibility | v2.1 Analog |
+|-----------|----------------|-------------|
+| Digital-resource types in `lib/model.ts` | Type definitions + pure gate-chain functions for Network/Platform/Application | Zone types + `evaluateControlledAccess` etc. in `model.ts` |
+| `seed.ts` additions | In-memory mock dataset: networks, platforms, applications, grants, delegates | `ZONES`, `GRANTS`, `DELEGATES` constants |
+| `world-state.tsx` extensions | Add resource arrays to `WorldState`; new action `TOGGLE_RESOURCE_GRANT`; reducer cases | `zones`, `grants`, `delegates` fields + `TOGGLE_GRANT` action |
+| `digital-resources-panel.tsx` | Outer shell; sub-nav for Resource Browser and Resource Resolution Explorer | `physical-access-panel.tsx` |
+| `resource-browser.tsx` | Network → Platform → Application collapsible tree + detail panel | `zone-browser.tsx` |
+| `resource-resolution-explorer.tsx` | Person + resource selector, gate-chain trace, advisory zone-prereq row, grant toggles | `access-resolution-explorer.tsx` |
+| `DemoRoot.tsx` (modified) | Add `"digital-resources"` to `ActiveView` union and a new tab button | Existing tab bar |
 
 ---
 
-## Unified Mock-World Data Model
-
-### The Reconciliation Problem
-
-The spike dataset has two separate namespaces that must coexist in the demo:
-
-**Spike 001–008 model** (`lib/data.ts`): `Subject` + `Resource` + `EntityId` (`ENTITY_A/B/C`) — used by ABAC engine, hub, handshake, contract, credential, audit, policy.
-
-**Spike 009 model** (`lib/obligations.ts`): `Subunit` + `ContextResource` + `UnitId` (`MILITARY_1/2`, `INTEL`, `INFRA`, `INDUSTRY`, `HOME_GUARD`) — used by the 6-unit deployment scenario.
-
-These are not contradictory — they are two lenses on the same entities at different abstraction levels. The reconciliation is straightforward:
-
-**Each `UnitId` maps to one `EntityId`.** The 6-unit scenario IS the real deployment; the 3-entity ABAC model was a simplified spike dataset. In the demo, promote the 6-unit model as the canonical entity set and retire the 3-entity simplification.
-
-### Unified Entity Mapping
-
-```
-UnitId (obligations.ts)  →  EntityId (world.ts)       →  Entity label
-─────────────────────────────────────────────────────────────────────
-MILITARY_1               →  "UNIT_MILITARY_1"          Military Unit 1
-MILITARY_2               →  "UNIT_MILITARY_2"          Military Unit 2
-INTEL                    →  "UNIT_INTEL"               Intelligence
-INFRA                    →  "UNIT_INFRA"               Inventory / Infrastructure
-INDUSTRY                 →  "UNIT_INDUSTRY"            Industry
-HOME_GUARD               →  "UNIT_HOME_GUARD"          Home Guard
-```
-
-The old `ENTITY_A/B/C` are replaced. All spike libs that take `EntityId` still work — only the seed values change.
-
-### Unified `world.ts` Schema
-
-```typescript
-// All types that world.ts must export:
-
-// -- Identifiers (replace ENTITY_A/B/C with the 6-unit set) --
-export type UnitId = "UNIT_MILITARY_1" | "UNIT_MILITARY_2" | "UNIT_INTEL"
-                   | "UNIT_INFRA" | "UNIT_INDUSTRY" | "UNIT_HOME_GUARD";
-export type EntityId = UnitId;  // alias so abac.ts and contract.ts still compile
-
-// -- From obligations.ts (expanded) --
-export type Deployment = "HOME" | "ABROAD";
-export interface Subunit { id: string; name: string; unit: UnitId; deployment: Deployment; }
-
-// -- From data.ts (unchanged types, re-seeded for 6 units) --
-export type Clearance = "UNCLASSIFIED" | "CONFIDENTIAL" | "SECRET" | "TOP_SECRET";
-export type Domain = "COMPUTER" | "DATA" | "PHYSICAL";
-export type Compartment = "AURORA" | "BLACKWING" | "CITADEL" | "HARVEST" | "SCREEN";
-  // HARVEST = intel program; SCREEN = industry stock data — new compartments for the 6-unit scenario
-
-export interface Subject {
-  id: string; name: string;
-  homeEntity: EntityId;             // which unit owns this person's record
-  clearance: Clearance;             // external, read-only
-  domainAuth: Partial<Record<Domain, string>>;
-  compartments: Compartment[];
-  flags: { revoked: boolean; securityHold: boolean; };
-}
-
-export interface Resource {
-  id: string; name: string;
-  domain: Domain;
-  requiredTier: string;
-  minClearance: Clearance;
-  requiredCompartments: Compartment[];
-  ownerEntity: EntityId;
-  shielded?: boolean;              // NEW: merges ContextResource.shielded into Resource
-  shieldAllowlist?: EntityId[];    // NEW: merges ContextResource.allowlist into Resource
-}
-
-export interface HubPointer {
-  subjectId: string; holdingEntity: EntityId; domain: Domain;
-}
-
-// -- Support obligations (from obligations.ts, same shape) --
-export interface SupportObligation { from: UnitId; to: UnitId; }
-
-// -- Per-entity policy (from policy.ts, EntityPolicy already references EntityId) --
-// EntityPolicy is imported from policy.ts unchanged.
-
-// -- Cross-entity agreements (from data.ts, re-seeded) --
-export type Agreement = [EntityId, EntityId];
-// Military units agree with each other; intel reads-all; infra domain-scoped; industry isolated
-```
-
-### Resource Model Merge
-
-`Resource` and `ContextResource` are the same concept. Merge them: add optional `shielded` and `shieldAllowlist` fields directly onto `Resource`. The ABAC engine already has `ownerEntity`; the policy/obligations code checks shielded. This lets `evaluateResourceAccess` in `obligations.ts` operate on the same `Resource` type as the ABAC engine, eliminating the parallel `RESOURCES_CTX` array.
-
-### Subjects Seeded for 6-Unit Scenario
-
-Seed at least one `Subject` per unit with representative clearance + compartments. Suggested seed (6 subjects, one per unit):
-
-| Name | homeEntity | clearance | domainAuth | compartments |
-|------|-----------|-----------|------------|--------------|
-| Alice Strand | UNIT_MILITARY_1 | SECRET | COMPUTER:PRIVILEGED, PHYSICAL:RESTRICTED_AREA | AURORA |
-| Ben Holt | UNIT_MILITARY_2 | TOP_SECRET | COMPUTER:ROOT, DATA:CLASSIFIED | AURORA, BLACKWING |
-| Cara Moen | UNIT_INTEL | TOP_SECRET | DATA:CLASSIFIED | AURORA, BLACKWING, HARVEST |
-| Dan Sørby | UNIT_INFRA | CONFIDENTIAL | PHYSICAL:RESTRICTED_AREA | — |
-| Eva Krog | UNIT_INDUSTRY | CONFIDENTIAL | DATA:RESTRICTED | SCREEN |
-| Finn Laug | UNIT_HOME_GUARD | SECRET | PHYSICAL:RESTRICTED_AREA | AURORA |
-
----
-
-## Recommended Demo Structure
+## Recommended Project Structure
 
 ```
 frontend/src/demo/
 ├── lib/
-│   ├── world.ts          # unified seed data + all shared types
-│   ├── abac.ts           # merged evaluate() + evaluateWithPolicy() + evaluateSubunit/Resource()
-│   ├── contract.ts       # Network class (reused unchanged)
-│   ├── credential.ts     # issueCredential / verifyCredential (reused unchanged)
-│   ├── auditlog.ts       # reconstructSubject / whoCanAccess (reused, base = WorldState subjects)
-│   ├── policy.ts         # EntityPolicy + evaluateWithPolicy (reused unchanged)
-│   └── obligations.ts    # evaluateSubunitAccess / evaluateResourceAccess (reused, types updated)
-├── context/
-│   └── world.tsx         # WorldStateContext + useWorld() + dispatch(WorldAction)
-├── views/
-│   ├── HubView.tsx       # Hub Console (god-view)
-│   ├── EntityView.tsx    # Entity Console (per-entity perspective)
-│   ├── AuditView.tsx     # Audit Console (time-slider, reconstruction)
-│   └── ContextView.tsx   # Context Console (6-unit deployment, obligations)
+│   ├── model.ts                          MODIFIED — append digital-resource types + functions
+│   ├── seed.ts                           MODIFIED — append NETWORKS, PLATFORMS, APPLICATIONS,
+│   │                                               RESOURCE_GRANTS, RESOURCE_DELEGATES
+│   ├── physical-access.test.ts           UNMODIFIED
+│   └── digital-resource.test.ts         NEW — unit tests for gate-chain functions
+├── store/
+│   └── world-state.tsx                  MODIFIED — WorldState fields, Action union, reducer
 ├── components/
-│   ├── DecisionTrace.tsx # shared rule/override renderer (from spike ui.tsx)
-│   ├── SubjectCard.tsx   # subject attributes + flags display
-│   ├── ResourceCard.tsx  # resource requirements display
-│   └── NetworkLog.tsx    # contract envelope transcript viewer
-└── DemoShell.tsx         # top-level nav + view switcher (replaces spikes/Shell.tsx)
+│   ├── DemoRoot.tsx                     MODIFIED — new tab entry
+│   ├── digital-resources-panel.tsx      NEW — outer shell (mirrors physical-access-panel.tsx)
+│   ├── resource-browser.tsx             NEW — tree browser (mirrors zone-browser.tsx)
+│   ├── resource-resolution-explorer.tsx NEW — gate-chain explorer (mirrors access-resolution-explorer.tsx)
+│   ├── physical-access-panel.tsx        UNMODIFIED
+│   ├── zone-browser.tsx                 UNMODIFIED
+│   ├── access-resolution-explorer.tsx   UNMODIFIED
+│   ├── zone-entry-log-view.tsx          UNMODIFIED
+│   └── ui.tsx                           UNMODIFIED (reuse Pill, Card, Field, Select, MockTag)
 ```
 
-The `demo/` tree is a **sibling of `spikes/`** — spike code is not deleted, just not imported. The new demo mounts via the existing `spikes.html` entry point, replacing the `Shell` import with `DemoShell`.
+### Structure Rationale
+
+- **No new directories.** v2.1 placed zone model types directly in `lib/model.ts` and zone seed data in `lib/seed.ts`. v2.2 mirrors this: append digital-resource types to the same `model.ts` and append seed constants to `seed.ts`. Keeping one model file avoids import-cycle risk between model and seed.
+- **New test file** (`digital-resource.test.ts`) rather than appending to `physical-access.test.ts`. Tests map 1:1 to their domain; mixing physical and digital tests in one file creates noise and breaks the "one domain per test file" pattern established in v2.1.
+- **New component files per sub-view.** v2.1 has `zone-browser.tsx`, `access-resolution-explorer.tsx`, `zone-entry-log-view.tsx` as separate files. v2.2 follows this: `resource-browser.tsx` and `resource-resolution-explorer.tsx` are separate files (no entry-log analog in v2.2 scope).
+- **`digital-resources-panel.tsx`** is the exact structural sibling of `physical-access-panel.tsx` — a thin shell that owns the sub-nav and conditionally renders sub-view components.
 
 ---
 
-## Architecture Patterns
+## Architectural Patterns
 
-### Pattern 1: WorldState as Single Append-Only Store
+### Pattern 1: Append to `model.ts`, export from one module
 
-**What:** One React context holds all mutable demo state. Every user action dispatches a `WorldAction` that: (a) appends an `AttrEvent` to the audit log, (b) updates the materialized subject/resource state. The audit log is the system of record; the materialized state is a performance projection.
+**What:** All domain types (interfaces) and pure resolver functions live in `lib/model.ts`. v2.1 added ~300 lines of zone types and functions to the existing file rather than creating a separate `zone-model.ts`. v2.2 must do the same.
 
-**When to use:** Always in this demo — this is the core invariant of the pure-ABAC model.
+**When to use:** Always — this is the established module contract. `seed.ts` imports from `./model`; `store/world-state.tsx` imports from `../lib/model`. Adding a new `digital-resource-model.ts` would require updating every consumer and risks circular imports when the digital-resource resolver needs `ZoneNode` and `PhysicalAccessGrant` for the advisory zone-prereq check.
 
-**Trade-offs:** All views share one store, so any view can show "current world" state without prop drilling. The cost is that the context is wide; fine for a demo.
+**Trade-offs:** `model.ts` grows longer (~650 lines today → ~950 after v2.2), but it is organized with `// --- Phase N: [section name] ---` comment headers. This convention must be followed.
 
-**Example:**
+**Example (types appended to model.ts):**
 ```typescript
-type WorldAction =
-  | { type: 'GRANT_COMPARTMENT'; subjectId: string; value: Compartment; actor: string }
-  | { type: 'SET_HOLD'; subjectId: string; actor: string }
-  | { type: 'SET_DEPLOYMENT'; subunitId: string; deployment: Deployment }
-  | { type: 'RESET' };
+// --- Phase 9: Digital Resource hierarchy model (v2.2) ---
 
-function worldReducer(state: WorldState, action: WorldAction): WorldState {
-  if (action.type === 'GRANT_COMPARTMENT') {
-    const event: AttrEvent = { seq: state.nextSeq, subjectId: action.subjectId,
-                                op: 'GRANT_COMPARTMENT', value: action.value, actor: action.actor };
-    // update materialized subjects + append to log in one atomic step
-    return { ...state, nextSeq: state.nextSeq + 1,
-             auditLog: [...state.auditLog, event],
-             subjects: applyEvent(state.subjects, event) };
-  }
-  // ...
+export type ResourceTier = "NETWORK" | "PLATFORM" | "APPLICATION";
+
+export interface NetworkNode {
+  id: string;
+  name: string;
+  classification: Clearance;
+  admin_org_id: UnitId;
+  asset_owner_org_id: UnitId;
+  zone_prereq_id: string | null; // advisory link to a ZoneNode (RSRC-ACCESS-04)
+}
+
+export interface PlatformNode {
+  id: string;
+  name: string;
+  network_id: string;          // strict tree: exactly one Network
+  classification: Clearance;
+  admin_org_id: UnitId;
+  asset_owner_org_id: UnitId;
+  zone_prereq_id: string | null;
+}
+
+export interface ApplicationNode {
+  id: string;
+  name: string;
+  platform_id: string;         // strict tree: exactly one Platform
+  // NO classification field — inherited from Platform at resolution time
+  admin_org_id: UnitId;
+  asset_owner_org_id: UnitId;
+  zone_prereq_id: string | null;
+}
+
+export interface ResourceAccessGrant {
+  id: string;
+  person_id: string;
+  resource_tier: ResourceTier;
+  resource_id: string;
+  valid_from: Date | null;
+  valid_until: Date | null;
+}
+
+export interface ResourceAccessDelegate {
+  id: string;
+  resource_tier: ResourceTier;
+  resource_id: string;
+  delegate_type: "PERSON" | "ORG";
+  delegate_person_id: string | null;
+  delegate_org_id: string | null;
+  granted_by_org_id: string;
+  valid_from: Date | null;
+  valid_until: Date | null;
 }
 ```
 
-### Pattern 2: Per-Entity Console View with Shared Engine
+### Pattern 2: Gate-chain as a pure function returning a typed trace record
 
-**What:** The Entity Console mounts in the context of one selected unit (`activeUnit`). It constructs a `Network` from the current `WorldState`, operates as that unit, and shows ABAC traces for every action. Role SoD is enforced by the active operating role (`activeRole`) checked against `ROLES[activeRole].ops`.
+**What:** v2.1 implements two-gate resolution as a pure function (`resolveZoneAccess`) returning a typed `ZoneAccessResult` that the UI renders as a trace. v2.2 must follow the same pattern for the three-gate digital-resource chain.
 
-**When to use:** Any demo interaction that shows "what an entity sees / can do."
+**When to use:** Resolution always. Derive the decision in the view via `useMemo`; never store it. This matches the "pure-computed ABAC" contract from the v2.0 AUTH-MODEL.
 
-**Trade-offs:** The `Network` is constructed fresh from `WorldState` on each render; this is fine for a demo with ~10 subjects. The transcript accumulates in local component state so it doesn't pollute the global audit log.
+**Example (result type and resolver signature):**
+```typescript
+export interface ResourceGateResult {
+  gate: "CLEARANCE" | "GRANT_LOOKUP" | "PREREQUISITE_GRANT";
+  pass: boolean;
+  detail: string;
+}
 
-**Example flow:**
+export interface ZonePrereqTrace {
+  zoneId: string;
+  zoneGrantActive: boolean;
+  advisory: string;  // plain-prose warning rendered in amber
+}
+
+export interface ResourceAccessResult {
+  allow: boolean;
+  tier: ResourceTier;
+  resourceId: string;
+  gates: ResourceGateResult[];
+  zonePrerequisite?: ZonePrereqTrace;  // present only when zone_prereq_id is non-null
+}
+
+// Gate 1: clearance >= resource classification
+//   (Application: classification derived from parent Platform)
+// Gate 2: explicit active grant for this resource and tier
+// Gate 3: prerequisite tier grant active (skipped for NETWORK — top of chain)
+//   PLATFORM: active NETWORK grant for platform.network_id
+//   APPLICATION: active PLATFORM grant for app.platform_id
+// Zone prereq: advisory — uses existing resolveZoneAccess from same file
+export function resolveResourceAccess(
+  personId: string,
+  resourceTier: ResourceTier,
+  resourceId: string,
+  allNetworks: NetworkNode[],
+  allPlatforms: PlatformNode[],
+  allApplications: ApplicationNode[],
+  allGrants: ResourceAccessGrant[],
+  personClearance: Clearance,
+  now: Date,
+  allZones: ZoneNode[],
+  allZoneGrants: PhysicalAccessGrant[],
+): ResourceAccessResult { ... }
 ```
-User picks: activeUnit = UNIT_INTEL, activeRole = ACCESS_APPROVER
-  → Entity Console shows INTEL's subject records
-  → User clicks "Discover subject X" → Network.discover(UNIT_INTEL, subjectId)
-  → Hub returns pointers (no detail)
-  → User clicks "Request detail from UNIT_MILITARY_1"
-      → Network.requestDetail(UNIT_INTEL, UNIT_MILITARY_1, subjectId, requester)
-      → ABAC trace rendered via DecisionTrace
-  → If ALLOW: user can see the record
+
+**Why NOT separate functions per tier:** v2.1 used separate `evaluateControlledAccess` / `evaluateRestrictedAccess` / `evaluateSecuredAccess` because each zone-type has a distinct rule structure. For digital resources, all three tiers share the same gate structure (clearance → explicit grant → prereq grant); a single parameterized function handles all tiers with tier-specific prereq logic.
+
+### Pattern 3: `WorldState` extension — append fields, new action types
+
+**What:** `world-state.tsx` holds `WorldState`, `Action` (discriminated union), and `reducer`. v2.1 added `zones`, `grants`, `delegates`, `entryLogs`, `visitorPasses`, `disabledGrantIds` to `WorldState` and `TOGGLE_GRANT` to `Action`. v2.2 appends new fields and a new action type; existing fields are untouched.
+
+**When to use:** Any new demo state. The split-context pattern (`WorldStateContext` + `WorldDispatchContext`) is already in place — do not change it.
+
+**Example (diff to world-state.tsx):**
+```typescript
+// Extend WorldState (append only — do NOT restructure existing fields):
+export interface WorldState {
+  // ... all existing fields unchanged ...
+  networks: NetworkNode[];
+  platforms: PlatformNode[];
+  applications: ApplicationNode[];
+  resourceGrants: ResourceAccessGrant[];
+  resourceDelegates: ResourceAccessDelegate[];
+  disabledResourceGrantIds: Set<string>;  // mirrors disabledGrantIds pattern
+}
+
+// Extend Action union (append only):
+export type Action =
+  | /* all existing actions unchanged */
+  | { type: "TOGGLE_RESOURCE_GRANT"; grantId: string };
+
+// seedWorld() adds:
+networks: [...NETWORKS],
+platforms: [...PLATFORMS],
+applications: [...APPLICATIONS],
+resourceGrants: [...RESOURCE_GRANTS],
+resourceDelegates: [...RESOURCE_DELEGATES],
+disabledResourceGrantIds: new Set<string>(),
 ```
 
-### Pattern 3: Simulated Transport via Network Class
+### Pattern 4: Panel shell + sub-nav (mirrors `physical-access-panel.tsx` exactly)
 
-**What:** `contract.ts`'s `Network` is the ONLY inter-entity communication channel in the demo. No direct cross-entity function calls. Every `requestDetail` call applies the holder's ABAC policy before returning. The `Network.transcript` array gives the demo its "wire log" — the Network Log panel shows the envelope sequence.
+**What:** `physical-access-panel.tsx` is a thin shell component that owns a local `activeView` state and renders one of three sub-view components. Each sub-view calls `useWorld()` directly for data — data is not passed as props. v2.2's `digital-resources-panel.tsx` must be structurally identical.
 
-**When to use:** Every federation interaction — publish, discover, request detail.
+**Example:**
+```typescript
+// digital-resources-panel.tsx
+type DigitalView = "resource-browser" | "resource-resolution";
 
-**Trade-offs:** In-process simulation means transport latency is zero; the demo uses `async` in credential verification but the Network itself is synchronous. A real build swaps `Network` for a real transport, keeping the `Envelope` types unchanged. That swap is explicit in the contract design.
-
-### Pattern 4: ABAC Engine Merge (obligations.ts unifies into abac.ts)
-
-**What:** The two evaluation paths (`abac.ts::evaluate` + `obligations.ts::evaluateSubunitAccess` / `evaluateResourceAccess`) are merged into a single `abac.ts` that handles both modes. `evaluateSubunitAccess` is the deployment-context path; `evaluateResourceAccess` applies shielding. Both use the same `Decision` / `Rule` / `ContextRule` return types.
-
-**When to use:** Any access decision. The caller picks the evaluation path based on what it's checking: a standard resource → `evaluate`; a subunit (deployment context) → `evaluateSubunitAccess`; a shielded resource → `evaluateResourceAccess`.
-
-**Trade-offs:** Keeping them separate (as in the spikes) is fine too. The advantage of merging is a single import and the ability to compose (e.g., standard ABAC check + shielding check in sequence for the same resource). Merge is recommended for the demo's single-file clarity; defer to separate files only if tests make the single file unwieldy.
+export function DigitalResourcesPanel() {
+  const [activeView, setActiveView] = useState<DigitalView>("resource-browser");
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <button
+          className={`rounded px-4 py-2 text-sm ${activeView === "resource-browser" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+          onClick={() => setActiveView("resource-browser")}
+        >
+          Resource Browser
+        </button>
+        <button
+          className={`rounded px-4 py-2 text-sm ${activeView === "resource-resolution" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+          onClick={() => setActiveView("resource-resolution")}
+        >
+          Access Resolution
+        </button>
+      </div>
+      {activeView === "resource-browser" && <ResourceBrowser />}
+      {activeView === "resource-resolution" && <ResourceResolutionExplorer />}
+    </div>
+  );
+}
+```
 
 ---
 
 ## Data Flow
 
-### ABAC Access Decision Flow
+### Resolution Request Flow (v2.2 gate chain)
 
 ```
-User selects: subject + resource (or subunit)
+User selects person + resource tier + resource in ResourceResolutionExplorer
     ↓
-WorldState.subjects → principalFromSubject(subject)
-WorldState.resources → requirementFromResource(resource)
+useMemo recomputes resolveResourceAccess(...)
+    ├── Gate 1: CLEARANCE
+    │     Application: look up app → platform → platform.classification
+    │     Platform: use platform.classification
+    │     Network: use network.classification
+    │     personClearance >= resource classification?
+    │     DENY on fail — stop evaluating remaining gates
+    ├── Gate 2: GRANT_LOOKUP
+    │     find active ResourceAccessGrant for (personId, tier, resourceId, now)
+    │     not in disabledResourceGrantIds
+    │     DENY on fail — stop evaluating remaining gates
+    ├── Gate 3: PREREQUISITE_GRANT (skipped for NETWORK tier)
+    │     PLATFORM: active NETWORK grant for platform.network_id?
+    │     APPLICATION: active PLATFORM grant for app.platform_id?
+    │     DENY on fail
+    └── ZONE PREREQ (advisory — always evaluated, never blocks)
+          resource has zone_prereq_id?
+            yes → call resolveZoneAccess(personId, zone, clearance, ...)
+                  using existing v2.1 fn from same model.ts
+            → ZonePrereqTrace{zoneId, zoneGrantActive, advisory string}
+    → ResourceAccessResult{allow, tier, resourceId, gates[], zonePrerequisite?}
     ↓
-abac.evaluate(principal, requirement)           ← for standard resource
-abac.evaluateWithPolicy(p, req, policy)         ← for per-entity policy path
-abac.evaluateSubunitAccess(requester, subunit)  ← for deployment context
-abac.evaluateResourceAccess(requester, res)     ← for shielded resource
-    ↓
-Decision { decision, rules[], overrides[], failed[] }
-    ↓
-<DecisionTrace decision={d} /> — renders every rule + override with ✓/✗
+ResourceResolutionTrace renders gate rows (red/green) + advisory zone row (amber)
 ```
 
-### Federation Request Flow (typed contract)
+### Application Classification Derivation
 
 ```
-Entity Console: user selects activeUnit, picks subject
+ApplicationNode has NO classification field
     ↓
-Network.discover(activeUnit, subjectId)
-    → appends DISCOVER + DISCOVER_RESULT envelopes to transcript
-    → returns Pointer[] (no sensitive data)
+resolveResourceAccess(tier="APPLICATION", resourceId, ...)
     ↓
-User selects a holder from the pointer list
-    ↓
-credential.issueCredential(claims, issuerKey)   ← async, Web Crypto
-    ↓
-verifyCredential(cred)                          ← holder verifies before ABAC
-    ↓ if valid:
-Network.requestDetail(activeUnit, holder, subjectId, principal)
-    → ABAC evaluation at holder's entity policy
-    → appends REQUEST_DETAIL + DETAIL_RESPONSE envelopes
-    → returns DetailResult { granted, decision, record | null }
-    ↓
-Decision rendered via DecisionTrace; record shown only if granted
+look up application → get platform_id
+look up platform → get platform.classification
+use platform.classification for Gate 1 clearance check
 ```
 
-### Audit Reconstruction Flow
+`ApplicationNode` intentionally has no `classification` field. The resolver derives it, making the inheritance rule explicit in the gate trace rather than a hidden data-copy.
+
+### State Management
 
 ```
-Audit Console: user drags timeline slider to asOf = N
+WorldState (useReducer, single store)
+    ↓ useWorld()
+ResourceBrowser reads: world.networks, world.platforms, world.applications,
+                       world.resourceGrants, world.resourceDelegates
+ResourceResolutionExplorer reads: all of the above + world.subjects,
+                                  world.disabledResourceGrantIds,
+                                  world.zones, world.grants (for zone-prereq)
+    ↓ useMemo → resolveResourceAccess(...)
+ResourceGateResult[] + optional ZonePrereqTrace
     ↓
-WorldState.auditLog (AttrEvent[]) + WorldState.subjects (base state)
-    ↓
-reconstructSubject(subjectId, auditLog, asOf) for each subject
-    ↓
-evaluate(principalFromSubject(reconstructed), requirement)
-    ↓
-whoCanAccess(requirement, auditLog, asOf) → AccessRow[]
-    ↓
-Rendered as "who could access X at time N" table
+ResourceResolutionTrace (renders gate rows)
+
+TOGGLE_RESOURCE_GRANT dispatched from grant checkbox
+    ↓ reducer: new Set(disabledResourceGrantIds) with toggle applied
+    ↓ disabledResourceGrantIds updated (new Set forces re-render)
+    ↓ activeResourceGrants recomputed in useMemo
+    ↓ Result re-evaluated live
 ```
 
-### WorldState Mutation Flow
+---
 
+## Advisory Zone-Prerequisite Wiring
+
+This is the only cross-domain integration point between the v2.2 digital-resource model and the v2.1 zone model.
+
+### Decision (already recorded in PROJECT.md)
+
+The zone-prerequisite link is advisory in the resolution trace — non-blocking. The gate-chain `allow` boolean is determined entirely by the three digital-resource gates. The zone-prereq check runs after all three gates and appends a `ZonePrereqTrace` to the result. A person can have `allow: true` while the zone-prereq warns they lack physical access to the terminal room.
+
+### Storage: Zone prereq on the resource node (not the grant)
+
+`zone_prereq_id: string | null` belongs on `NetworkNode` / `PlatformNode` / `ApplicationNode`, not on `ResourceAccessGrant`. The zone-prereq relationship is a structural property of the resource (the terminal physically lives in a room), not a property of a person's grant. This mirrors how `ZoneNode.requires_explicit_auth` is a property of the zone, not the grant.
+
+### Resolver call
+
+Because both `resolveResourceAccess` and `resolveZoneAccess` live in the same `model.ts` file, the zone-prereq check is a direct function call with no import needed:
+
+```typescript
+// Inside resolveResourceAccess, after Gate 3:
+if (resource.zone_prereq_id !== null) {
+  const prereqZone = allZones.find(z => z.id === resource.zone_prereq_id);
+  if (prereqZone) {
+    const zoneResult = resolveZoneAccess(
+      personId, prereqZone, personClearance,
+      false, // no escort context in digital-resource resolution
+      allZones, allZoneGrants, now
+    );
+    result.zonePrerequisite = {
+      zoneId: prereqZone.id,
+      zoneGrantActive: zoneResult.allow,
+      advisory: zoneResult.allow
+        ? `Zone access to "${prereqZone.name}" confirmed.`
+        : `Advisory: no active zone grant for "${prereqZone.name}" — physical access may be required.`,
+    };
+  }
+}
 ```
-Role SoD action (e.g. Approver grants compartment):
-    ↓
-dispatch({ type: 'GRANT_COMPARTMENT', subjectId, value, actor: activeRole })
-    ↓
-worldReducer appends AttrEvent to auditLog
-    ↓
-materialized subjects updated (applyEvent)
-    ↓
-All views reading WorldState re-render with new state
-    ↓
-Audit Console can now replay up to the new seq to see the change
-```
+
+### Trace Rendering
+
+`ResourceResolutionTrace` renders four rows:
+
+1. Gate 1 — Clearance (green/red)
+2. Gate 2 — Explicit grant (green/red)
+3. Gate 3 — Prerequisite tier grants (green/red; absent for NETWORK tier)
+4. Zone prerequisite — advisory row (amber `Pill` from `ui.tsx`; present only when configured)
+
+The advisory row never changes the overall ALLOW/DENY verdict label.
 
 ---
 
 ## Integration Points
 
-### Module Dependency Graph
+### New vs Modified File Summary
 
-```
-world.ts  (types + seed data)
-    ↑
-abac.ts   (depends on world.ts for types + CLEARANCE_RANK, TIERS, AGREEMENTS)
-    ↑
-contract.ts   (depends on world.ts + abac.ts)
-auditlog.ts   (depends on world.ts + abac.ts)
-policy.ts     (depends on world.ts + abac.ts)
-obligations.ts (depends on world.ts + abac.ts)
-credential.ts  (depends on world.ts for Clearance/Compartment/EntityId types only)
-    ↑
-context/world.tsx  (depends on all lib modules)
-    ↑
-views/  (depend on context/world.tsx + lib modules)
-components/  (depend on lib types for prop types; no world.tsx dependency)
-```
+| File | Status | Nature of Change |
+|------|--------|-----------------|
+| `lib/model.ts` | MODIFIED | Append digital-resource types and gate-chain functions after the last Phase 7 section comment |
+| `lib/seed.ts` | MODIFIED | Append NETWORKS, PLATFORMS, APPLICATIONS, RESOURCE_GRANTS, RESOURCE_DELEGATES; update exports |
+| `store/world-state.tsx` | MODIFIED | Append WorldState fields; extend Action union; extend reducer switch; update seedWorld() |
+| `components/DemoRoot.tsx` | MODIFIED | Add `"digital-resources"` to ActiveView union; add tab button; add `<DigitalResourcesPanel />` branch |
+| `lib/digital-resource.test.ts` | NEW | Unit tests for gate-chain functions (inline fixtures; no seed imports) |
+| `components/digital-resources-panel.tsx` | NEW | Outer shell (mirrors physical-access-panel.tsx) |
+| `components/resource-browser.tsx` | NEW | Tree browser + detail panel (mirrors zone-browser.tsx) |
+| `components/resource-resolution-explorer.tsx` | NEW | Gate-chain explorer (mirrors access-resolution-explorer.tsx) |
+| All other existing files | UNMODIFIED | zone-browser.tsx, access-resolution-explorer.tsx, zone-entry-log-view.tsx, ui.tsx, abac.ts, auditlog.ts, policy.ts, obligations.ts, contract.ts, credential.ts, physical-access.test.ts |
 
-No cycles. `world.ts` is the leaf (no internal imports). `credential.ts` is nearly independent — only needs three types from `world.ts`.
+### Internal Module Boundaries
 
-### Internal Boundaries
-
-| Boundary | Communication | Rule |
-|----------|---------------|------|
-| view → WorldState | `useWorld()` hook + `dispatch(WorldAction)` | Views never call lib functions directly that mutate world state; always go through dispatch |
-| Entity Console → Network | Instantiate `new Network()` in a `useMemo` from current `WorldState`; network transcript is local view state | Network is never in WorldState — it's a simulation tool, not persistent state |
-| credential verification → ABAC | ABAC is only called after `verifyCredential` returns `valid: true` | This is the trust boundary — never skip verification |
-| auditlog → subjects | `reconstructSubject` reads `WorldState.subjects` as base; events replay on top | Base state is not the log; it's the initial seed |
-
-### Spike Code Reuse vs. New Code
-
-| Module | Status | Action |
-|--------|--------|--------|
-| `spikes/lib/abac.ts` | REUSE with merge | Copy to `demo/lib/abac.ts`; add `evaluateSubunitAccess` + `evaluateResourceAccess` from `obligations.ts` |
-| `spikes/lib/contract.ts` | REUSE unchanged | Copy to `demo/lib/contract.ts`; update `EntityId` import to new 6-unit type |
-| `spikes/lib/credential.ts` | REUSE unchanged | Copy to `demo/lib/credential.ts`; ISSUER_KEYS and TRUSTED_ISSUERS stay identical |
-| `spikes/lib/auditlog.ts` | REUSE with one change | Copy to `demo/lib/auditlog.ts`; replace hardcoded `SUBJECTS` import with a passed-in `Subject[]` parameter so it works against WorldState instead of the spike seed |
-| `spikes/lib/policy.ts` | REUSE unchanged | Copy to `demo/lib/policy.ts`; update EntityId imports |
-| `spikes/lib/obligations.ts` | PARTIALLY REUSE | `evaluateSubunitAccess` + `evaluateResourceAccess` move into `demo/lib/abac.ts`; `UnitId` + `UNITS` + `SUPPORT_OBLIGATIONS` move into `world.ts` |
-| `spikes/lib/data.ts` | REPLACE | Superseded by `demo/lib/world.ts` with the unified 6-unit dataset |
-| `spikes/components/ui.tsx` (`DecisionTrace`) | REUSE | Extract `DecisionTrace` into `demo/components/DecisionTrace.tsx` |
-| All `Spike00N*.tsx` components | REPLACE | Views in `demo/views/` replace individual spike tabs; each view combines what multiple spikes showed separately |
-| `spikes/components/Shell.tsx` | REPLACE | `demo/DemoShell.tsx` replaces it; mounted from same `spikes.html` entry |
+| Boundary | Communication | Notes |
+|----------|---------------|-------|
+| `model.ts` ← `seed.ts` | `import type { ... } from "./model"` | seed.ts imports types; never exports logic |
+| `seed.ts` ← `world-state.tsx` | Named imports of constant arrays | `[...NETWORKS]` spread avoids shared array reference |
+| `world-state.tsx` → UI components | `useWorld()` / `useWorldDispatch()` hooks | Components never import seed.ts directly |
+| `resolveResourceAccess` → `resolveZoneAccess` | Same-file call (both in model.ts) | No import needed; zone-prereq wiring is contained in model.ts |
+| `resource-resolution-explorer.tsx` → `model.ts` | Import `resolveResourceAccess`, `isResourceGrantActive` | Same import path as v2.1: `../lib/model` |
 
 ---
 
-## Build Order
+## Suggested Build Order
 
-Build order follows the dependency graph: world data first, then engine, then simulation infrastructure, then views.
+This order ensures each layer is testable before the next depends on it.
 
-### Phase 1 — Foundation (no UI)
+**Phase 9 — Model + Tests (no UI, no seed dependency)**
+1. Append digital-resource type definitions to `lib/model.ts` — `ResourceTier`, `NetworkNode`, `PlatformNode`, `ApplicationNode`, `ResourceAccessGrant`, `ResourceAccessDelegate`, `ResourceAccessResult`, `ResourceGateResult`, `ZonePrereqTrace`
+2. Append pure functions to `lib/model.ts` — `isResourceGrantActive`, `resolveResourceGrant`, and the main `resolveResourceAccess` with advisory zone-prereq wiring using existing `resolveZoneAccess`
+3. Create `lib/digital-resource.test.ts` — unit tests for all gate-chain function branches (inline fixtures only, no seed imports; mirrors the D3-13 pattern from `physical-access.test.ts`)
 
-1. `demo/lib/world.ts` — unified seed data, all types, 6-unit dataset, `AGREEMENTS` and `SUPPORT_OBLIGATIONS` re-seeded. Reconciles both data models. This is the hardest data-design step; all downstream depends on it.
-2. `demo/lib/abac.ts` — merged evaluator: copy `evaluate` + `evaluateWithPolicy` from spike; add `evaluateSubunitAccess` + `evaluateResourceAccess` from obligations.ts; unify return types.
-3. `demo/context/world.tsx` — `WorldState`, `WorldAction`, `worldReducer`, `WorldStateContext`, `useWorld()`. Wire `GRANT_COMPARTMENT`, `REVOKE_COMPARTMENT`, `SET_HOLD`, `CLEAR_HOLD`, `SET_DEPLOYMENT` actions. Each action appends to `auditLog` + updates materialized state.
+**Phase 10 — Seed + Store (model must be complete)**
+4. Append NETWORKS, PLATFORMS, APPLICATIONS, RESOURCE_GRANTS, RESOURCE_DELEGATES to `lib/seed.ts`; add to export list; include zone_prereq_id links to existing zone IDs for at least one resource (RSRC-SEED-04)
+5. Extend `WorldState`, `Action`, `reducer`, `seedWorld()` in `store/world-state.tsx` — all append-only changes
 
-**Verify:** existing spike unit tests (`abac.test.ts`, `policy.test.ts`, `auditlog.test.ts`, `obligations.test.ts`, `contract.test.ts`, `credential.test.ts`) should all pass after the type updates.
+**Phase 11 — UI Components (store must be seeded)**
+6. Create `components/digital-resources-panel.tsx` (shell with sub-nav; renders sub-views)
+7. Create `components/resource-browser.tsx` (Network → Platform → Application collapsible tree + detail panel with admin_org, asset_owner_org, classification, active grants, delegates)
+8. Create `components/resource-resolution-explorer.tsx` (person + tier + resource selectors, gate-chain trace with advisory zone row, grant toggle panel)
+9. Modify `components/DemoRoot.tsx` — add `"digital-resources"` entry and `<DigitalResourcesPanel />` branch (smallest change; done last to avoid breaking the tab bar during construction)
 
-### Phase 2 — Simulation Infrastructure + Shared Components
-
-4. `demo/lib/contract.ts` — update `EntityId` type; otherwise unchanged.
-5. `demo/lib/credential.ts` — update imports; otherwise unchanged.
-6. `demo/lib/auditlog.ts` — change `reconstructSubject` to accept `subjects: Subject[]` instead of importing `SUBJECTS` directly; `whoCanAccess` receives subjects from caller.
-7. `demo/lib/policy.ts` — update imports.
-8. `demo/components/DecisionTrace.tsx` — extracted + lightly styled from spike `ui.tsx`.
-9. `demo/components/SubjectCard.tsx`, `ResourceCard.tsx`, `NetworkLog.tsx`.
-
-### Phase 3 — Views (in dependency order)
-
-10. `demo/views/HubView.tsx` — god-view: render `WorldState.hubIndex` as a table (no sensitive fields); show per-subject pointer grouping; "what the hub does NOT store" panel from spike 002. Requires only Phase 1 + 2.
-11. `demo/views/EntityView.tsx` — per-entity console: unit selector, role selector (8 roles), subject list for active unit, ABAC evaluation panel, federation panel (discover + request detail with credential verify + Network transcript). Combines spikes 001, 002, 003, 004, 005, 006, 008. Requires Phase 2 libs.
-12. `demo/views/AuditView.tsx` — audit log table, timeline slider for `asOf`, "who can access X at T" reconstruction panel, anomaly/leak detection indicator for INDUSTRY resources. Combines spikes 007. Requires `auditlog.ts` from Phase 2.
-13. `demo/views/ContextView.tsx` — 6-unit scenario: unit matrix, subunit deployment toggle (HOME/ABROAD), support obligation traces, directional shielding traces, `ContextDecision` renders via `DecisionTrace`. Combines spike 009. Requires Phase 1 merged `abac.ts`.
-
-### Phase 4 — Shell and Integration
-
-14. `demo/DemoShell.tsx` — top-level nav with four view tabs (Hub, Entity, Audit, Context). Wraps everything in `WorldStateProvider`. Replaces `spikes/Shell.tsx` as the mount point in `spikes.html` / `spikes/main.tsx`.
-
-**Verify integration:** demonstrate the cross-view story: grant a compartment in Entity Console (SoD: Approver role) → audit log in Audit Console updates → reconstruction slider shows the change → hub pointers remain unchanged (no sensitive detail leaked into hub).
+**Why this order:** Gate-chain logic is the riskiest part (most decision branching); test it before seed or UI depends on it. Seed before UI so components have real data on first render. Shell before sub-views so the sub-nav exists to navigate between sub-views as each is built. DemoRoot last because it just wires the already-working panel in.
 
 ---
 
 ## Anti-Patterns
 
-### Anti-Pattern 1: Sensitive Fields in WorldState Hub Index
+### Anti-Pattern 1: Creating `digital-resource-model.ts` as a separate file
 
-**What people do:** Store clearance, tier, or compartment data on `HubPointer` for convenience when populating views.
+**What people do:** Extract digital-resource types into their own file to keep `model.ts` shorter.
 
-**Why it's wrong:** Defeats the "discovery without disclosure" invariant. Any component reading hub state would trivially expose clearance data — the demo would no longer prove the model.
+**Why it's wrong:** `seed.ts` imports from `./model`. `world-state.tsx` imports from `../lib/model`. `access-resolution-explorer.tsx` imports from `../lib/model`. A second model file requires updating all consumers. Critically, `resolveResourceAccess` needs `ZoneNode` and `PhysicalAccessGrant` from the existing model for the zone-prereq check — splitting the file creates a circular import (`digital-resource-model.ts` imports from `model.ts`, which imports from `digital-resource-model.ts`).
 
-**Do this instead:** `HubPointer` contains only `{ subjectId, holdingEntity, domain }`. Sensitive data lives only in `WorldState.subjects`, accessible only via the handshake path (Network.requestDetail + ABAC evaluation).
+**Do this instead:** Append to `model.ts` under a `// --- Phase 9: Digital Resource hierarchy model (v2.2) ---` section comment, exactly as v2.1 appended zone types under `// --- Phase 5: Zone hierarchy model (v2.1 Physical Access Zones) ---`.
 
-### Anti-Pattern 2: Calling Spike Libs Directly from Views (Bypassing WorldState)
+### Anti-Pattern 2: Storing Application classification on `ApplicationNode`
 
-**What people do:** Import `evaluate()` directly in a view component and call it with hardcoded spike data instead of WorldState.
+**What people do:** Copy `platform.classification` onto the application record in seed data for convenience.
 
-**Why it's wrong:** Mutations (GRANT_COMPARTMENT, SET_HOLD) made via WorldState dispatch will not be reflected in direct spike-data calls. The audit log and materialized state diverge. The demo becomes inconsistent.
+**Why it's wrong:** The project decision is "Application INHERITS Platform classification." Storing it on the node creates two sources of truth and obscures the inheritance rule in the resolution trace. The detail panel should show "classification: SECRET (inherited from Platform X)" — this requires deriving it at display time, not reading a stored value.
 
-**Do this instead:** All evaluations in views use data from `useWorld()`. Pass `WorldState.subjects`, `WorldState.resources`, `WorldState.auditLog` to lib functions.
+**Do this instead:** `ApplicationNode` has no `classification` field. `resolveResourceAccess` for `tier="APPLICATION"` looks up the application, then its platform, then uses `platform.classification` for Gate 1. The detail panel in `resource-browser.tsx` does the same lookup and renders the inheritance note.
 
-### Anti-Pattern 3: Modeling Obligations as Static Attributes
+### Anti-Pattern 3: Making zone-prerequisite a blocking gate
 
-**What people do:** Add a `hasObligation: boolean` flag to `Subject` or pre-compute obligation grants into `domainAuth` during seeding.
+**What people do:** Put the zone-prereq check as Gate 4 so a missing zone grant causes DENY.
 
-**Why it's wrong:** Obligations are dynamic — they turn ON when a subunit deploys ABROAD and OFF when it returns HOME. Baking them into subject attributes prevents demonstrating context-driven access and collapses the whole point of spike 009.
+**Why it's wrong:** The project decision (recorded in `PROJECT.md` Key Decisions) is: "zone-prerequisite link is advisory, not a hard gate — the prereq surfaces in the resolution trace as a warning rather than forcing DENY." Hard-gating creates tight coupling between the physical and digital access domains that the design explicitly avoids.
 
-**Do this instead:** `evaluateSubunitAccess` always reads `subunit.deployment` from `WorldState.subunits` live. The deployment toggle in Context Console dispatches `SET_DEPLOYMENT` → obligation grant activates/deactivates in real time.
+**Do this instead:** Run the zone-prereq check after all three digital gates. Attach `zonePrerequisite?: ZonePrereqTrace` to `ResourceAccessResult`. Render it as an amber advisory row that never contributes to the `allow` boolean.
 
-### Anti-Pattern 4: Skipping Credential Verification Before ABAC
+### Anti-Pattern 4: Implementing cross-tier grant inheritance (Network grant covers Platform)
 
-**What people do:** Call `evaluate(principal, requirement)` directly with claims from the requester without running `verifyCredential` first.
+**What people do:** Allow a Network-level grant to automatically cover Platforms on that network, mirroring how the zone model allows parent grants to cover children of the same zone_type.
 
-**Why it's wrong:** Spike 006's core finding: self-asserted attributes must never be trusted. The demo is specifically designed to show ROGUE-ISSUER rejection. Skipping verification makes the federation flow indistinguishable from the insecure baseline.
+**Why it's wrong:** RSRC-GRANT-02 explicitly states: "each tier always requires explicit authorization — no automatic inheritance across tiers (Network grant does not grant Platform access)." The prerequisite chain is not inheritance; Gate 3 verifies a parent-tier grant exists as a precondition, but that grant does not substitute for the child-tier grant.
 
-**Do this instead:** The Entity Console federation flow always: (1) `issueCredential`, (2) `verifyCredential` → show verify result, (3) only if `valid: true` proceed to `Network.requestDetail`.
+**Do this instead:** Gate 2 checks for an explicit grant on the target resource. Gate 3 checks that a separate, independent grant exists at the prerequisite tier. Both must pass independently.
 
-### Anti-Pattern 5: Reconciling Data Models by Adding Two Separate Entity Sets
+### Anti-Pattern 5: Accessing seed data directly from UI components
 
-**What people do:** Keep `ENTITY_A/B/C` for the ABAC/federation spikes and `MILITARY_1/INTEL/...` for the context spike, bridged by a mapping table.
+**What people do:** Import `NETWORKS` / `PLATFORMS` etc. directly from `seed.ts` in a component.
 
-**Why it's wrong:** Two parallel entity namespaces in the same demo are confusing for a viewer and make cross-view consistency impossible (the hub view shows ENTITY_A, the context view shows MILITARY_1 — they appear unrelated).
+**Why it's wrong:** v2.1 establishes that all demo data flows through `WorldState` via `useWorld()`. This allows `TOGGLE_RESOURCE_GRANT` to disable grants and have the change reflected everywhere. Direct seed imports bypass the store and break the toggle interactivity.
 
-**Do this instead:** Use the 6-unit `UnitId` set everywhere. Update `EntityId` to be an alias for `UnitId`. Re-seed subjects and resources for the 6-unit scenario. The ABAC engine and contract don't care about the specific string values — only the types.
-
----
-
-## Scaling Considerations
-
-This is a DEMO — scale is not a concern. The relevant constraint is demo clarity:
-
-| Scale | Note |
-|-------|------|
-| Subjects | 6–12 subjects (one or two per unit); enough to show interesting ABAC cases; small enough that all are visible in one table |
-| Resources | 6–10 resources across the three domains; at least one shielded (INTEL), one stock-data (INDUSTRY) |
-| Audit log | 10–20 seeded events; enough to show meaningful reconstruction + at least one anomaly |
-| Units / subunits | 6 units; 3–4 subunits with at least one ABROAD (MILITARY_1's deployed subunit) |
-
-Full replay of the audit log per query is fine at this scale. Materialization in `worldReducer` is an optimization included by design (to demonstrate that the architecture supports it) not a performance requirement.
+**Do this instead:** Read `world.networks`, `world.platforms`, etc. from `useWorld()`, as every existing v2.1 component does.
 
 ---
 
 ## Sources
 
-- `frontend/src/spikes/lib/` — all 7 validated spike libs (direct inspection, HIGH confidence)
-- `frontend/src/spikes/components/` — 9 spike UI components (direct inspection, HIGH confidence)
-- `.planning/AUTH-MODEL.md` — design contract, §4 ABAC attributes, §6 operating roles, §12 deployment scenario
-- `.planning/PROJECT.md` — demo scope, constraints, requirements
-- `.claude/skills/spike-findings-janus-2.0/references/` — synthesized findings for all 5 feature areas
+All findings are from direct code inspection — no external sources needed for this milestone.
+
+- `frontend/src/demo/lib/model.ts` — v2.1 zone model (structural template for types and resolver)
+- `frontend/src/demo/lib/seed.ts` — v2.1 zone seed (data shape and export pattern template)
+- `frontend/src/demo/store/world-state.tsx` — WorldState, Action, reducer, split-context pattern
+- `frontend/src/demo/components/physical-access-panel.tsx` — panel shell pattern
+- `frontend/src/demo/components/zone-browser.tsx` — tree browser pattern
+- `frontend/src/demo/components/access-resolution-explorer.tsx` — resolution explorer with trace pattern
+- `frontend/src/demo/components/zone-entry-log-view.tsx` — sub-view with filters pattern
+- `frontend/src/demo/components/ui.tsx` — shared UI primitives (Pill, Card, Field, Select, MockTag)
+- `frontend/src/demo/DemoRoot.tsx` — tab integration pattern
+- `.planning/milestones/v2.2-REQUIREMENTS.md` — RSRC-* requirements (gate chain, grant model, delegation)
+- `.planning/PROJECT.md` — key decisions: advisory zone-prereq, application inherits platform classification
 
 ---
-*Architecture research for: Janus 2.0 — Authorization Hub demo (consolidating 9 spikes into coherent app)*
-*Researched: 2026-05-21*
+*Architecture research for: v2.2 Digital-Resource Access Demo*
+*Researched: 2026-06-02*
