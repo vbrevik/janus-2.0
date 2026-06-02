@@ -58,7 +58,7 @@ See `.planning/milestones/v2.1-ROADMAP.md` for full phase details. Audit: `.plan
   7. `npm run test` passes with zero failures and zero TypeScript errors after all Phase 9 additions to `model.ts`, `seed.ts`, and the new `digital-resource.test.ts`
 **Plans**: 4 plans
 Plans:
-- [ ] 09-01-PLAN.md — Digital-resource types + pure data helpers (nodes, org_links, policy/grant/delegate types, window/classification/policy-selector/validator helpers)
+- [x] 09-01-PLAN.md — Digital-resource types + pure data helpers (nodes, org_links, policy/grant/delegate types, window/classification/policy-selector/validator helpers)
 - [ ] 09-02-PLAN.md — Gate evaluators + resolveResourceAccess dispatcher + canIssueResourceGrant (fail-closed, no cross-tier inheritance, advisory non-blocking)
 - [ ] 09-03-PLAN.md — digital-resource.test.ts blocking Vitest suite (one named test per acceptance criterion)
 - [ ] 09-04-PLAN.md — SEED-06 policy-shift + SEED-07 non-baseline fixtures in seed.ts + seed-resolution tests
@@ -101,6 +101,6 @@ Plans:
 | 6. Grants, Resolution & Delegation | v2.1 | 2/2 | Complete | 2026-05-23 |
 | 7. Entry Log & Visitor Passes | v2.1 | 2/2 | Complete | 2026-05-23 |
 | 8. Mock Dataset & Demo UI | v2.1 | 3/3 | Complete | 2026-05-23 |
-| 9. Digital Resource Model & Policy Engine | v2.2 | 0/? | Not started | - |
+| 9. Digital Resource Model & Policy Engine | v2.2 | 1/4 | In Progress|  |
 | 10. Mock Dataset & WorldState | v2.2 | 0/? | Not started | - |
 | 11. Demo UI & Tab Integration | v2.2 | 0/? | Not started | - |

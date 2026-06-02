@@ -17,19 +17,19 @@
 
 ### Digital Resource Model (RSRC)
 
-- [ ] **RSRC-01**: Digital resources are organized in a 3-tier hierarchy: **Network → Platform → Application**.
-- [ ] **RSRC-02**: Network and Platform each carry a classification from the 5-tier ladder (`UNCLASSIFIED → RESTRICTED → CONFIDENTIAL → SECRET → TOP_SECRET`). An **Application has no classification field** — it inherits its host Platform's, derived at resolution and display time.
-- [ ] **RSRC-03**: Network classification examples (indicative): National Restricted (`RESTRICTED`), National Secret (`SECRET`), Tactical Secure (`SECRET`), NATO Restricted (`RESTRICTED`), NATO Secret (`SECRET`), NATO Top Secret (`TOP_SECRET`).
-- [ ] **RSRC-04**: Each resource carries a list of org links `org_links: [{ org_id, role, valid_from, valid_until }]` (1–N, demo seeds up to ~5). `role` is an **open string vocabulary**; v2.2 seeds `ADMIN` (controls/delegates) · `ASSET_OWNER` (owns) · `OPERATOR` (runs/maintains) · `SECURITY_APPROVAL` (authorizing authority, ties to the NSM sikkerhetsgodkjenning badge). At least one active `ADMIN` link is required; a role may repeat (e.g. two operators); links are time-windowed.
-- [ ] **RSRC-05**: Strict tree — a Platform belongs to exactly one Network; an Application belongs to exactly one Platform. No multi-homing in demo scope.
+- [x] **RSRC-01**: Digital resources are organized in a 3-tier hierarchy: **Network → Platform → Application**.
+- [x] **RSRC-02**: Network and Platform each carry a classification from the 5-tier ladder (`UNCLASSIFIED → RESTRICTED → CONFIDENTIAL → SECRET → TOP_SECRET`). An **Application has no classification field** — it inherits its host Platform's, derived at resolution and display time.
+- [x] **RSRC-03**: Network classification examples (indicative): National Restricted (`RESTRICTED`), National Secret (`SECRET`), Tactical Secure (`SECRET`), NATO Restricted (`RESTRICTED`), NATO Secret (`SECRET`), NATO Top Secret (`TOP_SECRET`).
+- [x] **RSRC-04**: Each resource carries a list of org links `org_links: [{ org_id, role, valid_from, valid_until }]` (1–N, demo seeds up to ~5). `role` is an **open string vocabulary**; v2.2 seeds `ADMIN` (controls/delegates) · `ASSET_OWNER` (owns) · `OPERATOR` (runs/maintains) · `SECURITY_APPROVAL` (authorizing authority, ties to the NSM sikkerhetsgodkjenning badge). At least one active `ADMIN` link is required; a role may repeat (e.g. two operators); links are time-windowed.
+- [x] **RSRC-05**: Strict tree — a Platform belongs to exactly one Network; an Application belongs to exactly one Platform. No multi-homing in demo scope.
 
 ### Access Policy (RSRC-POLICY)
 
-- [ ] **RSRC-POLICY-01**: A resource's access rules are defined by a data-driven `ResourcePolicy` — not hardcoded. A policy specifies: the clearance requirement (default: derive from the resource's classification), which org-role authorizations are required, the ordered gate sequence, the prerequisite-tier requirement, and whether a zone prerequisite is advisory. Rules are values, not code branches.
-- [ ] **RSRC-POLICY-02**: Policies are **time-versioned**. A resource carries policy assignments each with `valid_from`/`valid_until` (nullable `valid_until` = open/current). Resolution selects the single policy whose validity window contains the evaluation timestamp.
+- [x] **RSRC-POLICY-01**: A resource's access rules are defined by a data-driven `ResourcePolicy` — not hardcoded. A policy specifies: the clearance requirement (default: derive from the resource's classification), which org-role authorizations are required, the ordered gate sequence, the prerequisite-tier requirement, and whether a zone prerequisite is advisory. Rules are values, not code branches.
+- [x] **RSRC-POLICY-02**: Policies are **time-versioned**. A resource carries policy assignments each with `valid_from`/`valid_until` (nullable `valid_until` = open/current). Resolution selects the single policy whose validity window contains the evaluation timestamp.
 - [ ] **RSRC-POLICY-03**: A resource's policy can **shift to a new value over time** (policy A expires, policy B takes effect). Point-in-time resolution reproduces the decision under whichever policy was active at the chosen timestamp.
-- [ ] **RSRC-POLICY-04**: Org-role and gate/rule-type vocabularies are **open and extensible** — new roles or rule types can be introduced as data without code changes. v2.2 seeds the baseline (4 roles above; gates = clearance + own-tier explicit grant + parent-tier prerequisite + advisory zone).
-- [ ] **RSRC-POLICY-05**: Different resources — and different tiers — may carry **different policies**. Network, Platform, Application, and individual instances need not share the same rule set.
+- [x] **RSRC-POLICY-04**: Org-role and gate/rule-type vocabularies are **open and extensible** — new roles or rule types can be introduced as data without code changes. v2.2 seeds the baseline (4 roles above; gates = clearance + own-tier explicit grant + parent-tier prerequisite + advisory zone).
+- [x] **RSRC-POLICY-05**: Different resources — and different tiers — may carry **different policies**. Network, Platform, Application, and individual instances need not share the same rule set.
 
 ### Access Rules (RSRC-ACCESS)
 
@@ -41,13 +41,13 @@
 
 ### Access Grants (RSRC-GRANT)
 
-- [ ] **RSRC-GRANT-01**: A `ResourceAccessGrant` links a person to a specific resource (Network, Platform, or Application) with `valid_from` and `valid_until` (nullable `valid_until` = permanent).
-- [ ] **RSRC-GRANT-02**: Grant active-window evaluation matches the v2.1 convention (inclusive boundary semantics consistent with `isGrantActive`); expired and future-dated grants do not satisfy a gate.
+- [x] **RSRC-GRANT-01**: A `ResourceAccessGrant` links a person to a specific resource (Network, Platform, or Application) with `valid_from` and `valid_until` (nullable `valid_until` = permanent).
+- [x] **RSRC-GRANT-02**: Grant active-window evaluation matches the v2.1 convention (inclusive boundary semantics consistent with `isGrantActive`); expired and future-dated grants do not satisfy a gate.
 - [ ] **RSRC-GRANT-03**: Time-limited grants model real-world temporary access (e.g. external contractor on National Restricted for 30 days).
 
 ### Delegation (RSRC-DELEG)
 
-- [ ] **RSRC-DELEG-01**: An org holding an active `ADMIN` org-link on a resource can delegate that resource's access-granting authority to a named person OR another org, time-bounded — mirrors v2.1 `ZoneAccessDelegate`. Only `ADMIN`-role orgs may delegate.
+- [x] **RSRC-DELEG-01**: An org holding an active `ADMIN` org-link on a resource can delegate that resource's access-granting authority to a named person OR another org, time-bounded — mirrors v2.1 `ZoneAccessDelegate`. Only `ADMIN`-role orgs may delegate.
 
 ### Mock Dataset (RSRC-SEED)
 
@@ -93,25 +93,25 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| RSRC-01 | Phase 9 | Pending |
-| RSRC-02 | Phase 9 | Pending |
-| RSRC-03 | Phase 9 | Pending |
-| RSRC-04 | Phase 9 | Pending |
-| RSRC-05 | Phase 9 | Pending |
-| RSRC-POLICY-01 | Phase 9 | Pending |
-| RSRC-POLICY-02 | Phase 9 | Pending |
+| RSRC-01 | Phase 9 | Complete |
+| RSRC-02 | Phase 9 | Complete |
+| RSRC-03 | Phase 9 | Complete |
+| RSRC-04 | Phase 9 | Complete |
+| RSRC-05 | Phase 9 | Complete |
+| RSRC-POLICY-01 | Phase 9 | Complete |
+| RSRC-POLICY-02 | Phase 9 | Complete |
 | RSRC-POLICY-03 | Phase 9 | Pending |
-| RSRC-POLICY-04 | Phase 9 | Pending |
-| RSRC-POLICY-05 | Phase 9 | Pending |
+| RSRC-POLICY-04 | Phase 9 | Complete |
+| RSRC-POLICY-05 | Phase 9 | Complete |
 | RSRC-ACCESS-01 | Phase 9 | Pending |
 | RSRC-ACCESS-02 | Phase 9 | Pending |
 | RSRC-ACCESS-03 | Phase 9 | Pending |
 | RSRC-ACCESS-04 | Phase 9 | Pending |
 | RSRC-ACCESS-05 | Phase 9 | Pending |
-| RSRC-GRANT-01 | Phase 9 | Pending |
-| RSRC-GRANT-02 | Phase 9 | Pending |
+| RSRC-GRANT-01 | Phase 9 | Complete |
+| RSRC-GRANT-02 | Phase 9 | Complete |
 | RSRC-GRANT-03 | Phase 9 | Pending |
-| RSRC-DELEG-01 | Phase 9 | Pending |
+| RSRC-DELEG-01 | Phase 9 | Complete |
 | RSRC-SEED-01 | Phase 10 | Pending |
 | RSRC-SEED-02 | Phase 10 | Pending |
 | RSRC-SEED-03 | Phase 10 | Pending |
