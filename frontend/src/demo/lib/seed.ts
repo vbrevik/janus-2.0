@@ -16,6 +16,10 @@ import type {
   ZoneAccessDelegate,
   ZoneEntryLog,
   ZoneVisitorPass,
+  GateDescriptor,
+  ResourcePolicy,
+  NetworkNode,
+  ResourceAccessGrant,
 } from "./model";
 export { ROLES, TIERS, UNITS } from "./model";
 export type { Subject, Resource, HubPointer, UnitId } from "./model";
@@ -1255,5 +1259,134 @@ export const VISITOR_PASSES: ZoneVisitorPass[] = [
     zone_id: "zone-bldg-block-a",
     valid_from: new Date("2026-05-20T14:00:00Z"),
     valid_until: new Date("2026-12-31T23:59:59Z"),
+  },
+];
+
+// ============================================================
+// Phase 9 (v2.2) — Digital Resource fixtures (APPEND-ONLY).
+// The two minimum real fixtures that exercise the time-versioned, parameterized
+// policy engine end-to-end (resolved by the seed integration tests in
+// digital-resource.test.ts). NOT the full 6-unit dataset (RSRC-SEED-01..05) —
+// that and WorldState wiring remain Phase 10.
+//
+//   - RSRC-SEED-06 (D-04, "tighten after an incident"): MilNet, a NetworkNode
+//     with two adjacent non-overlapping policy windows across 2026-03-01 — policy
+//     A = baseline; policy B = baseline + REQUIRED_ROLE:SECURITY_APPROVAL.
+//   - RSRC-SEED-07 (D-05, non-baseline): a separate NetworkNode whose single
+//     active policy = baseline + REQUIRED_ROLE:SECURITY_APPROVAL.
+// ============================================================
+
+// Shared baseline gate list: clearance + own-tier grant + parent-tier grant.
+const RESOURCE_BASELINE_GATES: GateDescriptor[] = [
+  { kind: "CLEARANCE" },
+  { kind: "OWN_TIER_GRANT" },
+  { kind: "PARENT_TIER_GRANT" },
+];
+
+// Baseline policy (pre-incident). Three gates, no advisory zone prerequisite.
+const RESOURCE_BASELINE_POLICY: ResourcePolicy = {
+  id: "rsrc-pol-baseline",
+  label: "Baseline access policy",
+  gates: RESOURCE_BASELINE_GATES,
+  zone_prereq_id: null,
+};
+
+// Non-baseline policy: baseline + a REQUIRED_ROLE:SECURITY_APPROVAL gate. This is
+// SEED-06's post-incident "tightened" policy B and SEED-07's sole active policy.
+const RESOURCE_NON_BASELINE_POLICY: ResourcePolicy = {
+  id: "rsrc-pol-security-approval",
+  label: "Tightened access policy (security approval required)",
+  gates: [
+    ...RESOURCE_BASELINE_GATES,
+    { kind: "REQUIRED_ROLE", role: "SECURITY_APPROVAL" },
+  ],
+  zone_prereq_id: null,
+};
+
+// SEED-06 incident boundary: policy A ends and policy B begins on this date.
+// Adjacent + non-overlapping in the demo sense — selectActivePolicy returns the
+// first covering window, so the test resolves Feb (A) and Apr (B), not the shared
+// boundary itself. (validatePolicyWindows flags touching inclusive windows; the
+// real-data demonstration is the cross-date verdict flip, not the validator.)
+//
+// RESOURCE_NODES — the SEED-06 (MilNet) and SEED-07 fixtures. SECRET-classified
+// so subj-1 (Dana, MILITARY_1, SECRET) clears the CLEARANCE gate. MILITARY_1 holds
+// an active ADMIN org_link but NO active SECURITY_APPROVAL link, so the same person
+// is ALLOWed under policy A (Feb) and DENied under policy B (Apr).
+export const RESOURCE_NODES: NetworkNode[] = [
+  // RSRC-SEED-06: MilNet — policy shift across the 2026-03-01 incident date.
+  {
+    id: "rsrc-milnet",
+    name: "MilNet",
+    tier: "NETWORK",
+    classification: "SECRET",
+    org_links: [
+      // MILITARY_1 administers MilNet (can issue grants) but is NOT a security
+      // approver — so the post-incident REQUIRED_ROLE gate fails for its members.
+      {
+        org_id: "MILITARY_1",
+        role: "ADMIN",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      // Policy A (baseline): unbounded start, ends at the incident date.
+      {
+        policy: RESOURCE_BASELINE_POLICY,
+        valid_from: null,
+        valid_until: new Date("2026-03-01"),
+      },
+      // Policy B (non-baseline): begins at the incident date, unbounded after.
+      {
+        policy: RESOURCE_NON_BASELINE_POLICY,
+        valid_from: new Date("2026-03-01"),
+        valid_until: null,
+      },
+    ],
+  },
+  // RSRC-SEED-07: IntelNet — single active non-baseline policy (security approval
+  // required at all times). subj-1's org (MILITARY_1) holds an active SECURITY_APPROVAL
+  // link here, demonstrating the extra role gate being satisfied via org_links.
+  {
+    id: "rsrc-intelnet",
+    name: "IntelNet",
+    tier: "NETWORK",
+    classification: "SECRET",
+    org_links: [
+      {
+        org_id: "MILITARY_1",
+        role: "SECURITY_APPROVAL",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      {
+        policy: RESOURCE_NON_BASELINE_POLICY,
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+  },
+];
+
+// RESOURCE_GRANTS — own-tier grants. subj-1 (Dana) holds a permanent grant on each
+// resource so the OWN_TIER_GRANT gate passes; the policy shift (SEED-06) and the
+// non-baseline role gate (SEED-07) are then the sole verdict drivers.
+export const RESOURCE_GRANTS: ResourceAccessGrant[] = [
+  {
+    id: "rsrc-grant-dana-milnet",
+    person_id: "subj-1",
+    resource_id: "rsrc-milnet",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "rsrc-grant-dana-intelnet",
+    person_id: "subj-1",
+    resource_id: "rsrc-intelnet",
+    valid_from: null,
+    valid_until: null,
   },
 ];
