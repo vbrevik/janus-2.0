@@ -47,19 +47,21 @@ See `.planning/milestones/v2.1-ROADMAP.md` for full phase details. Audit: `.plan
 ### Phase 9: Digital Resource Model & Policy Engine
 **Goal**: The digital-resource type system and gate-chain resolver are defined, tested, and safe to build on — every critical pitfall has a blocking Vitest test.
 **Depends on**: Phase 8 (v2.1 model.ts is the extension point; `resolveZoneAccess` is reused for the advisory zone-prereq)
-**Requirements**: RSRC-01, RSRC-02, RSRC-03, RSRC-04, RSRC-05, RSRC-POLICY-01, RSRC-POLICY-02, RSRC-POLICY-03, RSRC-POLICY-04, RSRC-POLICY-05, RSRC-ACCESS-01, RSRC-ACCESS-02, RSRC-ACCESS-03, RSRC-ACCESS-04, RSRC-ACCESS-05, RSRC-GRANT-01, RSRC-GRANT-02, RSRC-GRANT-03, RSRC-DELEG-01
+**Requirements**: RSRC-01, RSRC-02, RSRC-03, RSRC-04, RSRC-05, RSRC-POLICY-01, RSRC-POLICY-02, RSRC-POLICY-03, RSRC-POLICY-04, RSRC-POLICY-05, RSRC-ACCESS-01, RSRC-ACCESS-02, RSRC-ACCESS-03, RSRC-ACCESS-04, RSRC-ACCESS-05, RSRC-GRANT-01, RSRC-GRANT-02, RSRC-GRANT-03, RSRC-DELEG-01, RSRC-SEED-06, RSRC-SEED-07 *(SEED-06/07 pulled forward from Phase 10 per 09-SPEC.md — minimal real seed fixtures to exercise the policy mechanisms)*
 **Success Criteria** (what must be TRUE):
   1. `resolveResourceAccess` returns `allow: false` when a person holds only a Network grant and Platform access is evaluated (cross-tier inheritance is blocked; test named `cross-tier-inheritance-blocked` passes)
   2. `resolveResourceAccess` returns `allow: true` when only the zone prerequisite is unsatisfied — the `zoneAdvisory` field is present and non-null but the `allow` boolean is unaffected (advisory-is-non-blocking test passes)
   3. Point-in-time policy resolution selects the policy whose `valid_from`/`valid_until` window contains the supplied timestamp — evaluating the same resource at two timestamps across a policy boundary returns different gate sets
   4. `ApplicationNode` has no `classification` field; the resolver derives classification by traversing `app → platform` at evaluation time; a test confirms the Platform's classification is used for the clearance gate
-  5. `npm run test` passes with zero failures and zero TypeScript errors after all Phase 9 additions to `model.ts` and the new `digital-resource.test.ts`
+  5. `canIssueResourceGrant(actor, resource, now)` returns `true` for an active ADMIN-org actor and for an active delegate, `false` for non-ADMIN/no-delegate and expired-delegate actors (delegation enforced — closes the v2.1 DELEG-03 gap)
+  6. `seed.ts` contains a policy-shift example resource (RSRC-SEED-06) and a non-baseline-policy example resource (RSRC-SEED-07), each resolved by a passing test
+  7. `npm run test` passes with zero failures and zero TypeScript errors after all Phase 9 additions to `model.ts`, `seed.ts`, and the new `digital-resource.test.ts`
 **Plans**: TBD
 
 ### Phase 10: Mock Dataset & WorldState
 **Goal**: A realistic 6-unit mock dataset is loaded into `WorldState` via a `DigitalResourceWorld` sub-object, covering all required data shapes (active/expired/future grants, policy shift over time, non-baseline policy, zone-prereq link to v2.1).
 **Depends on**: Phase 9 (all types and resolver functions must exist before seed data can be validated against them)
-**Requirements**: RSRC-SEED-01, RSRC-SEED-02, RSRC-SEED-03, RSRC-SEED-04, RSRC-SEED-05, RSRC-SEED-06, RSRC-SEED-07
+**Requirements**: RSRC-SEED-01, RSRC-SEED-02, RSRC-SEED-03, RSRC-SEED-04, RSRC-SEED-05 *(SEED-06/07 moved to Phase 9 per 09-SPEC.md; Phase 10 extends the policy-shift/non-baseline resources into the full 6-unit dataset)*
 **Success Criteria** (what must be TRUE):
   1. `WorldState` carries a `digitalResources: DigitalResourceWorld` sub-object (not 6+ flat top-level fields); `seedWorld()` initialises it; the `TOGGLE_RESOURCE_GRANT` action targets `digitalResources.disabledResourceGrantIds` without colliding with the existing physical `TOGGLE_GRANT` action
   2. The seed includes ≥3 Networks with distinct classification tiers, ≥3 Platforms on those networks, and ≥3 Applications on those platforms; at least one Platform carries a `zone_prereq_id` pointing to an existing v2.1 zone ID

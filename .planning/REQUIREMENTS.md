@@ -117,8 +117,8 @@
 | RSRC-SEED-03 | Phase 10 | Pending |
 | RSRC-SEED-04 | Phase 10 | Pending |
 | RSRC-SEED-05 | Phase 10 | Pending |
-| RSRC-SEED-06 | Phase 10 | Pending |
-| RSRC-SEED-07 | Phase 10 | Pending |
+| RSRC-SEED-06 | Phase 9 | Pending |
+| RSRC-SEED-07 | Phase 9 | Pending |
 | RSRC-UI-01 | Phase 11 | Pending |
 | RSRC-UI-02 | Phase 11 | Pending |
 | RSRC-UI-03 | Phase 11 | Pending |
