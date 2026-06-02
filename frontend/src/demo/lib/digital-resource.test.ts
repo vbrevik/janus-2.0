@@ -35,7 +35,6 @@ import {
   activeOrgLinks,
   activeOrgLinksForRole,
   isWindowActive,
-  evaluateGate,
   type NetworkNode,
   type PlatformNode,
   type ApplicationNode,
@@ -342,5 +341,529 @@ describe("named pitfall blocking tests", () => {
     const parentTier = result.gates.find((g) => g.kind === "PARENT_TIER_GRANT");
     expect(ownTier?.pass).toBe(true);
     expect(parentTier?.pass).toBe(true);
+  });
+});
+
+// =====================================================================
+// Task 2 — gate matrix, policy windows, org links, delegation, trace.
+// =====================================================================
+
+// A baseline Platform on net-base with the subject holding own-tier + parent
+// grants and ample clearance — the "all gates pass" starting point that each
+// baseline-deny test perturbs by exactly one precondition.
+const BASE_PLATFORM: PlatformNode = {
+  id: "plat-base",
+  name: "Base Platform",
+  tier: "PLATFORM",
+  classification: "CONFIDENTIAL",
+  network_id: "net-base",
+  org_links: [],
+  policy_assignments: [ALWAYS_ON],
+};
+
+const G_OWN_BASE: ResourceAccessGrant = {
+  id: "g-own-base",
+  person_id: "subj-1",
+  resource_id: "plat-base",
+  valid_from: null,
+  valid_until: null,
+};
+
+const G_PARENT_BASE: ResourceAccessGrant = {
+  id: "g-parent-base",
+  person_id: "subj-1",
+  resource_id: "net-base",
+  valid_from: null,
+  valid_until: null,
+};
+
+const BASE_GRANTS: ResourceAccessGrant[] = [G_OWN_BASE, G_PARENT_BASE];
+
+describe("baseline gate semantics (resolveResourceAccess)", () => {
+  it("baseline-allow — all baseline gates pass", () => {
+    const result = resolveResourceAccess(
+      "subj-1",
+      "SECRET", // >= CONFIDENTIAL
+      "MILITARY_1",
+      BASE_PLATFORM,
+      [],
+      [BASE_PLATFORM],
+      BASE_GRANTS,
+      [],
+      [],
+      NOW,
+    );
+    expect(result.allow).toBe(true);
+    // one trace entry per baseline gate, all passing.
+    expect(result.gates).toHaveLength(3);
+    expect(result.gates.every((g) => g.pass)).toBe(true);
+  });
+
+  it("baseline-deny-clearance — clearance below resource classification", () => {
+    const result = resolveResourceAccess(
+      "subj-1",
+      "UNCLASSIFIED", // below CONFIDENTIAL
+      "MILITARY_1",
+      BASE_PLATFORM,
+      [],
+      [BASE_PLATFORM],
+      BASE_GRANTS,
+      [],
+      [],
+      NOW,
+    );
+    expect(result.allow).toBe(false);
+    const clearance = result.gates.find((g) => g.kind === "CLEARANCE");
+    expect(clearance?.pass).toBe(false);
+    expect(clearance?.reason).toBe("INSUFFICIENT_CLEARANCE");
+  });
+
+  it("baseline-deny-own-tier — no active own-tier grant", () => {
+    // Drop the own-tier grant; keep clearance + parent grant.
+    const result = resolveResourceAccess(
+      "subj-1",
+      "SECRET",
+      "MILITARY_1",
+      BASE_PLATFORM,
+      [],
+      [BASE_PLATFORM],
+      [G_PARENT_BASE],
+      [],
+      [],
+      NOW,
+    );
+    expect(result.allow).toBe(false);
+    const ownTier = result.gates.find((g) => g.kind === "OWN_TIER_GRANT");
+    expect(ownTier?.pass).toBe(false);
+    expect(ownTier?.reason).toBe("NO_OWN_TIER_GRANT");
+  });
+
+  it("baseline-deny-parent-tier — no active parent-tier grant", () => {
+    // Drop the parent grant; keep clearance + own-tier grant.
+    const result = resolveResourceAccess(
+      "subj-1",
+      "SECRET",
+      "MILITARY_1",
+      BASE_PLATFORM,
+      [],
+      [BASE_PLATFORM],
+      [G_OWN_BASE],
+      [],
+      [],
+      NOW,
+    );
+    expect(result.allow).toBe(false);
+    const parentTier = result.gates.find((g) => g.kind === "PARENT_TIER_GRANT");
+    expect(parentTier?.pass).toBe(false);
+    expect(parentTier?.reason).toBe("NO_PARENT_TIER_GRANT");
+  });
+
+  it("gates-evaluate-in-list-order — result.gates mirrors policy.gates order", () => {
+    // A deliberately permuted gate order; trace order must match exactly.
+    const ordered: GateDescriptor[] = [
+      { kind: "PARENT_TIER_GRANT" },
+      { kind: "CLEARANCE" },
+      { kind: "OWN_TIER_GRANT" },
+    ];
+    const policy: ResourcePolicy = {
+      id: "pol-ordered",
+      label: "Permuted order",
+      gates: ordered,
+      zone_prereq_id: null,
+    };
+    const platform: PlatformNode = {
+      ...BASE_PLATFORM,
+      id: "plat-ordered",
+      network_id: "net-ordered",
+      policy_assignments: [{ policy, valid_from: null, valid_until: null }],
+    };
+    const grants: ResourceAccessGrant[] = [
+      {
+        id: "g-own-ord",
+        person_id: "subj-1",
+        resource_id: "plat-ordered",
+        valid_from: null,
+        valid_until: null,
+      },
+      {
+        id: "g-parent-ord",
+        person_id: "subj-1",
+        resource_id: "net-ordered",
+        valid_from: null,
+        valid_until: null,
+      },
+    ];
+    const result = resolveResourceAccess(
+      "subj-1",
+      "SECRET",
+      "MILITARY_1",
+      platform,
+      [],
+      [platform],
+      grants,
+      [],
+      [],
+      NOW,
+    );
+    expect(result.gates.map((g) => g.kind)).toEqual([
+      "PARENT_TIER_GRANT",
+      "CLEARANCE",
+      "OWN_TIER_GRANT",
+    ]);
+  });
+});
+
+// --- SEED-06-style policy shift (boundary 2026-03-01, D-04) ---
+// Policy A (window A, until boundary) = baseline -> ALLOW for subj-1.
+// Policy B (window B, from boundary) = baseline + REQUIRED_ROLE SECURITY_APPROVAL
+// which subj-1's org does NOT hold -> DENY.
+
+const POLICY_A: ResourcePolicy = {
+  id: "pol-shift-A",
+  label: "Pre-incident baseline",
+  gates: BASELINE_GATES,
+  zone_prereq_id: null,
+};
+
+const POLICY_B: ResourcePolicy = {
+  id: "pol-shift-B",
+  label: "Post-incident hardened",
+  gates: [
+    { kind: "CLEARANCE" },
+    { kind: "OWN_TIER_GRANT" },
+    { kind: "PARENT_TIER_GRANT" },
+    { kind: "REQUIRED_ROLE", role: "SECURITY_APPROVAL" },
+  ],
+  zone_prereq_id: null,
+};
+
+// Adjacent, non-overlapping assignments: A is [null, boundary), B is [boundary, null].
+// Note the inclusive boundary: at exactly SHIFT_BOUNDARY both windows match; the
+// selector returns the FIRST covering assignment (A). NOW_A/NOW_B avoid the seam.
+const SHIFT_ASSIGNMENTS: PolicyAssignment[] = [
+  { policy: POLICY_A, valid_from: null, valid_until: SHIFT_BOUNDARY },
+  { policy: POLICY_B, valid_from: SHIFT_BOUNDARY, valid_until: null },
+];
+
+const SHIFT_NETWORK: NetworkNode = {
+  id: "net-milnet",
+  name: "MilNet",
+  tier: "NETWORK",
+  classification: "UNCLASSIFIED",
+  // subj-1's org holds no SECURITY_APPROVAL link — policy B will deny it.
+  org_links: [],
+  policy_assignments: SHIFT_ASSIGNMENTS,
+};
+
+const SHIFT_GRANT: ResourceAccessGrant = {
+  id: "g-milnet",
+  person_id: "subj-1",
+  resource_id: "net-milnet",
+  valid_from: null,
+  valid_until: null,
+};
+
+describe("time-versioned policy shift (SEED-06 narrative)", () => {
+  it("policy-shift-window-A — pre-incident baseline ALLOWS at NOW_A", () => {
+    const result = resolveResourceAccess(
+      "subj-1",
+      "SECRET",
+      "MILITARY_1",
+      SHIFT_NETWORK,
+      [SHIFT_NETWORK],
+      [],
+      [SHIFT_GRANT],
+      [],
+      [],
+      NOW_A,
+    );
+    expect(result.allow).toBe(true);
+    // Policy A's 3-gate set applied; policyVersion is window A.
+    expect(result.gates.map((g) => g.kind)).toEqual([
+      "CLEARANCE",
+      "OWN_TIER_GRANT",
+      "PARENT_TIER_GRANT",
+    ]);
+    expect(result.policyVersion?.valid_until).toEqual(SHIFT_BOUNDARY);
+    expect(result.policyVersion?.valid_from).toBeNull();
+  });
+
+  it("policy-shift-window-B — post-incident hardened DENIES at NOW_B", () => {
+    const result = resolveResourceAccess(
+      "subj-1",
+      "SECRET",
+      "MILITARY_1",
+      SHIFT_NETWORK,
+      [SHIFT_NETWORK],
+      [],
+      [SHIFT_GRANT],
+      [],
+      [],
+      NOW_B,
+    );
+    expect(result.allow).toBe(false);
+    // Policy B's 4-gate set applied (REQUIRED_ROLE added); the role gate fails.
+    expect(result.gates.map((g) => g.kind)).toEqual([
+      "CLEARANCE",
+      "OWN_TIER_GRANT",
+      "PARENT_TIER_GRANT",
+      "REQUIRED_ROLE",
+    ]);
+    const role = result.gates.find((g) => g.kind === "REQUIRED_ROLE");
+    expect(role?.pass).toBe(false);
+    expect(role?.reason).toBe("MISSING_REQUIRED_ROLE");
+    // policyVersion is window B.
+    expect(result.policyVersion?.valid_from).toEqual(SHIFT_BOUNDARY);
+    expect(result.policyVersion?.valid_until).toBeNull();
+  });
+});
+
+describe("selectActivePolicy + validatePolicyWindows", () => {
+  it("selectActivePolicy returns policy A in window 1, policy B in window 2", () => {
+    expect(selectActivePolicy(SHIFT_ASSIGNMENTS, NOW_A)?.policy.id).toBe(
+      "pol-shift-A",
+    );
+    expect(selectActivePolicy(SHIFT_ASSIGNMENTS, NOW_B)?.policy.id).toBe(
+      "pol-shift-B",
+    );
+  });
+
+  it("selectActivePolicy returns null when no window covers the timestamp", () => {
+    const gapped: PolicyAssignment[] = [
+      {
+        policy: POLICY_A,
+        valid_from: new Date("2025-01-01T00:00:00Z"),
+        valid_until: new Date("2025-06-01T00:00:00Z"),
+      },
+    ];
+    expect(selectActivePolicy(gapped, NOW)).toBeNull();
+  });
+
+  it("overlapping-windows-validator — overlap -> error string, adjacent -> null", () => {
+    // Two assignments sharing time -> overlap error.
+    const overlapping: PolicyAssignment[] = [
+      {
+        policy: POLICY_A,
+        valid_from: new Date("2026-01-01T00:00:00Z"),
+        valid_until: new Date("2026-04-01T00:00:00Z"),
+      },
+      {
+        policy: POLICY_B,
+        valid_from: new Date("2026-03-01T00:00:00Z"),
+        valid_until: new Date("2026-06-01T00:00:00Z"),
+      },
+    ];
+    expect(validatePolicyWindows(overlapping)).not.toBeNull();
+    // Note: the SEED-06 assignments touch at the inclusive boundary, so they are
+    // treated as overlapping by the inclusive rule. Strictly disjoint windows
+    // (a one-second gap) validate clean.
+    const disjoint: PolicyAssignment[] = [
+      {
+        policy: POLICY_A,
+        valid_from: null,
+        valid_until: new Date("2026-02-28T23:59:59Z"),
+      },
+      {
+        policy: POLICY_B,
+        valid_from: new Date("2026-03-01T00:00:00Z"),
+        valid_until: null,
+      },
+    ];
+    expect(validatePolicyWindows(disjoint)).toBeNull();
+  });
+});
+
+describe("org-link active-by-role helpers", () => {
+  const LINKS: OrgLink[] = [
+    {
+      org_id: "MILITARY_1",
+      role: "OPERATOR",
+      valid_from: null,
+      valid_until: null,
+    },
+    {
+      org_id: "INTEL",
+      role: "OPERATOR",
+      valid_from: new Date("2026-01-01T00:00:00Z"),
+      valid_until: new Date("2026-12-31T23:59:59Z"),
+    },
+    {
+      // expired ADMIN link
+      org_id: "MILITARY_2",
+      role: "ADMIN",
+      valid_from: new Date("2025-01-01T00:00:00Z"),
+      valid_until: new Date("2025-12-31T23:59:59Z"),
+    },
+  ];
+
+  it("org-links-active-by-role — two active OPERATORs, zero active ADMINs at NOW", () => {
+    expect(activeOrgLinksForRole(LINKS, "OPERATOR", NOW)).toHaveLength(2);
+    expect(activeOrgLinksForRole(LINKS, "ADMIN", NOW)).toHaveLength(0);
+    // activeOrgLinks (any role) excludes the expired ADMIN -> 2 active total.
+    expect(activeOrgLinks(LINKS, NOW)).toHaveLength(2);
+  });
+
+  it("isWindowActive honours the inclusive boundary (valid_until === now)", () => {
+    expect(isWindowActive(null, NOW, NOW)).toBe(true);
+    expect(isWindowActive(NOW, null, NOW)).toBe(true);
+  });
+});
+
+describe("canIssueResourceGrant — delegation authority matrix", () => {
+  // Resource with an active ADMIN org-link for MILITARY_1 and an expired ADMIN
+  // for MILITARY_2.
+  const RESOURCE: NetworkNode = {
+    id: "net-deleg",
+    name: "Deleg Net",
+    tier: "NETWORK",
+    classification: "UNCLASSIFIED",
+    org_links: [
+      {
+        org_id: "MILITARY_1",
+        role: "ADMIN",
+        valid_from: null,
+        valid_until: null,
+      },
+      {
+        org_id: "INTEL",
+        role: "OPERATOR",
+        valid_from: null,
+        valid_until: null,
+      },
+      {
+        org_id: "INFRA",
+        role: "ASSET_OWNER",
+        valid_from: null,
+        valid_until: null,
+      },
+      {
+        org_id: "INDUSTRY",
+        role: "SECURITY_APPROVAL",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [ALWAYS_ON],
+  };
+
+  const DELEGATE_ACTIVE: ResourceAccessDelegate = {
+    id: "rd-active",
+    resource_id: "net-deleg",
+    delegate_type: "ORG",
+    delegate_person_id: null,
+    delegate_org_id: "HOME_GUARD",
+    granted_by_org_id: "MILITARY_1",
+    valid_from: null,
+    valid_until: null,
+  };
+
+  const DELEGATE_EXPIRED: ResourceAccessDelegate = {
+    id: "rd-expired",
+    resource_id: "net-deleg",
+    delegate_type: "ORG",
+    delegate_person_id: null,
+    delegate_org_id: "MILITARY_2",
+    granted_by_org_id: "MILITARY_1",
+    valid_from: new Date("2025-01-01T00:00:00Z"),
+    valid_until: new Date("2025-12-31T23:59:59Z"),
+  };
+
+  it("can-issue-admin — active ADMIN org-link actor -> true", () => {
+    expect(canIssueResourceGrant("MILITARY_1", RESOURCE, [], NOW)).toBe(true);
+  });
+
+  it("can-issue-delegate — active matching ORG delegate -> true", () => {
+    expect(
+      canIssueResourceGrant("HOME_GUARD", RESOURCE, [DELEGATE_ACTIVE], NOW),
+    ).toBe(true);
+  });
+
+  it("cannot-issue-non-admin — OPERATOR/ASSET_OWNER/SECURITY_APPROVAL only, no delegate -> false", () => {
+    expect(canIssueResourceGrant("INTEL", RESOURCE, [], NOW)).toBe(false);
+    expect(canIssueResourceGrant("INFRA", RESOURCE, [], NOW)).toBe(false);
+    expect(canIssueResourceGrant("INDUSTRY", RESOURCE, [], NOW)).toBe(false);
+  });
+
+  it("cannot-issue-expired-delegate — expired delegate (and expired ADMIN) -> false", () => {
+    // MILITARY_2 has only an EXPIRED ADMIN org-link and an EXPIRED delegate.
+    expect(
+      canIssueResourceGrant("MILITARY_2", RESOURCE, [DELEGATE_EXPIRED], NOW),
+    ).toBe(false);
+  });
+});
+
+describe("explainable-trace", () => {
+  it("explainable-trace — one entry per baseline gate with reasons, advisory separate, policyVersion matches window", () => {
+    const securedZone: ZoneNode = {
+      id: "z-trace",
+      name: "Trace Vault",
+      level: "ROOM",
+      zone_type: "SECURED",
+      parent_id: null,
+      admin_org_id: "INTEL",
+      asset_owner_org_id: "INTEL",
+      requires_explicit_auth: true,
+    };
+    const tracePolicy: ResourcePolicy = {
+      id: "pol-trace",
+      label: "Baseline + advisory zone",
+      gates: BASELINE_GATES,
+      zone_prereq_id: "z-trace",
+    };
+    const assignment: PolicyAssignment = {
+      policy: tracePolicy,
+      valid_from: new Date("2026-01-01T00:00:00Z"),
+      valid_until: new Date("2026-12-31T23:59:59Z"),
+    };
+    const network: NetworkNode = {
+      id: "net-trace",
+      name: "Trace Net",
+      tier: "NETWORK",
+      classification: "UNCLASSIFIED",
+      org_links: [],
+      policy_assignments: [assignment],
+    };
+    const physGrant: PhysicalAccessGrant = {
+      // Subject can enter the zone too (advisory passes here — it is reported
+      // either way; the point is it is a SEPARATE entry from the gates).
+      id: "pg-trace",
+      person_id: "subj-1",
+      zone_id: "z-trace",
+      valid_from: null,
+      valid_until: null,
+    };
+    const ownGrant: ResourceAccessGrant = {
+      id: "g-own-trace",
+      person_id: "subj-1",
+      resource_id: "net-trace",
+      valid_from: null,
+      valid_until: null,
+    };
+
+    const result = resolveResourceAccess(
+      "subj-1",
+      "SECRET",
+      "MILITARY_1",
+      network,
+      [network],
+      [],
+      [ownGrant],
+      [securedZone],
+      [physGrant],
+      NOW,
+    );
+
+    // One trace entry per baseline gate, each carrying a reason string.
+    expect(result.gates).toHaveLength(BASELINE_GATES.length);
+    for (const g of result.gates) {
+      expect(typeof g.reason).toBe("string");
+      expect(g.reason.length).toBeGreaterThan(0);
+    }
+    // zoneAdvisory is a separate field, not folded into gates.
+    expect(result.zoneAdvisory).not.toBeNull();
+    expect(result.gates.some((g) => g.kind === "GRANT_LOOKUP")).toBe(false);
+    // policyVersion matches the selected assignment's window.
+    expect(result.policyVersion?.valid_from).toEqual(assignment.valid_from);
+    expect(result.policyVersion?.valid_until).toEqual(assignment.valid_until);
   });
 });
