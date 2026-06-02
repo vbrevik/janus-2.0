@@ -27,23 +27,23 @@
 
 - [x] **RSRC-POLICY-01**: A resource's access rules are defined by a data-driven `ResourcePolicy` — not hardcoded. A policy specifies: the clearance requirement (default: derive from the resource's classification), which org-role authorizations are required, the ordered gate sequence, the prerequisite-tier requirement, and whether a zone prerequisite is advisory. Rules are values, not code branches.
 - [x] **RSRC-POLICY-02**: Policies are **time-versioned**. A resource carries policy assignments each with `valid_from`/`valid_until` (nullable `valid_until` = open/current). Resolution selects the single policy whose validity window contains the evaluation timestamp.
-- [ ] **RSRC-POLICY-03**: A resource's policy can **shift to a new value over time** (policy A expires, policy B takes effect). Point-in-time resolution reproduces the decision under whichever policy was active at the chosen timestamp.
+- [x] **RSRC-POLICY-03**: A resource's policy can **shift to a new value over time** (policy A expires, policy B takes effect). Point-in-time resolution reproduces the decision under whichever policy was active at the chosen timestamp.
 - [x] **RSRC-POLICY-04**: Org-role and gate/rule-type vocabularies are **open and extensible** — new roles or rule types can be introduced as data without code changes. v2.2 seeds the baseline (4 roles above; gates = clearance + own-tier explicit grant + parent-tier prerequisite + advisory zone).
 - [x] **RSRC-POLICY-05**: Different resources — and different tiers — may carry **different policies**. Network, Platform, Application, and individual instances need not share the same rule set.
 
 ### Access Rules (RSRC-ACCESS)
 
-- [ ] **RSRC-ACCESS-01**: Access resolution evaluates the resource's **active policy** (per RSRC-POLICY-02) against the subject and the evaluation timestamp to produce ALLOW/DENY.
-- [ ] **RSRC-ACCESS-02**: The **seeded baseline policy** applies, in order: (1) clearance ≥ resource classification, (2) active explicit own-tier authorization, (3) active parent-tier prerequisite grant (Platform needs Network; Application needs Platform). Networks have no parent gate.
-- [ ] **RSRC-ACCESS-03**: Under the baseline policy there is **no cross-tier inheritance** — a Network grant does NOT confer Platform access; a Platform grant does NOT confer Application access. Each tier requires its own explicit authorization. (The trace states this at each gate.)
-- [ ] **RSRC-ACCESS-04**: A resource policy may declare a **zone prerequisite** (the room/building housing its terminal). The zone check is **advisory** — computed and shown in the trace but never changes ALLOW/DENY.
-- [ ] **RSRC-ACCESS-05**: Resolution produces an **explainable trace**: each gate's pass/fail with reason, the advisory zone result as a separate non-gating entry, and which policy version (and its validity window) was applied.
+- [x] **RSRC-ACCESS-01**: Access resolution evaluates the resource's **active policy** (per RSRC-POLICY-02) against the subject and the evaluation timestamp to produce ALLOW/DENY.
+- [x] **RSRC-ACCESS-02**: The **seeded baseline policy** applies, in order: (1) clearance ≥ resource classification, (2) active explicit own-tier authorization, (3) active parent-tier prerequisite grant (Platform needs Network; Application needs Platform). Networks have no parent gate.
+- [x] **RSRC-ACCESS-03**: Under the baseline policy there is **no cross-tier inheritance** — a Network grant does NOT confer Platform access; a Platform grant does NOT confer Application access. Each tier requires its own explicit authorization. (The trace states this at each gate.)
+- [x] **RSRC-ACCESS-04**: A resource policy may declare a **zone prerequisite** (the room/building housing its terminal). The zone check is **advisory** — computed and shown in the trace but never changes ALLOW/DENY.
+- [x] **RSRC-ACCESS-05**: Resolution produces an **explainable trace**: each gate's pass/fail with reason, the advisory zone result as a separate non-gating entry, and which policy version (and its validity window) was applied.
 
 ### Access Grants (RSRC-GRANT)
 
 - [x] **RSRC-GRANT-01**: A `ResourceAccessGrant` links a person to a specific resource (Network, Platform, or Application) with `valid_from` and `valid_until` (nullable `valid_until` = permanent).
 - [x] **RSRC-GRANT-02**: Grant active-window evaluation matches the v2.1 convention (inclusive boundary semantics consistent with `isGrantActive`); expired and future-dated grants do not satisfy a gate.
-- [ ] **RSRC-GRANT-03**: Time-limited grants model real-world temporary access (e.g. external contractor on National Restricted for 30 days).
+- [x] **RSRC-GRANT-03**: Time-limited grants model real-world temporary access (e.g. external contractor on National Restricted for 30 days).
 
 ### Delegation (RSRC-DELEG)
 
@@ -100,17 +100,17 @@
 | RSRC-05 | Phase 9 | Complete |
 | RSRC-POLICY-01 | Phase 9 | Complete |
 | RSRC-POLICY-02 | Phase 9 | Complete |
-| RSRC-POLICY-03 | Phase 9 | Pending |
+| RSRC-POLICY-03 | Phase 9 | Complete |
 | RSRC-POLICY-04 | Phase 9 | Complete |
 | RSRC-POLICY-05 | Phase 9 | Complete |
-| RSRC-ACCESS-01 | Phase 9 | Pending |
-| RSRC-ACCESS-02 | Phase 9 | Pending |
-| RSRC-ACCESS-03 | Phase 9 | Pending |
-| RSRC-ACCESS-04 | Phase 9 | Pending |
-| RSRC-ACCESS-05 | Phase 9 | Pending |
+| RSRC-ACCESS-01 | Phase 9 | Complete |
+| RSRC-ACCESS-02 | Phase 9 | Complete |
+| RSRC-ACCESS-03 | Phase 9 | Complete |
+| RSRC-ACCESS-04 | Phase 9 | Complete |
+| RSRC-ACCESS-05 | Phase 9 | Complete |
 | RSRC-GRANT-01 | Phase 9 | Complete |
 | RSRC-GRANT-02 | Phase 9 | Complete |
-| RSRC-GRANT-03 | Phase 9 | Pending |
+| RSRC-GRANT-03 | Phase 9 | Complete |
 | RSRC-DELEG-01 | Phase 9 | Complete |
 | RSRC-SEED-01 | Phase 10 | Pending |
 | RSRC-SEED-02 | Phase 10 | Pending |
