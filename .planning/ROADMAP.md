@@ -36,7 +36,7 @@ See `.planning/milestones/v2.1-ROADMAP.md` for full phase details. Audit: `.plan
 
 **Milestone Goal:** Extend the demo with a digital-resource access model — Network → Platform → Application hierarchy, data-driven time-versioned per-resource policies, explicit per-tier grants with a prerequisite chain, advisory zone-prerequisite link, delegation, a 6-unit mock dataset, and three new demo views.
 
-- [ ] **Phase 9: Digital Resource Model & Policy Engine** — TypeScript types (NetworkNode, PlatformNode, ApplicationNode, org_links, ResourcePolicy, ResourceAccessGrant, ResourceAccessDelegate), time-versioned per-resource policy resolver (`resolveResourceAccess`), pitfall-blocking Vitest coverage
+- [x] **Phase 9: Digital Resource Model & Policy Engine** — TypeScript types (NetworkNode, PlatformNode, ApplicationNode, org_links, ResourcePolicy, ResourceAccessGrant, ResourceAccessDelegate), time-versioned per-resource policy resolver (`resolveResourceAccess`), pitfall-blocking Vitest coverage (completed 2026-06-02)
 - [ ] **Phase 10: Mock Dataset & WorldState** — 6-unit seed (≥3 networks/platforms/apps, active/expired/future grants, policy-shift example, non-baseline-policy example, zone-prereq link to v2.1), `DigitalResourceWorld` sub-object in WorldState, toggle action
 - [ ] **Phase 11: Demo UI & Tab Integration** — Resource Browser (hierarchy tree + detail panel), Access Resolution Explorer with evaluation-timestamp picker, wired as DemoRoot tab (no route file)
 
@@ -61,7 +61,7 @@ Plans:
 - [x] 09-01-PLAN.md — Digital-resource types + pure data helpers (nodes, org_links, policy/grant/delegate types, window/classification/policy-selector/validator helpers)
 - [x] 09-02-PLAN.md — Gate evaluators + resolveResourceAccess dispatcher + canIssueResourceGrant (fail-closed, no cross-tier inheritance, advisory non-blocking)
 - [x] 09-03-PLAN.md — digital-resource.test.ts blocking Vitest suite (one named test per acceptance criterion)
-- [ ] 09-04-PLAN.md — SEED-06 policy-shift + SEED-07 non-baseline fixtures in seed.ts + seed-resolution tests
+- [x] 09-04-PLAN.md — SEED-06 policy-shift + SEED-07 non-baseline fixtures in seed.ts + seed-resolution tests
 
 ### Phase 10: Mock Dataset & WorldState
 **Goal**: A realistic 6-unit mock dataset is loaded into `WorldState` via a `DigitalResourceWorld` sub-object, covering all required data shapes (active/expired/future grants, policy shift over time, non-baseline policy, zone-prereq link to v2.1).
@@ -101,6 +101,6 @@ Plans:
 | 6. Grants, Resolution & Delegation | v2.1 | 2/2 | Complete | 2026-05-23 |
 | 7. Entry Log & Visitor Passes | v2.1 | 2/2 | Complete | 2026-05-23 |
 | 8. Mock Dataset & Demo UI | v2.1 | 3/3 | Complete | 2026-05-23 |
-| 9. Digital Resource Model & Policy Engine | v2.2 | 3/4 | In Progress|  |
+| 9. Digital Resource Model & Policy Engine | v2.2 | 4/4 | Complete   | 2026-06-02 |
 | 10. Mock Dataset & WorldState | v2.2 | 0/? | Not started | - |
 | 11. Demo UI & Tab Integration | v2.2 | 0/? | Not started | - |

@@ -56,8 +56,8 @@
 - [ ] **RSRC-SEED-03**: Dataset includes Applications hosted on those platforms.
 - [ ] **RSRC-SEED-04**: At least one Platform carries a zone prerequisite pointing to an existing v2.1 zone, so the advisory zone row is exercised (not dormant).
 - [ ] **RSRC-SEED-05**: Grants include active, expired, and future-dated examples across all three resource tiers.
-- [ ] **RSRC-SEED-06**: At least one resource demonstrates a **policy shift over time** — two policy assignments with adjacent validity windows — so point-in-time resolution at different timestamps yields different rules.
-- [ ] **RSRC-SEED-07**: At least one resource carries a **non-baseline policy** (e.g. an extra required org-role authorization or a different gate set) to exercise per-resource variation.
+- [x] **RSRC-SEED-06**: At least one resource demonstrates a **policy shift over time** — two policy assignments with adjacent validity windows — so point-in-time resolution at different timestamps yields different rules.
+- [x] **RSRC-SEED-07**: At least one resource carries a **non-baseline policy** (e.g. an extra required org-role authorization or a different gate set) to exercise per-resource variation.
 
 ### Demo UI (RSRC-UI)
 
@@ -117,8 +117,8 @@
 | RSRC-SEED-03 | Phase 10 | Pending |
 | RSRC-SEED-04 | Phase 10 | Pending |
 | RSRC-SEED-05 | Phase 10 | Pending |
-| RSRC-SEED-06 | Phase 9 | Pending |
-| RSRC-SEED-07 | Phase 9 | Pending |
+| RSRC-SEED-06 | Phase 9 | Complete |
+| RSRC-SEED-07 | Phase 9 | Complete |
 | RSRC-UI-01 | Phase 11 | Pending |
 | RSRC-UI-02 | Phase 11 | Pending |
 | RSRC-UI-03 | Phase 11 | Pending |
