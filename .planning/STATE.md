@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.1
-milestone_name: Physical Access Zones
-status: archived
-stopped_at: null
-last_updated: "2026-06-01T00:00:00.000Z"
-last_activity: 2026-06-01
+milestone: v2.2
+milestone_name: Platform, Network & Application Access
+status: planning
+last_updated: "2026-06-02T05:48:21.547Z"
+last_activity: 2026-06-02
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -25,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-05-23 for v2.1 milestone)
 
 ## Current Position
 
-Milestone: v2.1 — ARCHIVED (audit passed, tagged v2.1)
-Phases 5–8: complete (9/9 plans)
-Next: v2.2 (not started)
-Last activity: 2026-06-01
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-06-02 — Milestone v2.2 started
 
 ## Performance Metrics
 

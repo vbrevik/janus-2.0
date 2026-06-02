@@ -28,11 +28,21 @@ federated ABAC model is proven. The next milestone transitions this from demo to
 
 See `.planning/MILESTONES.md` and `.planning/milestones/v2.1-*` for the archived record.
 
-## Next Milestone: v2.2 Platform, Network & Application Access (demo)
+## Current Milestone: v2.2 Platform, Network & Application Access (demo)
 
-**Goal:** Extend the demo with a digital-resource access model — Network → Platform → Application hierarchy, classification tiers (National Restricted, Tactical Secure, NATO levels), dual org ownership, per-resource grants with a prerequisite tier chain, zone-prerequisite link, and delegation. Requirements seeded in `.planning/milestones/v2.2-REQUIREMENTS.md`.
+**Goal:** Extend the demo with a digital-resource access model — Network → Platform → Application hierarchy, classification tiers (National Restricted, Tactical Secure, NATO levels), dual org ownership, per-resource grants with a prerequisite tier chain, zone-prerequisite link, and delegation.
 
-Start with `/gsd-new-milestone` (refresh `REQUIREMENTS.md`, then roadmap Phases 9–11).
+**Target features:**
+- Digital resource hierarchy: Network → Platform → Application (strict tree, no multi-homing)
+- Classification per resource from the 5-tier ladder; Application inherits its Platform's classification
+- Dual org ownership per resource (admin_org + asset_owner_org) — mirrors v2.1 zone model
+- Per-resource time-windowed grants; each tier requires explicit authorization (no cross-tier inheritance)
+- Access resolution gate chain: clearance → explicit grant per tier → prerequisite tier grants active
+- Zone-prerequisite link to v2.1: **advisory** in the resolution trace (non-blocking warning)
+- Admin-org delegation of access-granting authority to a person or org
+- 6-unit mock dataset (active/expired/future grants) + demo UI (resource browser, detail panel, access resolution explorer)
+
+**Key context:** Mirrors v2.1 zone patterns. SEED-009 active (NSM §6 info-system security, approval-to-operate). Phases 9–11 (continued numbering). Backend deferred per Out of Scope. Requirements seeded in `.planning/milestones/v2.2-REQUIREMENTS.md`.
 
 <details>
 <summary>v2.1 goal (shipped)</summary>
@@ -68,7 +78,7 @@ Start with `/gsd-new-milestone` (refresh `REQUIREMENTS.md`, then roadmap Phases 
 - ✓ Coherent demo shell — 5 tabs, shared world-state, plain-prose traces, production build — v2.0 (Phase 4)
 - ✓ Existing substrate: JWT auth, Person/Org/InfoSystem CRUD, access grants, audit log, WebSocket, React/Vite/shadcn frontend
 
-### Active (v2.1)
+### Validated (v2.1)
 
 - [x] Zone hierarchy model: Site → Building → Room with zone_type enum — Validated in Phase 5
 - [x] 5-tier clearance ladder replacing 4-tier (adds RESTRICTED between UNCLASSIFIED and CONFIDENTIAL) — Validated in Phase 5
@@ -78,24 +88,12 @@ Start with `/gsd-new-milestone` (refresh `REQUIREMENTS.md`, then roadmap Phases 
 - [x] Delegation: admin org → named person or org; delegates can grant access — Validated in Phase 6
 - [x] ZoneEntryLog with method (CARD/ESCORT), escort person ref, entry/exit timestamps — Validated in Phase 7
 - [x] ZoneVisitorPass linked to escort entries with time-bounded validity — Validated in Phase 7
-- [ ] Rich mock dataset instantiating the 6-unit scenario with zones, grants, entry log
-- [ ] Demo UI tab: zone browser + access resolution explorer + entry log
+- [x] Rich mock dataset instantiating the 6-unit scenario with zones, grants, entry log — Validated in Phase 8
+- [x] Demo UI tab: zone browser + access resolution explorer + entry log — Validated in Phase 8
 
-### Planned: v2.2 Platform, Network & Application Access (demo)
+### Active (v2.2)
 
-**Goal:** Extend the demo with an access model for the full digital resource stack — classified networks, the platforms running on them, and the applications deployed on those platforms. Pre-registered as a capture target for digital-access topics that emerge during v2.1 physical zone work.
-
-**Planned scope:**
-- Digital resource hierarchy: Network → Platform → Application
-- Network classification tiers (National Restricted, Tactical Secure, NATO Restricted/Secret, etc.)
-- Clearance + authorization required per resource tier
-- Admin org + asset owner org per resource (mirrors v2.1 zone model)
-- Time-limited access grants per resource
-- Physical zone ↔ network/platform prerequisite link (being in a zone may be required to access a network)
-- Mock dataset + demo UI (carries v2.1 patterns)
-- SEED-009 activated (info-system security requirements: NSM §6, approval-to-operate, adequate security level)
-
-**Seeds:** SEED-009 active · Demo/mock only (backend defers to later milestone)
+Scoped requirements in `.planning/REQUIREMENTS.md` (RSRC / RSRC-ACCESS / RSRC-GRANT / RSRC-DELEG / RSRC-SEED / RSRC-UI). See Current Milestone above for the feature summary.
 
 ### Planned: v2.3 Dataset Access (demo)
 
@@ -154,6 +152,8 @@ Start with `/gsd-new-milestone` (refresh `REQUIREMENTS.md`, then roadmap Phases 
 | Demo island isolation (`frontend/src/demo/`) | No `routeTree.gen.ts` changes; demo builds as separate Vite entry | ✓ Held throughout all 4 phases |
 | 5-tab shell in Phase 4 (not 4-tab) | UnitConsolePanel extracted as standalone Entity Console tab for clarity | ✓ Passed legibility gate |
 | Defer AUDIT-03, CTX-04, SCOPE-01 | Infrastructure supports them; not critical for model proof | → Active/next milestone |
+| v2.2: Application inherits its Platform's classification | Simpler model; an app's grade is bounded by the platform it runs on — no independent ATO-per-app in demo scope | → v2.2 |
+| v2.2: zone-prerequisite link is advisory, not a hard gate | Lighter cross-domain coupling; the prereq surfaces in the resolution trace as a warning rather than forcing DENY | → v2.2 |
 
 ## Evolution
 
@@ -173,4 +173,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-23 — Milestone v2.1 Physical Access Zones (demo) started*
+*Last updated: 2026-06-02 — Milestone v2.2 Platform, Network & Application Access (demo) started*
