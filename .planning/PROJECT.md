@@ -35,11 +35,13 @@ See `.planning/MILESTONES.md` and `.planning/milestones/v2.1-*` for the archived
 **Target features:**
 - Digital resource hierarchy: Network → Platform → Application (strict tree, no multi-homing)
 - Classification per resource from the 5-tier ladder; Application inherits its Platform's classification
-- Dual org ownership per resource (admin_org + asset_owner_org) — mirrors v2.1 zone model
-- Per-resource time-windowed grants; each tier requires explicit authorization (no cross-tier inheritance)
-- Access resolution gate chain: clearance → explicit grant per tier → prerequisite tier grants active
+- Multi-org ownership per resource via a time-windowed `org_links: [{org_id, role, valid_from, valid_until}]` list (open role vocab: ADMIN / ASSET_OWNER / OPERATOR / SECURITY_APPROVAL / …), generalizing the v2.1 dual-org model
+- **Data-driven per-resource access policies** — rules are values not code; different resources/tiers carry different policies (mirrors v2.0 per-entity divergence)
+- **Time-versioned, mutable policies** — a resource's policy shifts over time (valid_from/valid_until); resolution uses the policy active at the evaluation timestamp (point-in-time, mirrors v2.0 audit reconstruction)
+- Per-resource time-windowed grants; each tier requires explicit authorization (no cross-tier inheritance under the seeded baseline policy)
+- Access resolution evaluates the active policy → explainable gate-chain trace (clearance → own-tier grant → parent-tier prerequisite) labeled with the policy version applied
 - Zone-prerequisite link to v2.1: **advisory** in the resolution trace (non-blocking warning)
-- Admin-org delegation of access-granting authority to a person or org
+- Delegation by active ADMIN-role orgs to a person or org
 - 6-unit mock dataset (active/expired/future grants) + demo UI (resource browser, detail panel, access resolution explorer)
 
 **Key context:** Mirrors v2.1 zone patterns. SEED-009 active (NSM §6 info-system security, approval-to-operate). Phases 9–11 (continued numbering). Backend deferred per Out of Scope. Requirements seeded in `.planning/milestones/v2.2-REQUIREMENTS.md`.
@@ -154,6 +156,9 @@ Scoped requirements in `.planning/REQUIREMENTS.md` (RSRC / RSRC-ACCESS / RSRC-GR
 | Defer AUDIT-03, CTX-04, SCOPE-01 | Infrastructure supports them; not critical for model proof | → Active/next milestone |
 | v2.2: Application inherits its Platform's classification | Simpler model; an app's grade is bounded by the platform it runs on — no independent ATO-per-app in demo scope | → v2.2 |
 | v2.2: zone-prerequisite link is advisory, not a hard gate | Lighter cross-domain coupling; the prereq surfaces in the resolution trace as a warning rather than forcing DENY | → v2.2 |
+| v2.2: access rules are data-driven per-resource policies, not a hardcoded chain | User need: rules/roles differ by platform/application; reuses v2.0 proven per-entity policy divergence | → v2.2 |
+| v2.2: policies are time-versioned & mutable (valid_from/until); roles+gates are open vocab | User need: must be flexible, shift to new values over time; resolution is point-in-time (reuses v2.0 audit reconstruction). In-app authoring deferred — v2.2 ships seed data | → v2.2 |
+| v2.2: multi-org per resource via role-tagged time-windowed org_links list | User need: up to ~5 orgs now, more later; generalizes v2.1 dual-org into an extensible list | → v2.2 |
 
 ## Evolution
 

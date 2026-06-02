@@ -1,0 +1,96 @@
+# Requirements — v2.2 Platform, Network & Application Access (demo)
+
+**Milestone:** v2.2 (ACTIVE)
+**Scope:** Demo/mock only — all data is in-memory TypeScript under `frontend/src/demo/`. No Rust/PostgreSQL backend, no `routeTree.gen.ts` changes (separate Vite demo entry).
+**Grounding:** SEED-009 (NSM §6 info-system security — classification, sikkerhetsgodkjenning/approval-to-operate, forsvarlig sikkerhetsnivå). Mirrors and generalizes the v2.1 physical-zone model.
+
+**Key decisions:**
+- Application **inherits** its host Platform's classification (no independent field).
+- Zone-prerequisite link is **advisory** — surfaced in the resolution trace as a non-blocking amber warning, never affects ALLOW/DENY.
+- Access rules are **data-driven, per-resource policies** (not a hardcoded chain). Different resources/tiers may carry different policies. (Mirrors v2.0 per-entity policy divergence.)
+- Policies are **time-versioned and mutable** — a resource's policy can shift to new values over time; each policy assignment carries `valid_from`/`valid_until`. Resolution evaluates the policy active at the evaluation timestamp (point-in-time, mirrors v2.0 audit reconstruction).
+- Org-role and gate/rule-type vocabularies are **open and extensible** — new values added via data without code changes. v2.2 seeds a baseline set.
+
+---
+
+## Milestone v2.2 Requirements
+
+### Digital Resource Model (RSRC)
+
+- [ ] **RSRC-01**: Digital resources are organized in a 3-tier hierarchy: **Network → Platform → Application**.
+- [ ] **RSRC-02**: Network and Platform each carry a classification from the 5-tier ladder (`UNCLASSIFIED → RESTRICTED → CONFIDENTIAL → SECRET → TOP_SECRET`). An **Application has no classification field** — it inherits its host Platform's, derived at resolution and display time.
+- [ ] **RSRC-03**: Network classification examples (indicative): National Restricted (`RESTRICTED`), National Secret (`SECRET`), Tactical Secure (`SECRET`), NATO Restricted (`RESTRICTED`), NATO Secret (`SECRET`), NATO Top Secret (`TOP_SECRET`).
+- [ ] **RSRC-04**: Each resource carries a list of org links `org_links: [{ org_id, role, valid_from, valid_until }]` (1–N, demo seeds up to ~5). `role` is an **open string vocabulary**; v2.2 seeds `ADMIN` (controls/delegates) · `ASSET_OWNER` (owns) · `OPERATOR` (runs/maintains) · `SECURITY_APPROVAL` (authorizing authority, ties to the NSM sikkerhetsgodkjenning badge). At least one active `ADMIN` link is required; a role may repeat (e.g. two operators); links are time-windowed.
+- [ ] **RSRC-05**: Strict tree — a Platform belongs to exactly one Network; an Application belongs to exactly one Platform. No multi-homing in demo scope.
+
+### Access Policy (RSRC-POLICY)
+
+- [ ] **RSRC-POLICY-01**: A resource's access rules are defined by a data-driven `ResourcePolicy` — not hardcoded. A policy specifies: the clearance requirement (default: derive from the resource's classification), which org-role authorizations are required, the ordered gate sequence, the prerequisite-tier requirement, and whether a zone prerequisite is advisory. Rules are values, not code branches.
+- [ ] **RSRC-POLICY-02**: Policies are **time-versioned**. A resource carries policy assignments each with `valid_from`/`valid_until` (nullable `valid_until` = open/current). Resolution selects the single policy whose validity window contains the evaluation timestamp.
+- [ ] **RSRC-POLICY-03**: A resource's policy can **shift to a new value over time** (policy A expires, policy B takes effect). Point-in-time resolution reproduces the decision under whichever policy was active at the chosen timestamp.
+- [ ] **RSRC-POLICY-04**: Org-role and gate/rule-type vocabularies are **open and extensible** — new roles or rule types can be introduced as data without code changes. v2.2 seeds the baseline (4 roles above; gates = clearance + own-tier explicit grant + parent-tier prerequisite + advisory zone).
+- [ ] **RSRC-POLICY-05**: Different resources — and different tiers — may carry **different policies**. Network, Platform, Application, and individual instances need not share the same rule set.
+
+### Access Rules (RSRC-ACCESS)
+
+- [ ] **RSRC-ACCESS-01**: Access resolution evaluates the resource's **active policy** (per RSRC-POLICY-02) against the subject and the evaluation timestamp to produce ALLOW/DENY.
+- [ ] **RSRC-ACCESS-02**: The **seeded baseline policy** applies, in order: (1) clearance ≥ resource classification, (2) active explicit own-tier authorization, (3) active parent-tier prerequisite grant (Platform needs Network; Application needs Platform). Networks have no parent gate.
+- [ ] **RSRC-ACCESS-03**: Under the baseline policy there is **no cross-tier inheritance** — a Network grant does NOT confer Platform access; a Platform grant does NOT confer Application access. Each tier requires its own explicit authorization. (The trace states this at each gate.)
+- [ ] **RSRC-ACCESS-04**: A resource policy may declare a **zone prerequisite** (the room/building housing its terminal). The zone check is **advisory** — computed and shown in the trace but never changes ALLOW/DENY.
+- [ ] **RSRC-ACCESS-05**: Resolution produces an **explainable trace**: each gate's pass/fail with reason, the advisory zone result as a separate non-gating entry, and which policy version (and its validity window) was applied.
+
+### Access Grants (RSRC-GRANT)
+
+- [ ] **RSRC-GRANT-01**: A `ResourceAccessGrant` links a person to a specific resource (Network, Platform, or Application) with `valid_from` and `valid_until` (nullable `valid_until` = permanent).
+- [ ] **RSRC-GRANT-02**: Grant active-window evaluation matches the v2.1 convention (inclusive boundary semantics consistent with `isGrantActive`); expired and future-dated grants do not satisfy a gate.
+- [ ] **RSRC-GRANT-03**: Time-limited grants model real-world temporary access (e.g. external contractor on National Restricted for 30 days).
+
+### Delegation (RSRC-DELEG)
+
+- [ ] **RSRC-DELEG-01**: An org holding an active `ADMIN` org-link on a resource can delegate that resource's access-granting authority to a named person OR another org, time-bounded — mirrors v2.1 `ZoneAccessDelegate`. Only `ADMIN`-role orgs may delegate.
+
+### Mock Dataset (RSRC-SEED)
+
+- [ ] **RSRC-SEED-01**: Dataset defines ≥3 Networks with realistic classification tiers from the 6-unit scenario.
+- [ ] **RSRC-SEED-02**: Dataset includes Platforms (terminals, servers, workstations) hosted on those networks.
+- [ ] **RSRC-SEED-03**: Dataset includes Applications hosted on those platforms.
+- [ ] **RSRC-SEED-04**: At least one Platform carries a zone prerequisite pointing to an existing v2.1 zone, so the advisory zone row is exercised (not dormant).
+- [ ] **RSRC-SEED-05**: Grants include active, expired, and future-dated examples across all three resource tiers.
+- [ ] **RSRC-SEED-06**: At least one resource demonstrates a **policy shift over time** — two policy assignments with adjacent validity windows — so point-in-time resolution at different timestamps yields different rules.
+- [ ] **RSRC-SEED-07**: At least one resource carries a **non-baseline policy** (e.g. an extra required org-role authorization or a different gate set) to exercise per-resource variation.
+
+### Demo UI (RSRC-UI)
+
+- [ ] **RSRC-UI-01**: A Resource Browser renders the Network → Platform → Application hierarchy with classification badges (Application badge shown as inherited).
+- [ ] **RSRC-UI-02**: Selecting a resource shows its org links grouped by role (ADMIN / ASSET_OWNER / OPERATOR / SECURITY_APPROVAL / …), classification, the active policy summary, active grants, and delegates. Platform detail shows NSM grounding badges (sikkerhetsgodkjenning / forsvarlig sikkerhetsnivå) as **static annotations**, not gates; the SECURITY_APPROVAL org names the authorizing authority behind the badge.
+- [ ] **RSRC-UI-03**: An Access Resolution Explorer: select person + resource + **evaluation timestamp** (default "now"), compute ALLOW/DENY with the full gate-chain trace, the amber non-blocking zone advisory row, and a label for which policy version was applied. Changing the timestamp across a policy-shift boundary visibly changes the applied rules.
+
+---
+
+## Future Requirements (deferred from v2.2)
+
+- Rust/PostgreSQL backend implementation of the resource hierarchy, grants, policies, and delegation
+- Real network/platform integration (actual network segments, AD/LDAP)
+- Approval-to-operate (sikkerhetsgodkjenning) lifecycle for platforms as an *enforced* gate (NSM §6-3)
+- Adequate-security-level assessment (forsvarlig sikkerhetsnivå) as an *enforced* gate (NSM §6-2)
+- Independent per-Application classification (if a real build needs ATO-per-app)
+- Policy authoring UI (creating/editing policies in-app); v2.2 policies are seeded data only
+
+## Out of Scope (v2.2)
+
+- **Backend implementation** — all data is mock/in-memory TypeScript
+- **Real network topology** — simulated in mock data
+- **Multi-homing** — a Platform on multiple Networks; strict tree only (RSRC-05)
+- **Approval-to-operate / adequate-security-level as access gates** — static Platform badges only
+- **Physical hardware inventory** — Platforms are logical records, not hardware management
+- **Independent Application classification** — Applications inherit from Platform
+- **Content / dataset-level access** — the innermost layer (mailbox/archive/doc-site) is the planned **v2.3 Dataset Access** milestone, not v2.2
+- **In-app policy authoring** — policies are mutable/time-versioned in the data model, but v2.2 ships them as seed data; an editing UI is deferred
+
+---
+
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| _(filled by roadmap)_ | | |
