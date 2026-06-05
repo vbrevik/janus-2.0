@@ -85,7 +85,10 @@ Plans:
   3. The Access Resolution Explorer evaluates clearance + own-tier explicit grant + parent-tier prerequisite for the selected person, resource, and evaluation timestamp and renders a labeled gate-chain trace; the zone-prerequisite row (when present) renders in amber with an explicit "Advisory (non-blocking)" label and does not change the ALLOW/DENY verdict
   4. Sliding the evaluation timestamp picker across a policy-shift boundary visibly changes which policy version label appears in the trace and may change the gate requirements shown; the demo build (`npm run build`) produces zero TypeScript errors
 **UI hint**: yes
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 10-01-PLAN.md - WorldState extension: DigitalResourceWorld type, TOGGLE_RESOURCE_GRANT action, seedWorld() init, 6-unit seed dataset
+- [ ] 10-02-PLAN.md - Pure read selectors: buildResourceTree, activeGrantsForResource, resolveResourceAt + seed-validation tests
 
 ---
 
