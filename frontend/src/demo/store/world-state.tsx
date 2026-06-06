@@ -42,10 +42,20 @@ import {
   SUBJECTS,
   VISITOR_PASSES,
   ZONES,
+  RESOURCE_NODES,
+  RESOURCE_GRANTS,
+  PLATFORMS,
+  APPLICATIONS,
+  ORG_LINKS,
+  POLICIES,
+  POLICY_ASSIGNMENTS,
+  RSRC_POLICIES,
+  RSRC_DELEGATES,
 } from "../lib/seed";
 import { buildDiscoverEnvelopes, type DetailResult } from "../lib/contract";
 import type { VerifyResult } from "../lib/credential";
 import type { Principal } from "../lib/abac";
+import type { DigitalResourceWorld } from "../lib/model";
 
 export interface AbacTarget {
   subjectId: string;
@@ -92,6 +102,7 @@ export interface WorldState {
   entryLogs: ZoneEntryLog[];
   visitorPasses: ZoneVisitorPass[];
   disabledGrantIds: Set<string>;
+  digitalResources: DigitalResourceWorld;
 }
 
 /** Build the initial world from the frozen seed (lazy-init for useReducer). */
@@ -125,6 +136,17 @@ export function seedWorld(): WorldState {
     entryLogs: [...ENTRY_LOGS],
     visitorPasses: [...VISITOR_PASSES],
     disabledGrantIds: new Set<string>(),
+    digitalResources: {
+      networks: [...RESOURCE_NODES],
+      platforms: [...PLATFORMS],
+      applications: [...APPLICATIONS],
+      orgLinks: [...ORG_LINKS],
+      policies: [...RSRC_POLICIES],
+      policyAssignments: [...POLICY_ASSIGNMENTS],
+      grants: [...RESOURCE_GRANTS],
+      delegates: [...RSRC_DELEGATES],
+      disabledResourceGrantIds: new Set<string>(),
+    },
   };
 }
 
@@ -172,7 +194,8 @@ export type Action =
       requester: Principal;
     }
   | { type: "FEDERATION_RESET" }
-  | { type: "TOGGLE_GRANT"; grantId: string };
+  | { type: "TOGGLE_GRANT"; grantId: string }
+  | { type: "TOGGLE_RESOURCE_GRANT"; resourceGrantId: string };
 
 /** Immutable subject clone — new object, new compartments array, new flags object. */
 function cloneSubject(s: Subject): Subject {
@@ -454,6 +477,20 @@ export function reducer(state: WorldState, action: Action): WorldState {
       if (next.has(action.grantId)) next.delete(action.grantId);
       else next.add(action.grantId);
       return { ...state, disabledGrantIds: next };
+    }
+
+    case "TOGGLE_RESOURCE_GRANT": {
+      // Immutable Set update — mirrors TOGGLE_GRANT pattern on the digital sub-object.
+      const next = new Set(state.digitalResources.disabledResourceGrantIds);
+      if (next.has(action.resourceGrantId)) next.delete(action.resourceGrantId);
+      else next.add(action.resourceGrantId);
+      return {
+        ...state,
+        digitalResources: {
+          ...state.digitalResources,
+          disabledResourceGrantIds: next,
+        },
+      };
     }
 
     default:

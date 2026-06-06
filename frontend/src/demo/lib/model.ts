@@ -794,6 +794,22 @@ export interface ResourceAccessResult {
   reason?: string;
 }
 
+// --- DigitalResourceWorld (Phase 10) ---
+// Flat arrays matching seed.ts 1:1; consumed by seedWorld() and selectors.
+// Declared here (not in seed.ts) to avoid circular imports — seed.ts imports
+// types FROM model.ts, and world-state.tsx imports DigitalResourceWorld FROM model.ts.
+export interface DigitalResourceWorld {
+  networks: NetworkNode[];
+  platforms: PlatformNode[];
+  applications: ApplicationNode[];
+  orgLinks: OrgLink[];
+  policies: ResourcePolicy[];
+  policyAssignments: PolicyAssignment[];
+  grants: ResourceAccessGrant[];
+  delegates: ResourceAccessDelegate[];
+  disabledResourceGrantIds: Set<string>;
+}
+
 // --- Phase 9 pure helpers (v2.2) ---
 // Every time-dependent helper takes an explicit `now: Date`; NONE call
 // Date.now()/new Date() internally (Constraint, PITFALLS #5) so point-in-time

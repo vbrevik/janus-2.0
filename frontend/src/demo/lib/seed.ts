@@ -1263,18 +1263,14 @@ export const VISITOR_PASSES: ZoneVisitorPass[] = [
 ];
 
 // ============================================================
-// Phase 9 (v2.2) — Digital Resource fixtures (APPEND-ONLY).
-// The two minimum real fixtures that exercise the time-versioned, parameterized
-// policy engine end-to-end (resolved by the seed integration tests in
-// digital-resource.test.ts). NOT the full 6-unit dataset (RSRC-SEED-01..05) —
-// that and WorldState wiring remain Phase 10.
-//
-//   - RSRC-SEED-06 (D-04, "tighten after an incident"): MilNet, a NetworkNode
-//     with two adjacent non-overlapping policy windows across 2026-03-01 — policy
-//     A = baseline; policy B = baseline + REQUIRED_ROLE:SECURITY_APPROVAL.
-//   - RSRC-SEED-07 (D-05, non-baseline): a separate NetworkNode whose single
-//     active policy = baseline + REQUIRED_ROLE:SECURITY_APPROVAL.
+// Phase 9/10 — Digital Resource fixtures.
+// 6-unit restructured dataset (RSRC-SEED-01..05, Plan 01 Wave 1).
+// Two legacy fixtures preserved: MilNet (policy-shift, SEED-06) and
+// IntelNet (non-baseline, SEED-07) — both still resolvable by name
+// via RESOURCE_NODES.find(n => n.name === "MilNet"/"IntelNet").
 // ============================================================
+
+// --- Resource policies ---
 
 // Shared baseline gate list: clearance + own-tier grant + parent-tier grant.
 const RESOURCE_BASELINE_GATES: GateDescriptor[] = [
@@ -1283,7 +1279,6 @@ const RESOURCE_BASELINE_GATES: GateDescriptor[] = [
   { kind: "PARENT_TIER_GRANT" },
 ];
 
-// Baseline policy (pre-incident). Three gates, no advisory zone prerequisite.
 const RESOURCE_BASELINE_POLICY: ResourcePolicy = {
   id: "rsrc-pol-baseline",
   label: "Baseline access policy",
@@ -1291,11 +1286,9 @@ const RESOURCE_BASELINE_POLICY: ResourcePolicy = {
   zone_prereq_id: null,
 };
 
-// Non-baseline policy: baseline + a REQUIRED_ROLE:SECURITY_APPROVAL gate. This is
-// SEED-06's post-incident "tightened" policy B and SEED-07's sole active policy.
-const RESOURCE_NON_BASELINE_POLICY: ResourcePolicy = {
-  id: "rsrc-pol-security-approval",
-  label: "Tightened access policy (security approval required)",
+const RESOURCE_RESTRICTED_POLICY: ResourcePolicy = {
+  id: "rsrc-pol-restricted",
+  label: "Post-incident policy",
   gates: [
     ...RESOURCE_BASELINE_GATES,
     { kind: "REQUIRED_ROLE", role: "SECURITY_APPROVAL" },
@@ -1303,26 +1296,26 @@ const RESOURCE_NON_BASELINE_POLICY: ResourcePolicy = {
   zone_prereq_id: null,
 };
 
-// SEED-06 incident boundary: policy A ends and policy B begins on this date.
-// Adjacent + non-overlapping in the demo sense — selectActivePolicy returns the
-// first covering window, so the test resolves Feb (A) and Apr (B), not the shared
-// boundary itself. (validatePolicyWindows flags touching inclusive windows; the
-// real-data demonstration is the cross-date verdict flip, not the validator.)
-//
-// RESOURCE_NODES — the SEED-06 (MilNet) and SEED-07 fixtures. SECRET-classified
-// so subj-1 (Dana, MILITARY_1, SECRET) clears the CLEARANCE gate. MILITARY_1 holds
-// an active ADMIN org_link but NO active SECURITY_APPROVAL link, so the same person
-// is ALLOWed under policy A (Feb) and DENied under policy B (Apr).
+const RESOURCE_NON_BASELINE_POLICY: ResourcePolicy = {
+  id: "rsrc-pol-non-baseline",
+  label: "Enhanced access policy",
+  gates: [
+    ...RESOURCE_BASELINE_GATES,
+    { kind: "REQUIRED_ROLE", role: "SECURITY_APPROVAL" },
+  ],
+  zone_prereq_id: "zone-room-sr1", // RSRC-SEED-04: zone-prereq link
+};
+
+// --- 6 Networks (RSRC-SEED-01) ---
+
 export const RESOURCE_NODES: NetworkNode[] = [
-  // RSRC-SEED-06: MilNet — policy shift across the 2026-03-01 incident date.
+  // Network 1: MILITARY_1 — keeps policy-shift story (former MilNet)
   {
     id: "rsrc-milnet",
     name: "MilNet",
     tier: "NETWORK",
     classification: "SECRET",
     org_links: [
-      // MILITARY_1 administers MilNet (can issue grants) but is NOT a security
-      // approver — so the post-incident REQUIRED_ROLE gate fails for its members.
       {
         org_id: "MILITARY_1",
         role: "ADMIN",
@@ -1331,29 +1324,50 @@ export const RESOURCE_NODES: NetworkNode[] = [
       },
     ],
     policy_assignments: [
-      // Policy A (baseline): unbounded start, ends at the incident date.
       {
         policy: RESOURCE_BASELINE_POLICY,
         valid_from: null,
-        valid_until: new Date("2026-03-01"),
+        valid_until: new Date("2026-02-28T23:59:59Z"),
       },
-      // Policy B (non-baseline): begins at the incident date, unbounded after.
       {
-        policy: RESOURCE_NON_BASELINE_POLICY,
-        valid_from: new Date("2026-03-01"),
+        policy: RESOURCE_RESTRICTED_POLICY,
+        valid_from: new Date("2026-03-01T00:00:00Z"),
         valid_until: null,
       },
     ],
   },
-  // RSRC-SEED-07: IntelNet — single active non-baseline policy (security approval
-  // required at all times). subj-1's org (MILITARY_1) holds an active SECURITY_APPROVAL
-  // link here, demonstrating the extra role gate being satisfied via org_links.
+  // Network 2: MILITARY_2
+  {
+    id: "rsrc-milnet-tac",
+    name: "TacNet-Mil2",
+    tier: "NETWORK",
+    classification: "SECRET",
+    org_links: [
+      {
+        org_id: "MILITARY_2",
+        role: "ADMIN",
+        valid_from: null,
+        valid_until: null,
+      },
+      {
+        org_id: "MILITARY_2",
+        role: "OPERATOR",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
+  // Network 3: INTEL — keeps non-baseline story (former IntelNet)
   {
     id: "rsrc-intelnet",
     name: "IntelNet",
     tier: "NETWORK",
-    classification: "SECRET",
+    classification: "TOP_SECRET",
     org_links: [
+      { org_id: "INTEL", role: "ADMIN", valid_from: null, valid_until: null },
       {
         org_id: "MILITARY_1",
         role: "SECURITY_APPROVAL",
@@ -1369,23 +1383,454 @@ export const RESOURCE_NODES: NetworkNode[] = [
       },
     ],
   },
+  // Network 4: INFRA
+  {
+    id: "rsrc-infrastructure",
+    name: "InfraNet",
+    tier: "NETWORK",
+    classification: "CONFIDENTIAL",
+    org_links: [
+      { org_id: "INFRA", role: "ADMIN", valid_from: null, valid_until: null },
+      {
+        org_id: "INFRA",
+        role: "OPERATOR",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
+  // Network 5: INDUSTRY
+  {
+    id: "rsrc-industry",
+    name: "IndusNet",
+    tier: "NETWORK",
+    classification: "RESTRICTED",
+    org_links: [
+      {
+        org_id: "INDUSTRY",
+        role: "ADMIN",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
+  // Network 6: HOME_GUARD
+  {
+    id: "rsrc-homeguard",
+    name: "HomeGuardNet",
+    tier: "NETWORK",
+    classification: "UNCLASSIFIED",
+    org_links: [
+      {
+        org_id: "HOME_GUARD",
+        role: "ADMIN",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
 ];
 
-// RESOURCE_GRANTS — own-tier grants. subj-1 (Dana) holds a permanent grant on each
-// resource so the OWN_TIER_GRANT gate passes; the policy shift (SEED-06) and the
-// non-baseline role gate (SEED-07) are then the sole verdict drivers.
-export const RESOURCE_GRANTS: ResourceAccessGrant[] = [
+// --- Platforms (RSRC-SEED-02) ---
+
+export const PLATFORMS: PlatformNode[] = [
+  // Platform 1: on MilNet — policy-shift narrative, zone_prereq (RSRC-SEED-04)
   {
-    id: "rsrc-grant-dana-milnet",
+    id: "rsrc-milpl-1",
+    name: "MilPlatform-1",
+    tier: "PLATFORM",
+    classification: "SECRET",
+    network_id: "rsrc-milnet",
+    org_links: [
+      {
+        org_id: "MILITARY_1",
+        role: "ADMIN",
+        valid_from: null,
+        valid_until: null,
+      },
+      {
+        org_id: "MILITARY_1",
+        role: "ASSET_OWNER",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
+  // Platform 2: on TacNet-Mil2
+  {
+    id: "rsrc-tacpl-1",
+    name: "TacPlatform-1",
+    tier: "PLATFORM",
+    classification: "SECRET",
+    network_id: "rsrc-milnet-tac",
+    org_links: [
+      {
+        org_id: "MILITARY_2",
+        role: "ADMIN",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
+  // Platform 3: on IntelNet — non-baseline policy
+  {
+    id: "rsrc-intpl-1",
+    name: "IntelPlatform-1",
+    tier: "PLATFORM",
+    classification: "TOP_SECRET",
+    network_id: "rsrc-intelnet",
+    org_links: [
+      { org_id: "INTEL", role: "ADMIN", valid_from: null, valid_until: null },
+    ],
+    policy_assignments: [
+      {
+        policy: RESOURCE_NON_BASELINE_POLICY,
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+  },
+  // Platform 4: on InfraNet
+  {
+    id: "rsrc-infrapl-1",
+    name: "InfraPlatform-1",
+    tier: "PLATFORM",
+    classification: "CONFIDENTIAL",
+    network_id: "rsrc-infrastructure",
+    org_links: [
+      { org_id: "INFRA", role: "ADMIN", valid_from: null, valid_until: null },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
+];
+
+// --- Applications (RSRC-SEED-03, NO classification field) ---
+
+export const APPLICATIONS: ApplicationNode[] = [
+  // App 1: on MilPlatform-1
+  {
+    id: "rsrc-milapp-1",
+    name: "MilApp-1",
+    tier: "APPLICATION",
+    platform_id: "rsrc-milpl-1",
+    org_links: [
+      {
+        org_id: "MILITARY_1",
+        role: "ADMIN",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
+  // App 2: on TacPlatform-1
+  {
+    id: "rsrc-tacapp-1",
+    name: "TacApp-1",
+    tier: "APPLICATION",
+    platform_id: "rsrc-tacpl-1",
+    org_links: [
+      {
+        org_id: "MILITARY_2",
+        role: "ADMIN",
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
+  // App 3: on IntelPlatform-1
+  {
+    id: "rsrc-intapp-1",
+    name: "IntelApp-1",
+    tier: "APPLICATION",
+    platform_id: "rsrc-intpl-1",
+    org_links: [
+      { org_id: "INTEL", role: "ADMIN", valid_from: null, valid_until: null },
+    ],
+    policy_assignments: [
+      {
+        policy: RESOURCE_NON_BASELINE_POLICY,
+        valid_from: null,
+        valid_until: null,
+      },
+    ],
+  },
+  // App 4: on InfraPlatform-1
+  {
+    id: "rsrc-infraapp-1",
+    name: "InfraApp-1",
+    tier: "APPLICATION",
+    platform_id: "rsrc-infrapl-1",
+    org_links: [
+      { org_id: "INFRA", role: "ADMIN", valid_from: null, valid_until: null },
+    ],
+    policy_assignments: [
+      { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+    ],
+  },
+];
+
+// --- Flat org links (for selectors) ---
+
+export const ORG_LINKS: OrgLink[] = [
+  { org_id: "MILITARY_1", role: "ADMIN", valid_from: null, valid_until: null }, // MilNet
+  { org_id: "MILITARY_1", role: "ADMIN", valid_from: null, valid_until: null }, // MilPlat-1
+  {
+    org_id: "MILITARY_1",
+    role: "ASSET_OWNER",
+    valid_from: null,
+    valid_until: null,
+  },
+  { org_id: "MILITARY_2", role: "ADMIN", valid_from: null, valid_until: null }, // TacNet
+  {
+    org_id: "MILITARY_2",
+    role: "OPERATOR",
+    valid_from: null,
+    valid_until: null,
+  },
+  { org_id: "MILITARY_2", role: "ADMIN", valid_from: null, valid_until: null }, // TacPlat-1
+  { org_id: "INTEL", role: "ADMIN", valid_from: null, valid_until: null }, // IntelNet
+  {
+    org_id: "MILITARY_1",
+    role: "SECURITY_APPROVAL",
+    valid_from: null,
+    valid_until: null,
+  },
+  { org_id: "INTEL", role: "ADMIN", valid_from: null, valid_until: null }, // IntelPlat-1
+  { org_id: "INFRA", role: "ADMIN", valid_from: null, valid_until: null }, // InfraNet
+  { org_id: "INFRA", role: "OPERATOR", valid_from: null, valid_until: null },
+  { org_id: "INFRA", role: "ADMIN", valid_from: null, valid_until: null }, // InfraPlat-1
+  { org_id: "INDUSTRY", role: "ADMIN", valid_from: null, valid_until: null }, // Industry
+  { org_id: "HOME_GUARD", role: "ADMIN", valid_from: null, valid_until: null }, // HomeGuard
+  { org_id: "MILITARY_1", role: "ADMIN", valid_from: null, valid_until: null }, // MilApp-1
+  { org_id: "MILITARY_2", role: "ADMIN", valid_from: null, valid_until: null }, // TacApp-1
+  { org_id: "INTEL", role: "ADMIN", valid_from: null, valid_until: null }, // IntelApp-1
+  { org_id: "INFRA", role: "ADMIN", valid_from: null, valid_until: null }, // InfraApp-1
+];
+
+// --- Flat policies ---
+
+export const RSRC_POLICIES: ResourcePolicy[] = [
+  RESOURCE_BASELINE_POLICY,
+  RESOURCE_RESTRICTED_POLICY,
+  RESOURCE_NON_BASELINE_POLICY,
+];
+
+// --- Flat policy assignments ---
+
+export const POLICY_ASSIGNMENTS: PolicyAssignment[] = [
+  // MilNet — policy shift
+  {
+    policy: RESOURCE_BASELINE_POLICY,
+    valid_from: null,
+    valid_until: new Date("2026-02-28T23:59:59Z"),
+  },
+  {
+    policy: RESOURCE_RESTRICTED_POLICY,
+    valid_from: new Date("2026-03-01T00:00:00Z"),
+    valid_until: null,
+  },
+  // TacNet — baseline permanent
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+  // IntelNet — non-baseline permanent
+  { policy: RESOURCE_NON_BASELINE_POLICY, valid_from: null, valid_until: null },
+  // InfraNet, Industry, HomeGuard
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+  // Platforms (4)
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+  { policy: RESOURCE_NON_BASELINE_POLICY, valid_from: null, valid_until: null },
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+  // Applications (4)
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+  { policy: RESOURCE_NON_BASELINE_POLICY, valid_from: null, valid_until: null },
+  { policy: RESOURCE_BASELINE_POLICY, valid_from: null, valid_until: null },
+];
+
+// --- Grants (RSRC-SEED-05: temporal variety per tier) ---
+
+export const RESOURCE_GRANTS: ResourceAccessGrant[] = [
+  // === NETWORK grants ===
+  // Expired network grant
+  {
+    id: "rsrc-grant-milnet-expired",
+    person_id: "subj-1",
+    resource_id: "rsrc-milnet",
+    valid_from: null,
+    valid_until: new Date("2025-01-01"),
+  },
+  // Active network grant
+  {
+    id: "rsrc-grant-milnet-active",
     person_id: "subj-1",
     resource_id: "rsrc-milnet",
     valid_from: null,
     valid_until: null,
   },
+  // Future network grant
   {
-    id: "rsrc-grant-dana-intelnet",
+    id: "rsrc-grant-milnet-future",
+    person_id: "subj-1",
+    resource_id: "rsrc-milnet",
+    valid_from: new Date("2027-01-01"),
+    valid_until: null,
+  },
+  // Active grant on TacNet
+  {
+    id: "rsrc-grant-tacnet-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-milnet-tac",
+    valid_from: null,
+    valid_until: null,
+  },
+  // Active grant on IntelNet
+  {
+    id: "rsrc-grant-intelnet-active",
     person_id: "subj-1",
     resource_id: "rsrc-intelnet",
+    valid_from: null,
+    valid_until: null,
+  },
+  // === PLATFORM grants ===
+  // Expired platform grant
+  {
+    id: "rsrc-grant-milpl-expired",
+    person_id: "subj-1",
+    resource_id: "rsrc-milpl-1",
+    valid_from: null,
+    valid_until: new Date("2025-06-01"),
+  },
+  // Active platform grant
+  {
+    id: "rsrc-grant-milpl-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-milpl-1",
+    valid_from: null,
+    valid_until: null,
+  },
+  // Future platform grant
+  {
+    id: "rsrc-grant-milpl-future",
+    person_id: "subj-1",
+    resource_id: "rsrc-milpl-1",
+    valid_from: new Date("2027-06-01"),
+    valid_until: null,
+  },
+  // Active grants on other platforms
+  {
+    id: "rsrc-grant-tacpl-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-tacpl-1",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "rsrc-grant-intpl-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-intpl-1",
+    valid_from: null,
+    valid_until: null,
+  },
+  // === APPLICATION grants ===
+  // Expired application grant
+  {
+    id: "rsrc-grant-milapp-expired",
+    person_id: "subj-1",
+    resource_id: "rsrc-milapp-1",
+    valid_from: null,
+    valid_until: new Date("2025-09-01"),
+  },
+  // Active application grant
+  {
+    id: "rsrc-grant-milapp-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-milapp-1",
+    valid_from: null,
+    valid_until: null,
+  },
+  // Future application grant
+  {
+    id: "rsrc-grant-milapp-future",
+    person_id: "subj-1",
+    resource_id: "rsrc-milapp-1",
+    valid_from: new Date("2027-09-01"),
+    valid_until: null,
+  },
+  // Active grants on other apps
+  {
+    id: "rsrc-grant-tacapp-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-tacapp-1",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "rsrc-grant-intapp-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-intapp-1",
+    valid_from: null,
+    valid_until: null,
+  },
+  // Grant on Infra resources
+  {
+    id: "rsrc-grant-infra-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-infrastructure",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "rsrc-grant-infrapl-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-infrapl-1",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "rsrc-grant-infraapp-active",
+    person_id: "subj-1",
+    resource_id: "rsrc-infraapp-1",
+    valid_from: null,
+    valid_until: null,
+  },
+];
+
+// --- Delegates ---
+
+export const RSRC_DELEGATES: ResourceAccessDelegate[] = [
+  // MILITARY_1 delegates IntelNet access authority to subject-2
+  {
+    id: "rsrc-delegate-subj2",
+    resource_id: "rsrc-intelnet",
+    delegate_type: "PERSON",
+    delegate_person_id: "subj-2",
+    delegate_org_id: null,
+    granted_by_org_id: "INTEL",
     valid_from: null,
     valid_until: null,
   },
