@@ -122,4 +122,55 @@ describe("world-state reducer", () => {
     const after = evaluate(principalFromSubject(find(next, SUBJ)), req);
     expect(after.decision).toBe("ALLOW"); // the NEW subject ref now satisfies NTK
   });
+
+  describe("TOGGLE_RESOURCE_GRANT action", () => {
+    it("toggles disabledResourceGrantIds on then off", () => {
+      const state = seedWorld();
+      expect(state.digitalResources.disabledResourceGrantIds.size).toBe(0);
+
+      // Toggle ON
+      const toggledOn = reducer(state, {
+        type: "TOGGLE_RESOURCE_GRANT",
+        resourceGrantId: "rsrc-grant-milnet-active",
+      });
+      expect(toggledOn.digitalResources.disabledResourceGrantIds.size).toBe(1);
+      expect(
+        toggledOn.digitalResources.disabledResourceGrantIds.has(
+          "rsrc-grant-milnet-active",
+        ),
+      ).toBe(true);
+      // Immutable update: new Set reference
+      expect(toggledOn.digitalResources.disabledResourceGrantIds).not.toBe(
+        state.digitalResources.disabledResourceGrantIds,
+      );
+
+      // Toggle OFF (again)
+      const toggledOff = reducer(toggledOn, {
+        type: "TOGGLE_RESOURCE_GRANT",
+        resourceGrantId: "rsrc-grant-milnet-active",
+      });
+      expect(
+        toggledOff.digitalResources.disabledResourceGrantIds.has(
+          "rsrc-grant-milnet-active",
+        ),
+      ).toBe(false);
+      expect(toggledOff.digitalResources.disabledResourceGrantIds.size).toBe(0);
+    });
+
+    it("physical TOGGLE_GRANT does not touch digitalResources", () => {
+      const state = seedWorld();
+      expect(state.disabledGrantIds.size).toBe(0);
+      expect(state.digitalResources.disabledResourceGrantIds.size).toBe(0);
+
+      // Physical toggle only affects disabledGrantIds
+      const toggled = reducer(state, {
+        type: "TOGGLE_GRANT",
+        grantId: "grant-dana-block-a",
+      });
+      expect(toggled.disabledGrantIds.size).toBe(1);
+      expect(toggled.disabledGrantIds.has("grant-dana-block-a")).toBe(true);
+      expect(toggled.digitalResources.disabledResourceGrantIds.size).toBe(0);
+      // Physical toggle only changes disabledGrantIds; digitalResources unchanged.
+    });
+  });
 });
