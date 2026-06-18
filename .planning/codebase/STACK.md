@@ -1,144 +1,102 @@
 # Technology Stack
 
-**Analysis Date:** 2026-05-20
+**Analysis Date:** 2026-06-18
 
 ## Languages
 
 **Primary:**
-- Rust (edition 2021) - Backend API server (`backend/src/`)
-- TypeScript ~5.9.3 - Frontend SPA (`frontend/src/`)
+- Rust 1.87 — backend API server (`backend/`)
+- TypeScript 5.9 — frontend SPA (`frontend/src/`)
 
 **Secondary:**
-- SQL - Database migrations (`backend/migrations/`)
-- Nginx config - Production frontend serving (`frontend/nginx.conf`)
+- SQL — database migrations (`backend/migrations/*.sql`)
+- HTML — entry points (`frontend/index.html`, `frontend/demo.html`)
 
 ## Runtime
 
-**Backend:**
-- Rust 1.87 (minimum, per Dockerfile `FROM rust:1.87-slim`)
-- Async runtime: Tokio 1.x (`backend/Cargo.toml`)
+**Environment:**
+- Backend: Tokio async runtime (via `tokio = { version = "1", features = ["full"] }`)
+- Frontend: Browser (ES modules via Vite)
 
-**Frontend:**
-- Node.js 20 (per Dockerfile `FROM node:20-alpine`)
-- No `.nvmrc` or `.node-version` file present — Node version enforced only via Docker
-
-## Package Manager
-
-**Frontend:**
-- npm with `package-lock.json` (lockfile v3, `frontend/package-lock.json`)
-- Lockfile: present
-
-**Backend:**
-- Cargo with `Cargo.lock` (`backend/Cargo.lock`)
-- Lockfile: present
+**Package Manager:**
+- Backend: Cargo (lockfile: `backend/Cargo.lock`)
+- Frontend: npm (lockfile: `frontend/package-lock.json`)
 
 ## Frameworks
 
-**Core (Backend):**
-- Rocket 0.5 (features: json) - HTTP web framework (`backend/Cargo.toml`)
-- rocket_cors 0.6 - CORS middleware
+**Backend:**
+- Rocket 0.5 — HTTP web framework (`rocket = { version = "0.5", features = ["json"] }`)
+- rocket_cors 0.6 — CORS middleware
 
-**Core (Frontend):**
-- React 19.1.1 - UI library (`frontend/package.json`)
-- TanStack Router 1.133.x - Type-safe file-based routing (`frontend/src/routes/`)
-- TanStack Query 5.90.x - Server state management / data fetching
+**Frontend Core:**
+- React 19.1 — UI rendering
+- TanStack Router 1.133 — file-based routing (`frontend/src/routes/`, generates `frontend/src/routeTree.gen.ts`)
+- TanStack Query 5.90 — server state / data fetching
+- Vite 7.1 — build tool and dev server (port 15510)
 
-**UI:**
-- shadcn/ui (new-york style) - Component library built on Radix UI (`frontend/src/components/ui/`)
-  - Components installed: button, badge, card, checkbox, dialog, dropdown-menu, input, label, select, table
-  - Config: `frontend/components.json`
-- Radix UI primitives - `@radix-ui/react-dropdown-menu`, `@radix-ui/react-select`, `@radix-ui/react-icons`
-- Tailwind CSS 3.4.x - Utility-first styling with CSS variables (`frontend/tailwind.config.js`)
-- lucide-react 0.548 - Icon set
-- class-variance-authority + clsx + tailwind-merge - Component variant utilities
+**Styling:**
+- Tailwind CSS 3.4 — utility-first CSS
+- shadcn/ui (Radix UI components) — component library; `@radix-ui/react-dropdown-menu`, `@radix-ui/react-select`, `@radix-ui/react-icons`
+- class-variance-authority 0.7, clsx 2.1, tailwind-merge 3.3 — class composition utilities
+- lucide-react 0.548 — icon library
 
-**Forms & Validation:**
-- react-hook-form 7.65 - Form state management
-- zod 4.1.12 - Schema validation
-- @hookform/resolvers 5.2 - Bridge between react-hook-form and zod
+**Forms:**
+- react-hook-form 7.65
+- @hookform/resolvers 5.2
+- zod 4.1 — schema validation
 
 **Testing:**
-- Vitest 4.0.x - Unit/component test runner (`frontend/vite.config.ts` test config)
-- @testing-library/react 16.x - React component testing
-- @testing-library/jest-dom 6.x - DOM matchers
-- jsdom 28.x - DOM environment for tests
-- Playwright 1.56.x - E2E testing (`frontend/playwright.config.ts`)
+- Vitest 4.0 — unit test runner (jsdom environment)
+- @testing-library/react 16.3 — component testing
+- Playwright 1.56 — e2e tests (`frontend/e2e/`)
+- jsdom 28.1 — DOM simulation for unit tests
 
-**Build/Dev (Frontend):**
-- Vite 7.1.7 - Dev server and bundler (`frontend/vite.config.ts`)
-- @vitejs/plugin-react 5.0 - React Fast Refresh support
-- @tanstack/router-vite-plugin - Auto-generates route tree from `src/routes/` filesystem
+**Build/Dev:**
+- @vitejs/plugin-react 5.0 — React fast refresh
+- @tanstack/router-vite-plugin 1.133 — auto-generates route tree
+- typescript-eslint 8.45 + eslint 9.36 — linting (flat config, no Prettier)
 
 ## Key Dependencies
 
 **Critical (Backend):**
-- sqlx 0.7 (features: runtime-tokio-native-tls, postgres, uuid, chrono, json) - Async PostgreSQL client (`backend/Cargo.toml`)
-- jsonwebtoken 9.2 - JWT creation and validation (`backend/src/auth/jwt.rs`)
-- bcrypt 0.15 - Password hashing (`backend/src/auth/handlers.rs`, `backend/src/person/handlers.rs`)
-- validator 0.16 - Request body validation
-- serde + serde_json 1.0 - JSON serialization
-- s3-tokio 0.39 (aliased as `s3`) - MinIO/S3 object storage client (`backend/Cargo.toml`)
-- tokio-tungstenite 0.21 - WebSocket server implementation (`backend/src/messaging/`)
-- uuid 1.5 (v4) - UUID generation
-- chrono 0.4 - Date/time types
-- dotenvy 0.15 - `.env` file loading
-- base64 0.22 - File attachment encoding/decoding
-
-**Critical (Frontend):**
-- @tanstack/react-router - File-based routing with auto-generated tree (`frontend/src/routeTree.gen.ts`)
-- @tanstack/react-query - Data fetching and cache (`frontend/src/hooks/`)
-- @tanstack/react-router-devtools - DevTools overlay in development
-
-**Infrastructure:**
-- log 0.4 + env_logger 0.11 - Logging facade and implementation
-- futures-util 0.3 - Async stream utilities for WebSocket
+- `sqlx 0.7` (features: postgres, uuid, chrono, json, runtime-tokio-native-tls) — async database queries; inline SQL in `r#"..."#` blocks
+- `jsonwebtoken 9.2` — JWT creation and verification (`backend/src/auth/jwt.rs`)
+- `bcrypt 0.15` — password hashing
+- `tokio-tungstenite 0.21` — WebSocket server (port 15540)
+- `validator 0.16` — request struct validation via derive macros
+- `uuid 1.5` (v4) — primary key generation
+- `chrono 0.4` — timestamps with serde support
+- `s3-tokio 0.39` (package alias `s3`) — MinIO/S3 object storage client (`backend/src/document_references/handlers.rs`)
+- `serde 1.0` + `serde_json 1.0` — serialization
+- `dotenvy 0.15` — `.env` file loading
+- `env_logger 0.11` — structured logging
 
 ## Configuration
 
-**Environment (Backend):**
-- `DATABASE_URL` - PostgreSQL connection string (required)
-- `JWT_SECRET` - HMAC secret for JWT signing, min 32 chars (required)
-- `ROCKET_PORT` - HTTP port override (default: 8000)
-- `ROCKET_ADDRESS` - Bind address (default: 0.0.0.0 in Docker)
-- `RUST_LOG` - Log level filter (e.g., `info`)
-- `MINIO_ENDPOINT` - Object storage URL (default: `http://localhost:9000`)
-- `MINIO_ACCESS_KEY` - Object storage access key
-- `MINIO_SECRET_KEY` - Object storage secret key
-- `MINIO_BUCKET` - Bucket name (default: `janus-documents`)
-- `MINIO_REGION` - S3 region string (default: `us-east-1`)
-- Loaded via `dotenvy` from `.env` at startup (`backend/src/shared/rocket_setup.rs`)
-- `.env` file present at `backend/.env` — contents not read
-
-**Environment (Frontend):**
-- `VITE_API_URL` - Backend HTTP base URL (default: `http://localhost:15520`)
-- `VITE_WS_URL` - WebSocket URL (default: `ws://localhost:15540`)
-- Set at build time or via Docker environment
+**Environment:**
+- Backend: `backend/.env` file (loaded via dotenvy); required vars include `DATABASE_URL`, `JWT_SECRET`
+- Frontend: `VITE_API_URL` env var; defaults to `http://localhost:15520` (`frontend/src/lib/api.ts:3`)
 
 **Build:**
-- `frontend/vite.config.ts` - Vite config with path alias `@` → `./src`
-- `frontend/tsconfig.json` / `tsconfig.app.json` / `tsconfig.node.json` - TypeScript project references
-- `frontend/tailwind.config.js` - Tailwind with shadcn/ui CSS variable tokens
-- `frontend/postcss.config.js` - PostCSS with autoprefixer
-- `frontend/eslint.config.js` - ESLint 9 flat config with typescript-eslint + react-hooks + react-refresh
-- `backend/Cargo.toml` - Release profile: `opt-level=3`, `lto=true`, `codegen-units=1`
+- `frontend/vite.config.ts` — Vite config; path alias `@` → `src/`; multiple entry points (`index.html`, `demo.html`)
+- `frontend/tsconfig.json`, `frontend/tsconfig.app.json`, `frontend/tsconfig.node.json` — TypeScript config (strict mode, `noUnusedLocals`, `noUnusedParameters`)
+- `frontend/components.json` — shadcn/ui component configuration
+- `backend/Cargo.toml` — release profile with LTO and `opt-level = 3`
 
 ## Platform Requirements
 
 **Development:**
-- Docker + Docker Compose for PostgreSQL (`docker-compose.dev.yml` — DB only)
-- Native Rust toolchain for backend dev
-- Node 20 + npm for frontend dev
-- Backend dev server: `localhost:15520` (HTTP), `localhost:15540` (WebSocket)
-- Frontend dev server: `localhost:15510`
-- PostgreSQL: `localhost:15530`
+- Docker (for PostgreSQL container on port 15530)
+- Rust 1.87+
+- Node.js (npm)
+- PostgreSQL 15 (via Docker image `postgres:15-alpine`)
 
 **Production:**
-- Docker Compose full profile (`docker-compose.yml` with `--profile full`)
-- PostgreSQL 15 Alpine container
-- Backend: Rocket in Debian slim container
-- Frontend: nginx Alpine serving Vite-built static files on port 3000
-- Ports: 15510 (frontend), 15520 (backend API), 15530 (postgres), 15540 (WebSocket)
+- Backend: native Rust binary
+- Frontend: static files from `vite build` (produces `frontend/dist/`)
+- PostgreSQL database
+- Optional: MinIO or S3-compatible object storage for document references
 
 ---
 
-*Stack analysis: 2026-05-20*
+*Stack analysis: 2026-06-18*

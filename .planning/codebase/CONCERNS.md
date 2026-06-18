@@ -1,314 +1,291 @@
 # Codebase Concerns
 
-**Analysis Date:** 2026-05-20
+**Analysis Date:** 2026-06-18
 
 ---
 
 ## Security Considerations
 
-### Backend Has No Role-Based Authorization on Most Endpoints
+### RBAC Not Enforced on Most Backend Endpoints
 
-**Risk:** Any authenticated user (any role) can call destructive or admin-only backend endpoints directly (e.g., create/update/delete person, grant access, manage organizations). Role enforcement only exists in the roles module (`/api/roles`).
+**Risk:** Any authenticated user (regardless of role) can read or mutate persons, access grants, NDAs, audit logs, organizations, relations, discussions, and document references. The `role_has_permission` function exists in `backend/src/shared/rbac.rs` but is called **only** in `backend/src/roles/handlers.rs`. Every other domain handler accepts any valid JWT bearer token as sufficient authorization.
+
 **Files:**
-- `backend/src/person/handlers.rs` — all routes use `_auth: AuthGuard` (authentication only, no role check)
-- `backend/src/access/handlers.rs` — same pattern
-- `backend/src/organizations/handlers.rs` — same pattern
-- `backend/src/audit/handlers.rs` — same pattern
-- `backend/src/roles/handlers.rs` — correct: calls `role_has_permission()` per endpoint
-**Current mitigation:** Frontend `ProtectedRoute` component enforces roles client-side, but this is bypassable via direct API calls.
-**Recommendations:** Introduce role-guard middleware in Rocket (mirroring `roles/handlers.rs`) for person, access, organizations, nda, discussions, and info_systems handlers. Any authenticated user with a valid JWT currently has full write access.
+- `backend/src/shared/rbac.rs` — function defined but unused outside roles
+- `backend/src/access/handlers.rs` — grants computer/data/physical access with no role check
+- `backend/src/person/handlers.rs` — creates and updates persons with no role check
+- `backend/src/nda/handlers.rs` — issues NDAs with no role check
+- `backend/src/audit/handlers.rs` — reads full audit log with no role check
+- `backend/src/relations/handlers.rs` — manages relations with no role check
+- `backend/src/organizations/handlers.rs` — manages orgs with no role check
+
+**Current mitigation:** Frontend `ProtectedRoute` / `allowedRoles` guard limits UI access by role, but this is client-side only.
+
+**Recommendations:** Apply `role_has_permission` (or a simpler `auth.claims.role` pattern) in every mutating handler. At minimum, scope write endpoints to `admin`/`manager` roles and read endpoints to everything above `viewer`.
 
 ---
 
-### JWT Secret Falls Back to Hardcoded Value in Production
+### JWT Secret Falls Back to a Hardcoded Test Value in Production
 
-**Risk:** If `JWT_SECRET` env var is not set, the backend silently uses `"test-secret-key-must-be-at-least-32-characters-long"` — a public value that allows forging valid tokens.
-**Files:**
-- `backend/src/shared/rocket_setup.rs` lines 22–23
-**Current mitigation:** `docker-compose.yml` sets a different development secret, but the fallback means a misconfigured production deployment would be exploitable.
-**Recommendations:** Panic with an explicit error message if `JWT_SECRET` is unset in non-test builds. Use `env::var("JWT_SECRET").expect("JWT_SECRET must be set")` (guarded behind `cfg!(not(test))`).
+**Risk:** If `JWT_SECRET` env var is absent at startup, the server silently uses `"test-secret-key-must-be-at-least-32-characters-long"`. Any attacker who knows this default can forge valid JWTs.
 
----
+**Files:** `backend/src/shared/rocket_setup.rs:22`
 
-### CORS Allows All Origins
-
-**Risk:** `AllowedOrigins::all()` with `allow_credentials(true)` permits cross-origin requests with credentials from any domain. This opens the API to CSRF and credential-theft attacks from any website.
-**Files:**
-- `backend/src/shared/rocket_setup.rs` lines 57–66
-**Current mitigation:** None.
-**Recommendations:** Restrict `allowed_origins` to the frontend origin via an env var (`ALLOWED_ORIGIN` or similar). Remove `allow_credentials(true)` if not required, or tighten origin list.
+**Fix approach:** Panic (or refuse startup) when `JWT_SECRET` is missing in non-test environments. Add a `cfg!(test)` guard so the fallback only applies in test builds.
 
 ---
 
-### `password_hash` Is Serialized in All Person API Responses
+### CORS Wildcard with Credentials Enabled
 
-**Risk:** Every `GET /api/person`, `GET /api/person/:id`, create, and update response includes `password_hash` (bcrypt hash). While not a plaintext password, exposing hashes increases offline-cracking attack surface.
-**Files:**
-- `backend/src/person/models.rs` — `Person` struct derives `Serialize` with `password_hash: Option<String>` (line 17)
-- `backend/src/person/handlers.rs` — all handlers return `Json<Person>` directly
-**Current mitigation:** None.
-**Recommendations:** Add a separate `PersonResponse` DTO that omits `password_hash` and use it in all handler return types.
+**Risk:** `AllowedOrigins::all()` combined with `.allow_credentials(true)` is a CORS misconfiguration. Browsers block wildcard origin with credentials per spec, but some older clients and non-browser HTTP clients are unrestricted.
 
----
+**Files:** `backend/src/shared/rocket_setup.rs:57-67`
 
-### JWT Claims `sub` Parse Failure Silently Uses Person ID 0
-
-**Risk:** If the JWT `sub` claim is not a valid integer, `auth.claims.sub.parse::<i32>().unwrap_or(0)` returns 0. Person ID 0 does not exist, so the handler returns 404 — but in theory this could be a logic bug if any record ever gets ID 0.
-**Files:**
-- `backend/src/auth/handlers.rs` lines 66, 108
-- `backend/src/discussions/handlers.rs` line 106
-**Current mitigation:** ID 0 doesn't exist in practice, so these calls return NotFound.
-**Recommendations:** Return `Status::Unauthorized` explicitly on parse failure rather than silently defaulting to 0.
+**Fix approach:** Restrict `allowed_origins` to a specific allowlist (e.g., `http://localhost:15510` in dev, production origin in prod).
 
 ---
 
-### Auth Token Stored in `localStorage` (XSS Risk)
+### Hardcoded MinIO Credentials as Fallback
 
-**Risk:** `localStorage` is accessible by any JavaScript running on the page. An XSS vulnerability would immediately expose the JWT.
+**Risk:** `backend/src/document_references/handlers.rs:206-207` falls back to `"janusminio"` / `"janusminio_password"` when env vars are not set. If MinIO is reachable from the network, these credentials grant full document bucket access.
+
+**Files:** `backend/src/document_references/handlers.rs:205-208`
+
+**Fix approach:** Panic on missing MinIO credentials in production, same as JWT secret pattern above.
+
+---
+
+### `unwrap_or(0)` on Person ID Parse — Silent Auth Confusion
+
+**Risk:** Multiple handlers parse the JWT subject (person ID) with `.unwrap_or(0)`. If parsing fails, the handler silently operates as person ID 0 (non-existent), yielding `NOT FOUND` from the DB rather than a proper auth error.
+
 **Files:**
-- `frontend/src/lib/api.ts` line 24 — reads token from `localStorage`
-- `frontend/src/contexts/auth-context.tsx` lines 60–61 — writes token to `localStorage`
-**Current mitigation:** No explicit XSS vectors identified yet, but the storage choice increases blast radius.
-**Recommendations:** Migrate to `httpOnly` cookies for token storage. This requires backend changes to set/clear the cookie on login/logout.
+- `backend/src/auth/handlers.rs:66` — `get_profile`
+- `backend/src/auth/handlers.rs:108` — `change_password`
+- `backend/src/discussions/handlers.rs:106`, `141`
+- `backend/src/nda/handlers.rs:117`, `192`, `235`
+- `backend/src/document_references/handlers.rs:111`
+
+**Fix approach:** Return `Status::Unauthorized` on parse failure instead of falling through with ID 0.
 
 ---
 
 ## Tech Debt
 
-### Duplicate Route Files: Non-Admin vs. Admin Views
+### Duplicate Flat Routes vs. Admin Routes
 
-**Issue:** Multiple routes exist in near-identical pairs. The non-admin versions use the old `protected-route` (no role enforcement) and are registered in the router alongside their `/admin/*` counterparts.
-**Files (non-admin copies with no role enforcement):**
-- `frontend/src/routes/ndas/index.tsx` and `frontend/src/routes/admin/ndas/index.tsx`
-- `frontend/src/routes/access/index.tsx` and `frontend/src/routes/admin/access/index.tsx`
-- `frontend/src/routes/info-systems.tsx` and `frontend/src/routes/admin/info-systems.tsx`
-- `frontend/src/routes/roles/index.tsx` and `frontend/src/routes/admin/roles/index.tsx`
-- `frontend/src/routes/person/$personId.tsx` and `frontend/src/routes/admin/person/$personId.tsx`
-- `frontend/src/routes/organizations/$organizationId.tsx` and `frontend/src/routes/admin/organizations/$vendorId.tsx`
-**Impact:** Every bug fix or feature addition must be applied twice. The non-admin copies are unguarded by role checks.
-**Fix approach:** Determine which audience each route serves. If only admin-accessible, remove the non-admin copy and update the routeTree. If shared, parameterize with context rather than duplicating.
+**Issue:** Pre-pivot flat routes under `frontend/src/routes/{access,roles,ndas,organizations,person,person-relations,info-systems,tasks,...}` are near-identical copies of the canonical `frontend/src/routes/admin/` pages. They are unlinked from navigation but still compiled, maintained in the route tree, and carry older bugs.
+
+**Files:**
+- `frontend/src/routes/access/index.tsx` (379 lines) — mirrors `frontend/src/routes/admin/access/index.tsx` (379 lines)
+- `frontend/src/routes/ndas/index.tsx` (478 lines) — mirrors `frontend/src/routes/admin/ndas/index.tsx` (527 lines)
+- `frontend/src/routes/roles/index.tsx` (422 lines) — mirrors `frontend/src/routes/admin/roles/index.tsx` (422 lines)
+- `frontend/src/routes/info-systems.tsx` (454 lines) — mirrors `frontend/src/routes/admin/info-systems.tsx` (452 lines)
+- `frontend/src/routes/organizations/` — mirrors `frontend/src/routes/admin/organizations/`
+- `frontend/src/routes/tasks.tsx` — mirrors `frontend/src/routes/enduser/tasks.tsx`
+- `frontend/src/routes/person-relations/` — role unclear
+
+**Impact:** Dead code doubles the surface area of every UI bug fix; fixes applied to `/admin/*` must be manually checked against the flat copies. Bundle size is inflated. Regenerated `routeTree.gen.ts` includes these routes.
+
+**Fix approach:** Delete all flat route files that are shadowed by `/admin/`, `/enduser/`, or `/official/` equivalents. Regenerate `routeTree.gen.ts`.
 
 ---
 
-### Two Incompatible `ProtectedRoute` Components Coexist
+### `App.tsx` — Vite Scaffold Leftover
 
-**Issue:** Two separate `ProtectedRoute` implementations exist with different APIs and security models.
-**Files:**
-- `frontend/src/components/protected-route.tsx` — authentication only, no `allowedRoles` prop, uses `useNavigate` + `useEffect` (stale pattern)
-- `frontend/src/components/ProtectedRoute.tsx` — authentication + role check via `allowedRoles: string[]`, uses `<Navigate>` (correct pattern)
-**Impact:** Routes importing from `protected-route` (lowercase) get no role enforcement. At least 15 route files still use the old component including several under `/admin/`.
-**Files still on old component:**
-- `frontend/src/routes/admin/info-systems.tsx`
-- `frontend/src/routes/dashboard.tsx`
-- `frontend/src/routes/tasks.tsx`
-- `frontend/src/routes/profile.tsx`
-- `frontend/src/routes/info-systems.tsx`
-- `frontend/src/routes/ndas/index.tsx`
-- `frontend/src/routes/access/index.tsx`
-- `frontend/src/routes/person/index.tsx`
-- `frontend/src/routes/person/$personId.tsx`
-- `frontend/src/routes/organizations/index.tsx`
-- `frontend/src/routes/organizations/$organizationId.tsx`
-- `frontend/src/routes/audit/index.tsx`
-- `frontend/src/routes/roles/index.tsx`
-- `frontend/src/routes/person-relations/index.tsx`
-**Fix approach:** Delete `protected-route.tsx` (lowercase). Migrate all imports to `ProtectedRoute.tsx` (PascalCase) and add appropriate `allowedRoles`.
+**Issue:** `frontend/src/App.tsx` is the original Vite scaffold (counter demo). Real entry is `main.tsx` + `routes/__root.tsx`. The file exists but is never imported.
+
+**Files:** `frontend/src/App.tsx`
+
+**Fix approach:** Delete `App.tsx` and `App.css`.
 
 ---
 
-### Stale `update_admin_routes.sh` Script Committed in Source Tree
+### Migration History Cannot Reconstruct a Clean Database
 
-**Issue:** A shell script that performs in-place `sed` rewrites of route files is present at `frontend/src/routes/admin/update_admin_routes.sh`. It is untracked by git but present on disk. Running it again would corrupt route definitions.
-**Files:**
-- `frontend/src/routes/admin/update_admin_routes.sh`
-**Impact:** Developer confusion; accidental execution would be destructive.
-**Fix approach:** Delete the script. The migration it performed is already complete.
+**Issue:** Running `sqlx migrate run` on a fresh DB fails due to ordering conflicts:
+- `20251101191000_rename_personnel_to_person.sql` executes `ALTER TABLE personnel RENAME TO person` — but on a clean DB the `personnel` table does not exist yet if the later-timestamped `20250131000000_create_person_table_unified.sql` has already run first.
+- `20251026112329_create_personnel_table.sql` creates `personnel`, then `20250131000000` creates a new unified `person` table — both coexist in the migration sequence but the unified migration supersedes the earlier ones.
+- Two migrations share timestamp prefix `20251101190000` (schema org relation types + rename vendors to organizations).
 
----
+**Files:** `backend/migrations/` — specifically the 2025-10 series and 2025-01-31 series.
 
-### Incomplete `update_person_handler` — Dynamic Query Builder with Manual String Concatenation
+**Impact:** Cannot spin up a fresh dev environment or CI DB without manual intervention.
 
-**Issue:** The `update_person` handler in the backend builds a dynamic SQL UPDATE by string-concatenating field names and parameter indices (`$1`, `$2`, ...) in a loop. This is fragile: adding or reordering fields requires matching changes in two separate loops.
-**Files:**
-- `backend/src/person/handlers.rs` lines 190–270
-**Impact:** High maintenance burden; easy to introduce off-by-one errors in parameter binding order.
-**Fix approach:** Use `sqlx::QueryBuilder` (the crate's typed builder API) or implement a PATCH-style endpoint that accepts only the fields provided, using a simpler static query with COALESCE.
+**Fix approach:** Squash all migrations up to the current stable schema into a single `0000000000_initial_schema.sql` baseline, then add incremental migrations from that point forward.
 
 ---
 
-### E2E Tests Reference Old `/personnel` URL and "Personnel" Terminology
+### Relations Backend Missing Endpoint for Person-Specific Lookup
 
-**Issue:** E2E test files were not updated during the personnel→person rename refactor. They reference `/personnel` URLs and "Personnel Management" headings that no longer exist.
+**Issue:** Two frontend pages stub a missing backend endpoint for fetching relations by `person_id`. The frontend leaves the data as an empty array `[]` with a `TODO` comment.
+
 **Files:**
-- `frontend/e2e/personnel.spec.ts` — `waitForURL('/personnel', ...)`, `getByRole('button', { name: /add personnel/i })`
-- `frontend/e2e/auth.spec.ts` — `expect(page).toHaveURL('/personnel', ...)`
-- `frontend/e2e/access.spec.ts` — `waitForURL('/personnel')`
-- `frontend/e2e/organizations.spec.ts` — `page.goto('/personnel')`, `waitForURL('/personnel', ...)`
-- `frontend/e2e/role-based-routing.spec.ts` — `page.goto('http://localhost:5173/admin/personnel')`, `getByText('Personnel Management')`
-**Impact:** All of these E2E tests will fail against the current application, providing no regression protection.
-**Fix approach:** Update all `personnel` URL references to `/admin/person` and text assertions to match current UI labels.
+- `frontend/src/routes/person/$personId.tsx:178-179`
+- `frontend/src/routes/admin/person/$personId.tsx:178-179`
+
+**Impact:** Person detail pages silently show no relations.
+
+**Fix approach:** Add `GET /api/relations?person_id=<id>` handler in `backend/src/relations/handlers.rs` and wire up the frontend hook.
 
 ---
 
-### `vendor_relations` Module Name Not Updated After Organizations Rename
+### `any` Type Proliferation in TypeScript
 
-**Issue:** The backend module `vendor_relations` and its associated DB table, Rocket routes (`/api/vendors/...`), and frontend types/hooks still use "vendor" terminology after organizations were renamed.
-**Files:**
-- `backend/src/vendor_relations/` — full module directory
-- `backend/src/relations/handlers.rs` line 150 — calls `list_relations(db, "vendor".to_string(), ...)` which passes an entity type that fails the `"person" || "organization"` validation check at line 20
-- `frontend/src/types/vendor-relation.ts`
-- `frontend/src/hooks/use-vendor-relations.ts` — calls `/vendors/relations` endpoint
-- `frontend/src/components/person-details/vendor-relations-tab.tsx`
-**Impact:** The `/api/vendors/<id>/relations` endpoint currently passes `"vendor"` as `entity_type` to `list_relations`, which validates against `"person" | "organization"` and will return `400 Bad Request` for all calls. This is a functional bug.
-**Fix approach:** Either (a) update relations handler validation to allow `"vendor"` OR (b) rename the vendor_relations module and routes to use organization/organization terminology consistently.
+**Issue:** ~18 explicit `: any` annotations across the frontend undermine strict TS checks and hide type errors.
 
----
+**Files (sample):**
+- `frontend/src/components/person-details/details-tab.tsx:11` — `personnel: any`
+- `frontend/src/routes/organizations/$organizationId.tsx:100,214,215,348`
+- `frontend/src/routes/admin/organizations/$vendorId.tsx:99,213,214,347`
+- `frontend/src/routes/person-relations/index.tsx:287-288`
+- `frontend/src/lib/api.ts:7,68,75` — API response/request typed as `any`
 
-### Audit Logging Only Covers NDA Operations
-
-**Issue:** The `create_audit_log` function exists but is only called from `backend/src/nda/handlers.rs`. Security-sensitive operations — creating/updating/deleting persons, granting/revoking access — produce no audit trail.
-**Files:**
-- `backend/src/nda/handlers.rs` lines 147, 191, 234 — only callers
-- `backend/src/person/handlers.rs` — no audit calls
-- `backend/src/access/handlers.rs` — no audit calls
-- `backend/src/roles/handlers.rs` — no audit calls
-- `backend/src/organizations/handlers.rs` — no audit calls
-**Impact:** The audit log UI (`frontend/src/routes/admin/audit/`) shows an incomplete security record. Compliance and forensic requirements cannot be met.
-**Fix approach:** Add `create_audit_log(...)` calls to all create/update/delete handlers in person, access, organizations, roles, and discussions.
+**Fix approach:** Define shared types in `frontend/src/types/` for Organization, Relation, and API payloads; replace `any` with those types.
 
 ---
 
-## Known Bugs
+### `console.error` Used for Error UI Instead of In-App Feedback
 
-### `/api/vendors/<vendor_id>/relations` Always Returns 400
+**Issue:** Across ~20 error handlers, errors are logged to `console.error` but not surfaced to the user in the UI (no toast, no inline message). Users see silent failure.
 
-**Symptoms:** Calling the vendor-specific relations endpoint returns a 400 Bad Request.
-**Files:**
-- `backend/src/relations/handlers.rs` line 150: passes `"vendor"` as `entity_type`
-- `backend/src/relations/handlers.rs` line 20: validates `entity_type != "person" && entity_type != "organization"` — `"vendor"` fails this check
-**Trigger:** Any request to `/api/vendors/{id}/relations`.
-**Workaround:** None. The endpoint is broken since the entity_type check was updated to `organization`.
+**Files (sample):**
+- `frontend/src/routes/admin/ndas/index.tsx:206,415`
+- `frontend/src/routes/admin/discussions/index.tsx:304,411`
+- `frontend/src/routes/admin/info-systems.tsx:178,191,362`
+- `frontend/src/routes/ndas/index.tsx:190,381`
+- `frontend/src/components/person-details/vendor-relations-tab.tsx:91,102`
 
----
-
-### Missing Backend Endpoint: Person Relations by `person_id`
-
-**Symptoms:** Person detail pages in both admin and non-admin views note a missing endpoint with a TODO comment and cannot load relations data.
-**Files:**
-- `frontend/src/routes/person/$personId.tsx` line 178: `// TODO: Implement a backend endpoint to get relations by person_id`
-- `frontend/src/routes/admin/person/$personId.tsx` line 177: same comment
-**Trigger:** Viewing person detail page → Relations tab.
-**Workaround:** None; the tab shows no data.
+**Fix approach:** Per conventions, render inline error messages (`bg-destructive/10 text-destructive`) rather than only logging. The existing `ApiError{status}` propagation makes this straightforward.
 
 ---
 
-## Performance Bottlenecks
+### WebSocket Auth Rejection Loop
 
-### `update_person` Handler Runs Two Extra DB Queries Per Update
+**Issue:** The WebSocket server on port 15540 rejects authentication, causing the frontend reconnect logic to flood the browser console with errors on every page load. This is a known non-fatal issue but degrades developer experience and obscures real errors.
 
-**Problem:** Before updating a person, the handler runs a separate `EXISTS` check, then the update. Additionally, a department existence check adds a third query.
 **Files:**
-- `backend/src/person/handlers.rs` lines 154–175 (exists check), 177–200 (department check), 200+ (update)
-**Cause:** Defensive checks that could be collapsed into the UPDATE itself using `RETURNING` row count.
-**Improvement path:** Use `UPDATE ... WHERE id = $1 AND deleted_at IS NULL RETURNING ...` — if no rows returned, emit 404. Eliminate the pre-flight SELECT.
+- `backend/src/messaging/handlers.rs`
+- `frontend/src/hooks/use-websocket.ts:69,101,106,125`
+- `frontend/src/contexts/websocket-context.tsx:23`
 
----
+**Impact:** Console noise makes debugging harder; reconnect loops may contribute to backend load.
 
-### Audit Log Dynamic Query Builder Has Unused `param_count` Increment
-
-**Problem:** In `list_audit_logs`, the `resource_type` filter increments `param_count` but the comment notes it's intentionally not incremented — meaning the binding and counting are inconsistent.
-**Files:**
-- `backend/src/audit/handlers.rs` lines 40–44 — `param_count` is not incremented after `resource_type` clause
-**Cause:** Copy-paste error during dynamic query construction.
-**Improvement path:** Audit the full binding sequence; or switch to `sqlx::QueryBuilder` for type-safe dynamic queries.
+**Fix approach:** Investigate why auth fails in the WS handshake (likely bearer token format mismatch). Add exponential backoff or a max-retry cap in `use-websocket.ts` to prevent infinite loops.
 
 ---
 
 ## Fragile Areas
 
-### `routeTree.gen.ts` — Generated File Includes Untracked Routes
+### `routeTree.gen.ts` — Generated File Committed, Easy to Desync
 
-**Files:**
-- `frontend/src/routeTree.gen.ts` — 779-line generated file
-**Why fragile:** The generated route tree imports from `frontend/src/routes/admin/dashboard/` and `frontend/src/routes/admin/discussions/` which are untracked (`??` in git status). If these directories are deleted or cleaned, the generated imports break the build.
-**Safe modification:** Run `pnpm run build` or the TanStack Router codegen command after any route file changes. Ensure new route directories are committed before the routeTree is regenerated.
-**Test coverage:** No unit tests for routing logic; only E2E tests (currently broken, see above).
+**Issue:** `frontend/src/routeTree.gen.ts` (779 lines) is auto-generated by TanStack Router. It is committed to the repo and must be manually regenerated after any route directory change. A desync between the route directory tree and this file causes silent routing failures.
+
+**Files:** `frontend/src/routeTree.gen.ts`
+
+**Why fragile:** Adding or removing a route file without regenerating causes the router to silently ignore the new route or continue serving the old one.
+
+**Safe modification:** Always run the TanStack route generation command after touching `frontend/src/routes/`; commit the new `routeTree.gen.ts` in the same PR.
 
 ---
 
-### `native alert()` Used for All User Feedback
+### Hand-Rolled `Dialog` Component Lacks Portal/Focus-Trap
 
-**Files:**
-- `frontend/src/routes/info-systems.tsx` — 6 uses of `alert()`
-- `frontend/src/routes/ndas/index.tsx` — 3 uses of `alert()`
-- `frontend/src/routes/person/$personId.tsx` — 3 uses of `alert()`
-- `frontend/src/routes/tasks.tsx` — 1 use of `alert()`
-- `frontend/src/routes/profile.tsx` — 2 uses of `alert()`
-- `frontend/src/routes/organizations/$organizationId.tsx` — 1 use of `alert()`
-- `frontend/src/components/person-details/vendor-relations-tab.tsx` — 2 uses of `alert()`
-**Why fragile:** `window.alert()` blocks the main thread, cannot be styled, and cannot be tested in Playwright without special config. It creates a poor UX.
-**Safe modification:** Replace with a toast/notification system (the project has shadcn/ui; `sonner` or `useToast` can be added). The admin routes (`/admin/info-systems.tsx`) have already eliminated `alert()` in favor of `console.error` — extend that approach with a toast.
+**Issue:** `frontend/src/components/ui/dialog.tsx` is a hand-rolled dialog, not Radix UI Dialog. It lacks focus trapping, scroll lock, and a proper portal mount. An empty `<SelectItem value="">` inside a dialog will cause a full-page crash (Radix throws, root error boundary shows blank screen).
+
+**Files:** `frontend/src/components/ui/dialog.tsx`
+
+**Why fragile:** Any consumer that passes an empty-string value to `<SelectItem>` inside a dialog will trigger a full-page crash with an unhelpful error boundary message.
+
+**Safe modification:** Always use a sentinel value (e.g., `value="ALL"`) for placeholder `<SelectItem>` entries, never `value=""`. Long-term: migrate to Radix Dialog.
+
+---
+
+### `parse::<i32>().unwrap_or(0)` Pattern on Auth Claims
+
+**Issue:** Six handlers silently coerce a failed person-ID parse to 0. If a JWT is malformed (e.g., subject is a non-numeric string), handlers continue with ID 0 instead of rejecting the request.
+
+**Files:** See Security section above.
+
+**Why fragile:** Masquerades auth issues as "not found" errors, making security bugs harder to detect.
+
+---
+
+## Performance Bottlenecks
+
+### N+1 Risk in Relations Handlers
+
+**Issue:** `backend/src/relations/handlers.rs` (419 lines) handles complex multi-entity relation lookups. Without examining query plans, the inline `sqlx` pattern (no ORM, raw SQL) is generally safe, but the handler complexity suggests multiple sequential queries may be issued per request.
+
+**Files:** `backend/src/relations/handlers.rs`
+
+**Fix approach:** Add `EXPLAIN ANALYZE` to the most-used relation queries during load testing; add indexes on `entity_id`/`entity_type` columns if not already present.
+
+---
+
+### `seed.ts` — 1837-line Frontend Seed File Loaded at Runtime
+
+**Issue:** `frontend/src/demo/lib/seed.ts` (1837 lines) is a large in-memory dataset loaded when the demo world-state store initializes. This is fine for demo use but would be inappropriate in a production code path.
+
+**Files:** `frontend/src/demo/lib/seed.ts`, `frontend/src/demo/store/world-state.tsx`
+
+**Current risk:** Low — demo code is isolated under `src/demo/`. Risk elevates if demo store is ever imported outside demo routes.
 
 ---
 
 ## Test Coverage Gaps
 
-### No Unit Tests for Frontend Components or Hooks
+### Backend: No Tests for Core Domain Handlers
 
-**What's not tested:** All React components, all custom hooks (`use-person`, `use-vendor-relations`, `use-info-systems`, etc.), API client logic in `lib/api.ts`, auth context.
+**What's not tested:** Person CRUD, access grants (computer/data/physical), NDA lifecycle, organizations, relations, audit log, discussions, document references — all in production handler files.
+
 **Files:**
-- `frontend/src/hooks/use-websocket.test.ts` — only one hook has a test file
-- No test files under `frontend/src/components/`, `frontend/src/routes/`, `frontend/src/lib/`, `frontend/src/contexts/`
-**Risk:** Refactoring hooks or components has no safety net. Business logic in mutation callbacks is untested.
-**Priority:** High — especially for `auth-context.tsx` (login/logout/role routing logic) and `lib/api.ts` (token injection, error parsing).
+- `backend/tests/info_systems_test.rs` — exists
+- `backend/tests/nda_test.rs` — exists
+- All other domains: no integration tests
+
+**Risk:** Regressions in access-grant logic, person creation, or NDA issuance go undetected.
+
+**Priority:** High — these are the security-critical paths.
 
 ---
 
-### E2E Tests Are All Broken (See Tech Debt Section)
+### Frontend: No Component or Hook Tests for Production UI
 
-**What's not tested:** All user flows that reference `/personnel`, including auth login redirect, personnel CRUD, access granting, organization relations, and role-based routing.
-**Files:**
-- `frontend/e2e/personnel.spec.ts`
-- `frontend/e2e/auth.spec.ts`
-- `frontend/e2e/access.spec.ts`
-- `frontend/e2e/organizations.spec.ts`
-- `frontend/e2e/role-based-routing.spec.ts`
-**Risk:** Regression protection for these flows is effectively zero.
-**Priority:** High — fix URL and text references to match current routes.
+**What's not tested:** All route components under `frontend/src/routes/admin/`, `frontend/src/routes/enduser/`, and `frontend/src/routes/official/`. Hooks in `frontend/src/hooks/use-*.ts` (except `use-websocket.test.ts`).
+
+**Files:** `frontend/src/routes/admin/`, `frontend/src/hooks/`
+
+**Risk:** UI regressions in access management, NDA workflows, and person detail pages are not caught before commit.
+
+**Priority:** Medium.
 
 ---
 
-### Backend Integration Tests Only Cover NDA and Info Systems
+### E2E Tests Not Covering Role-Based Access Paths
 
-**What's not tested:** Person CRUD, access grants, audit logging, discussions, organization relations, roles, authentication edge cases.
-**Files:**
-- `backend/tests/nda_test.rs`
-- `backend/tests/info_systems_test.rs`
-**Risk:** The backend has no coverage for the security-critical person and access-management endpoints.
-**Priority:** High — add integration tests for person create/update/delete and access grant/revoke.
+**What's not tested:** Playwright e2e tests exist but there is no evidence of tests verifying that a `viewer`-role user cannot perform `admin`-role actions (either via UI or direct API call).
 
----
+**Files:** `frontend/e2e/`
 
-## Missing Critical Features
+**Risk:** A role-regression (e.g., a `viewer` gaining write access) would not be caught by automated tests.
 
-### No Token Expiry Handling on Frontend
-
-**Problem:** JWTs expire after 8 hours (`Duration::hours(8)` in `backend/src/auth/jwt.rs` line 16). The frontend never checks expiry — expired tokens are sent until the next manual page load or login.
-**Blocks:** Users experience silent API failures (401 responses) with no prompt to re-authenticate.
-**Files:**
-- `frontend/src/lib/api.ts` — catches 401 but throws `ApiError`; no redirect to login
-- `frontend/src/contexts/auth-context.tsx` — no expiry detection on token load
+**Priority:** High given the system's core value proposition is role-aware access control.
 
 ---
 
-### No Input Sanitization for Free-Text Fields
+## Dependencies at Risk
 
-**Problem:** Fields like discussion content, NDA content, and document notes accept arbitrary text. There is no server-side or client-side sanitization or length enforcement beyond the validator crate's `length(max = N)` constraint.
+### `enduser` and `official` Seed Users Missing
+
+**Issue:** `CLAUDE.md` documents seed users `enduser` and `official` but the migration `20260601120200_seed_enduser_official_users.sql` may not have run on all developer DBs (the migration is recent). The `getDefaultRoute` in `auth-context.tsx` routes these roles to `/enduser/tasks` and `/official/dashboard`, but without seed users those flows cannot be manually tested.
+
 **Files:**
-- `backend/src/discussions/handlers.rs` — no sanitization before DB insert
-- `backend/src/nda/handlers.rs` — no sanitization
-**Risk:** If any of this content is rendered as HTML (e.g., in a future rich-text viewer), it becomes an XSS vector.
+- `backend/migrations/20260601120200_seed_enduser_official_users.sql`
+- `frontend/src/contexts/auth-context.tsx`
+
+**Fix approach:** Verify the migration ran on dev DBs; document in README or run script.
 
 ---
 
-*Concerns audit: 2026-05-20*
+*Concerns audit: 2026-06-18*
