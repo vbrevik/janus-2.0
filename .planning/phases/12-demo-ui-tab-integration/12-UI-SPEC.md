@@ -1,11 +1,12 @@
 ---
 phase: 12
 slug: demo-ui-tab-integration
-status: approved
+status: draft
 shadcn_initialized: true
 preset: new-york / slate / cssVariables
 created: 2026-06-19
 reviewed_at: 2026-06-19
+updated: 2026-06-19
 ---
 
 # Phase 12 — UI Design Contract
@@ -18,6 +19,10 @@ reviewed_at: 2026-06-19
 > (Physical Access). Two sub-views: Resource Browser (hierarchy tree + detail
 > panel) and Access Resolution Explorer (person + resource + timestamp picker,
 > gate-chain trace with amber advisory zone row).
+>
+> **Updated 2026-06-19:** Scope expanded to include three additional contracts:
+> hybrid loader states (RSRC-UI-04), delegation-issuing forms (RSRC-UI-06),
+> and can-issue affordance gating (RSRC-UI-06). All existing contracts preserved.
 >
 > No TanStack route file is touched. `git diff frontend/src/routeTree.gen.ts`
 > must be empty after all Phase 12 commits.
@@ -337,6 +342,24 @@ The zone advisory row must NEVER use green or red styling. The "Advisory (non-bl
 | Resource grants toggle card title | "Resource grants (toggle to simulate)" | Matches Phase 8 pattern |
 | About this decision card title | "About this decision" | Matches Phase 8 pattern |
 | No relevant grants empty state | "No grants for this person and resource." | Default |
+| Loader loading copy | "Loading digital resource data…" | RSRC-UI-04 (hybrid loader) |
+| Loader error heading | "Could not load digital resource data." | RSRC-UI-04 |
+| Loader error body | "The backend API is unreachable or returned an error. Check that the backend is running on :15520 and retry." | RSRC-UI-04 |
+| Loader empty state | "No digital resources found. Seed the database and refresh." | RSRC-UI-04 |
+| Loader retry button | "Retry" | RSRC-UI-04 (optional) |
+| Issue grant expand trigger | "+ Issue new grant" | RSRC-UI-06 |
+| Issue delegate expand trigger | "+ Issue new delegate" | RSRC-UI-06 |
+| Issue grant collapse trigger | "Cancel" | RSRC-UI-06 |
+| Issue delegate collapse trigger | "Cancel" | RSRC-UI-06 |
+| Issue grant submit label (idle) | "Issue grant" | RSRC-UI-06 |
+| Issue grant submit label (pending) | "Issuing…" | RSRC-UI-06 |
+| Issue delegate submit label (idle) | "Issue delegate" | RSRC-UI-06 |
+| Issue delegate submit label (pending) | "Issuing…" | RSRC-UI-06 |
+| Issue grant 403 error | "Not authorized. Your current identity does not have issuing authority for this resource." | RSRC-UI-06 |
+| Issue generic error | "Issue failed. Check that the backend is running and retry." | RSRC-UI-06 |
+| Issue grant valid-until hint | "Leave blank for permanent grant." | RSRC-UI-06 |
+| Issue delegate valid-until hint | "Leave blank for open delegation." | RSRC-UI-06 |
+| Can-issue hidden note | "Issuing controls are only available to ADMIN-role org members and active delegates." | RSRC-UI-06 (optional, shown when resource selected + no authority) |
 
 No destructive actions in this phase. No confirmation dialogs needed.
 
@@ -381,6 +404,196 @@ The resource `Select` must always have a non-empty initial value. The first reso
 
 ---
 
+## Hybrid Loader States (RSRC-UI-04)
+
+The `DigitalResourcesPanel` (or a `useDigitalResources` hook it calls) fetches from the Phase 11 API on mount via React Query (`useQuery`). The digital-resource data initializes empty in `WorldState`; the loader populates `digitalResources` via dispatch once the fetch resolves. The three states below are mutually exclusive and rendered by `DigitalResourcesPanel` before the sub-nav is shown.
+
+### Loading state
+
+While `isLoading` is true (first fetch, no cached data):
+
+```
+[outer tab and sub-nav are NOT shown]
+<div className="flex items-center gap-3 py-12 text-sm text-slate-500">
+  <svg className="animate-spin h-4 w-4 text-slate-400" …/>   ← Lucide Loader2 or equivalent
+  Loading digital resource data…
+</div>
+```
+
+- No skeleton rows. A single centered spinner + label is sufficient.
+- The spinner uses `animate-spin` Tailwind utility on a 16px (h-4 w-4) icon.
+- Copy: **"Loading digital resource data…"** (exact string — no ellipsis variation).
+
+### Error state (API unreachable)
+
+When `isError` is true (network error or non-2xx response, including a 0-status fetch failure):
+
+```
+<div className="rounded-md bg-destructive/10 p-4 text-destructive text-sm space-y-1">
+  <p className="font-semibold">Could not load digital resource data.</p>
+  <p>The backend API is unreachable or returned an error. Check that the backend is running on :15520 and retry.</p>
+  [optional: <button className="underline text-xs mt-1" onClick={refetch}>Retry</button>]
+</div>
+```
+
+**Rules:**
+- Uses the project-standard inline error pattern: `bg-destructive/10 text-destructive` — no toast, no modal.
+- Heading: **"Could not load digital resource data."** (semibold, `font-semibold`).
+- Body: **"The backend API is unreachable or returned an error. Check that the backend is running on :15520 and retry."**
+- An optional "Retry" text-button (`refetch()` from React Query) may be shown beneath the error body. If present: `<button className="underline text-xs mt-1" onClick={refetch}>Retry</button>`.
+- The sub-nav and all sub-views MUST NOT render in the error state. The loader IS the only thing rendered inside `<main>` content area.
+- PROHIBITION: never fall back to `seedWorld()` digital resource arrays or any stale hardcoded data when the API is unreachable. Show error instead.
+
+### Empty state (API returned empty arrays)
+
+When the fetch succeeds but returns zero networks/platforms/applications:
+
+```
+<div className="py-12 text-sm text-slate-400 text-center">
+  No digital resources found. Seed the database and refresh.
+</div>
+```
+
+- Copy: **"No digital resources found. Seed the database and refresh."**
+- Centered, `text-slate-400 text-sm`.
+- The sub-nav and sub-views MUST NOT render in the empty state (there is nothing to browse or resolve).
+
+### State-to-render map
+
+| React Query state | What renders inside DigitalResourcesPanel |
+|------------------|------------------------------------------|
+| `isLoading` | Spinner + "Loading digital resource data…" |
+| `isError` | Error block (`bg-destructive/10`) + optional Retry |
+| Success, data empty | Empty-state prose |
+| Success, data present | Sub-nav + active sub-view |
+
+---
+
+## Delegation-Issuing Forms (RSRC-UI-06)
+
+Two forms exist: **Issue Grant** and **Issue Delegate**. Both appear as collapsible inline sections at the bottom of the Access Resolution Explorer (below the grant-toggle card), NOT as modals or separate pages.
+
+The forms call backend POST endpoints via `mutateAsync` following the project convention (hooks in `demo/hooks/` or co-located). On success the response payload is dispatched to `WorldState` (reducer adds the new grant/delegate to `digitalResources.grants` or `digitalResources.delegates`). The identity who is issuing is derived from `world.currentRole` / the role-switcher subject — not a separate form field.
+
+### Issue Grant form
+
+**Location:** Expandable section in the Access Resolution Explorer below the "Resource grants (toggle to simulate)" card. Expand trigger: a text-button labeled **"+ Issue new grant"**.
+
+**Fields (vertical stacked layout, `space-y-3`):**
+
+| Field | Type | Label | Notes |
+|-------|------|-------|-------|
+| Grantee (person) | `Select` | "Person" | Flat list of all subjects. Sentinel rule applies — first subject is default. |
+| Resource | `Select` | "Resource" | Flat list of all resources `[TIER] Name` format (same as resolution explorer). First resource is default. |
+| Valid from | `<input type="date">` | "Valid from" | Default: today's date (`new Date().toISOString().slice(0, 10)`). |
+| Valid until | `<input type="date">` | "Valid until (optional)" | Empty by default (open-ended). Hint: `text-xs text-slate-400 "Leave blank for permanent grant."` |
+
+**Submit affordance:**
+
+```
+<button
+  className="rounded px-3 py-1.5 text-sm bg-slate-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={mutation.isPending}
+  onClick={handleIssueGrant}
+>
+  {mutation.isPending ? "Issuing…" : "Issue grant"}
+</button>
+```
+
+- Label: **"Issue grant"** (idle) / **"Issuing…"** (pending).
+- Button is gated on `mutation.isPending` — disabled while request is in flight.
+- `disabled:opacity-50 disabled:cursor-not-allowed` applied when disabled.
+
+**Server 403 inline error (appears below the submit button, replaces any previous error):**
+
+```
+<div className="rounded bg-destructive/10 p-3 text-sm text-destructive mt-2">
+  <span className="font-semibold">Not authorized.</span> Your current identity does not have issuing authority for this resource.
+</div>
+```
+
+- Only shown when `mutation.isError && error.status === 403`.
+- Copy: **"Not authorized. Your current identity does not have issuing authority for this resource."**
+- Uses `bg-destructive/10 text-destructive` — same as all other inline errors in the project.
+- For non-403 errors: **"Issue failed. Check that the backend is running and retry."** Same styling.
+
+**On success:** Collapse the form section, dispatch new grant to `WorldState`, clear form fields to defaults.
+
+### Issue Delegate form
+
+**Location:** Same collapsible approach. Expand trigger: **"+ Issue new delegate"**, shown below the "Delegates" section in the Resource Browser detail panel (not in the Access Resolution Explorer).
+
+**Fields (vertical stacked layout, `space-y-3`):**
+
+| Field | Type | Label | Notes |
+|-------|------|-------|-------|
+| Delegate (person) | `Select` | "Delegate person" | Flat list of all subjects. Sentinel rule applies — first subject is default. |
+| Resource | `Select` | "Resource" | Flat list of all resources. Defaults to the currently selected resource in the browser. |
+| Valid from | `<input type="date">` | "Valid from" | Default: today. |
+| Valid until | `<input type="date">` | "Valid until (optional)" | Empty by default. Hint: `text-xs text-slate-400 "Leave blank for open delegation."` |
+
+**Submit affordance:**
+
+```
+<button
+  className="rounded px-3 py-1.5 text-sm bg-slate-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={mutation.isPending}
+  onClick={handleIssueDelegate}
+>
+  {mutation.isPending ? "Issuing…" : "Issue delegate"}
+</button>
+```
+
+- Label: **"Issue delegate"** (idle) / **"Issuing…"** (pending).
+- Same 403 / non-403 inline error pattern as Issue Grant form.
+
+**On success:** Collapse form, dispatch new delegate to `WorldState`, clear form fields to defaults.
+
+### Form collapse/expand state
+
+- Both forms default to **collapsed** (hidden) — they are affordances that appear on demand.
+- Expand trigger is a small text-button styled as: `text-sm text-slate-600 underline hover:text-slate-800`.
+- When expanded: the trigger label changes to **"Cancel"** (same style). Clicking "Cancel" collapses without submitting.
+- Only one form can be open at a time per section (Issue Grant and Issue Delegate are in different sections so simultaneous open is fine).
+
+---
+
+## Can-Issue Affordance Gating (RSRC-UI-06)
+
+The **"+ Issue new grant"** and **"+ Issue new delegate"** expand triggers (and their forms) are conditionally hidden based on the current identity's issuing authority.
+
+Authority is computed client-side by calling `canIssueResourceGrant(currentSubject, selectedResource, now)` from `demo/lib/digital-resource-selectors.ts` (or `model.ts`). This is a client-side pre-check only — the backend re-validates on the POST. The UI gate prevents unnecessary form exposure, not security.
+
+### When `canIssueResourceGrant` returns `false`
+
+Both the **"+ Issue new grant"** and **"+ Issue new delegate"** triggers are hidden (`hidden` or not rendered). No disabled button is shown, no explanation is displayed by default.
+
+If the currently selected resource has no ADMIN org link (or the current identity has no active grant/delegate authority), no issuing affordance is visible.
+
+### When `canIssueResourceGrant` returns `true`
+
+The expand triggers render normally. The form can be opened and submitted.
+
+### Explanatory copy (optional disclosure)
+
+An optional `text-xs text-slate-400` note may appear below the "Delegates" card when no affordance is visible:
+
+**"Issuing controls are only available to ADMIN-role org members and active delegates."**
+
+This note is optional — include it if `selectedResource !== null` and `canIssueResourceGrant` returns false for the current identity. Omit it if no resource is selected (nothing to explain).
+
+### Gating contract summary
+
+| `canIssueResourceGrant` result | "Issue new grant" trigger | "Issue new delegate" trigger | Optional note |
+|-------------------------------|--------------------------|------------------------------|---------------|
+| `true` | Visible | Visible | Hidden |
+| `false`, resource selected | Hidden | Hidden | Shown (text-xs text-slate-400) |
+| `false`, no resource selected | N/A | N/A | Hidden |
+
+**Important:** The gate is advisory UI only. The backend endpoint independently validates issuing authority and returns 403 if the actor is unauthorized. The UI gate does not eliminate the 403 inline error path — both must coexist because a valid-looking client state may be stale or the authority check may be more restrictive server-side.
+
+---
+
 ## Registry Safety
 
 | Registry | Blocks Used | Safety Gate |
@@ -395,11 +608,11 @@ All UI components in this phase are either existing demo primitives (`Card`, `Pi
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [ ] Dimension 1 Copywriting: PENDING (re-verify — 20 new copy elements added 2026-06-19)
+- [ ] Dimension 2 Visuals: PENDING (re-verify — loader/form/gating layouts added 2026-06-19)
+- [ ] Dimension 3 Color: PASS (no new color tokens; existing bg-destructive/10 reused)
+- [ ] Dimension 4 Typography: PASS (no new sizes or weights)
+- [ ] Dimension 5 Spacing: PASS (no new spacing exceptions)
+- [ ] Dimension 6 Registry Safety: PASS (no registry blocks added)
 
-**Approval:** pending
+**Approval:** pending (re-verification required after 2026-06-19 scope expansion)
