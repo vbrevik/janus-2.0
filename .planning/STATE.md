@@ -5,10 +5,10 @@ milestone_name: Platform, Network & Application Access
 current_phase: 10
 current_phase_name: mock-dataset-worldstate
 status: executing
-stopped_at: Phase 11 split into backend (11) + UI (12); SPECs written, ready to plan Phase 11
-last_updated: "2026-06-19T11:22:22.132Z"
-last_activity: 2026-06-19
-last_activity_desc: "Phase 11 expanded to full-stack + split into backend (11) + UI (12); 11-SPEC/12-SPEC written, 12-UI-SPEC approved"
+stopped_at: Phase 12 UI-SPEC approved (updated for loader/issuing scope)
+last_updated: "2026-06-19T11:29:44.141Z"
+last_activity: 2026-06-18
+last_activity_desc: "Phase 10 verified; next: /gsd-plan-phase 11"
 progress:
   total_phases: 4
   completed_phases: 2
@@ -106,6 +106,6 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-19T11:00:42.027Z
-Stopped at: Phase 11 UI-SPEC approved
-Resume file: .planning/phases/11-demo-ui-tab-integration/11-UI-SPEC.md
+Last session: 2026-06-19T11:29:44.134Z
+Stopped at: Phase 12 UI-SPEC approved (updated for loader/issuing scope)
+Resume file: .planning/phases/12-demo-ui-tab-integration/12-UI-SPEC.md
