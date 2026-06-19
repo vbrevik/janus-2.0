@@ -1,10 +1,11 @@
 ---
 phase: 11
 slug: demo-ui-tab-integration
-status: draft
+status: approved
 shadcn_initialized: true
 preset: new-york / slate / cssVariables
 created: 2026-06-19
+reviewed_at: 2026-06-19
 ---
 
 # Phase 11 — UI Design Contract
