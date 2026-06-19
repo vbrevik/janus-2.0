@@ -2,16 +2,19 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Platform, Network & Application Access
+current_phase: 10
+current_phase_name: mock-dataset-worldstate
 status: executing
-stopped_at: Phase 10 verified — ready to plan Phase 11
-last_updated: "2026-06-18T21:05:00.000Z"
-last_activity: 2026-06-18 -- Phase 10 verified (5/5 success criteria, 193 tests pass)
+stopped_at: Phase 11 split into backend (11) + UI (12); SPECs written, ready to plan Phase 11
+last_updated: "2026-06-19T11:22:22.132Z"
+last_activity: 2026-06-19
+last_activity_desc: "Phase 11 expanded to full-stack + split into backend (11) + UI (12); 11-SPEC/12-SPEC written, 12-UI-SPEC approved"
 progress:
-  total_phases: 3
+  total_phases: 4
   completed_phases: 2
   total_plans: 6
   completed_plans: 6
-  percent: 67
+  percent: 50
 ---
 
 # Project State
@@ -21,7 +24,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-02 for v2.2 milestone)
 
 **Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — federated ABAC model proven through v2.1.
-**Current focus:** Phase 11 — demo-ui-tab-integration (next to plan)
+**Current focus:** Phase 11 — digital-resource-backend (next to plan). Original Phase 11 was expanded to a full-stack vertical and split: Phase 11 = backend + Rust resolver port + read/issue API; Phase 12 = demo UI/loader/tab (depends on 11).
 
 ## Current Position
 
@@ -77,6 +80,10 @@ None.
 
 None.
 
+### Roadmap Evolution
+
+- Phase 11 edited: split original Phase 11 (full-stack scope expansion): Phase 11 = digital-resource backend + Rust resolver port + read/issue API; new Phase 12 = demo UI/loader/tab. RSRC-BE-01..05 added; RSRC-UI-01..03 remapped to 12 + UI-04/05/06 added.
+
 ## Deferred Items
 
 Items deferred from v2.0/v2.1, carried forward:
@@ -99,6 +106,6 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-02T08:19:49.135Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-mock-dataset-worldstate/10-CONTEXT.md
+Last session: 2026-06-19T11:00:42.027Z
+Stopped at: Phase 11 UI-SPEC approved
+Resume file: .planning/phases/11-demo-ui-tab-integration/11-UI-SPEC.md

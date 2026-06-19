@@ -59,11 +59,24 @@
 - [x] **RSRC-SEED-06**: At least one resource demonstrates a **policy shift over time** — two policy assignments with adjacent validity windows — so point-in-time resolution at different timestamps yields different rules.
 - [x] **RSRC-SEED-07**: At least one resource carries a **non-baseline policy** (e.g. an extra required org-role authorization or a different gate set) to exercise per-resource variation.
 
-### Demo UI (RSRC-UI)
+### Digital Resource Backend (RSRC-BE) — Phase 11
+
+*Added 2026-06-19 when the original Phase 11 was expanded to a full-stack vertical and split into a backend phase (11) + a UI phase (12).*
+
+- [ ] **RSRC-BE-01**: A new backend digital-resource domain persists all 8 entities (networks, platforms, applications, org_links, resource_policies, policy_assignments, resource_access_grants, resource_access_delegates) via migration + sqlx models + Rocket handlers, mirroring the `model.ts` shapes; Application carries **no** classification column (derived from Platform).
+- [ ] **RSRC-BE-02**: The full gate-chain resolver is ported to Rust with parity to the TS `resolveResourceAccess` (clearance + own-tier grant + parent-tier prerequisite + advisory zone + time-versioned policy selection), taking an explicit evaluation timestamp; a parity test covers the inclusive policy-window boundary and the no-policy fail-closed `NO_ACTIVE_POLICY` DENY.
+- [ ] **RSRC-BE-03**: AuthGuard-protected GET endpoints expose the hierarchy plus policies, grants, and delegates; unauthenticated requests are rejected.
+- [ ] **RSRC-BE-04**: POST issue endpoints persist a new resource grant/delegate only after the ported Rust `canIssueResourceGrant` re-validates issuing authority server-side; 403 for non-ADMIN/no-delegate, expired-delegate, and out-of-window-delegate actors; duplicate issue creates no duplicate row.
+- [ ] **RSRC-BE-05**: The `seed.ts` digital-resource fixtures are loaded into Postgres as the single source of truth; `seedWorld()` no longer hardcodes the digital-resource arrays.
+
+### Demo UI (RSRC-UI) — Phase 12
 
 - [ ] **RSRC-UI-01**: A Resource Browser renders the Network → Platform → Application hierarchy with classification badges (Application badge shown as inherited).
 - [ ] **RSRC-UI-02**: Selecting a resource shows its org links grouped by role (ADMIN / ASSET_OWNER / OPERATOR / SECURITY_APPROVAL / …), classification, the active policy summary, active grants, and delegates. Platform detail shows NSM grounding badges (sikkerhetsgodkjenning / forsvarlig sikkerhetsnivå) as **static annotations**, not gates; the SECURITY_APPROVAL org names the authorizing authority behind the badge.
 - [ ] **RSRC-UI-03**: An Access Resolution Explorer: select person + resource + **evaluation timestamp** (default "now"), compute ALLOW/DENY with the full gate-chain trace, the amber non-blocking zone advisory row, and a label for which policy version was applied. Changing the timestamp across a policy-shift boundary visibly changes the applied rules.
+- [ ] **RSRC-UI-04**: A hybrid loader fetches digital-resource data from the Phase 11 API on demo mount and populates `WorldState.digitalResources`; an unreachable API surfaces an explicit error/empty state (no silent stale fallback).
+- [ ] **RSRC-UI-05**: A grant enable/disable toggle (`TOGGLE_RESOURCE_GRANT`) is interactive; disabling the grant behind an ALLOW flips the verdict to DENY and re-enabling restores it.
+- [ ] **RSRC-UI-06**: Delegation-issuing forms issue a grant/delegate via the Phase 11 POST endpoints (backend persist) then update `WorldState`; controls are gated by the can-issue check and a server 403 surfaces inline.
 
 ---
 
@@ -119,6 +132,14 @@
 | RSRC-SEED-05 | Phase 10 | Pending |
 | RSRC-SEED-06 | Phase 9 | Complete |
 | RSRC-SEED-07 | Phase 9 | Complete |
-| RSRC-UI-01 | Phase 11 | Pending |
-| RSRC-UI-02 | Phase 11 | Pending |
-| RSRC-UI-03 | Phase 11 | Pending |
+| RSRC-BE-01 | Phase 11 | Pending |
+| RSRC-BE-02 | Phase 11 | Pending |
+| RSRC-BE-03 | Phase 11 | Pending |
+| RSRC-BE-04 | Phase 11 | Pending |
+| RSRC-BE-05 | Phase 11 | Pending |
+| RSRC-UI-01 | Phase 12 | Pending |
+| RSRC-UI-02 | Phase 12 | Pending |
+| RSRC-UI-03 | Phase 12 | Pending |
+| RSRC-UI-04 | Phase 12 | Pending |
+| RSRC-UI-05 | Phase 12 | Pending |
+| RSRC-UI-06 | Phase 12 | Pending |

@@ -4,7 +4,7 @@
 
 - ✅ **v2.0 Authorization Hub (demo)** — Phases 1–4 (shipped 2026-05-22)
 - ✅ **v2.1 Physical Access Zones (demo)** — Phases 5–8 (shipped 2026-05-23)
-- **v2.2 Platform, Network & Application Access (demo)** — Phases 9–11 (active)
+- **v2.2 Platform, Network & Application Access (demo)** — Phases 9–12 (active)
 
 ## Phases
 
@@ -38,7 +38,8 @@ See `.planning/milestones/v2.1-ROADMAP.md` for full phase details. Audit: `.plan
 
 - [x] **Phase 9: Digital Resource Model & Policy Engine** — TypeScript types (NetworkNode, PlatformNode, ApplicationNode, org_links, ResourcePolicy, ResourceAccessGrant, ResourceAccessDelegate), time-versioned per-resource policy resolver (`resolveResourceAccess`), pitfall-blocking Vitest coverage (completed 2026-06-02)
 - [x] **Phase 10: Mock Dataset & WorldState** (2/2 plans, verified 2026-06-18) — 6-unit seed (≥3 networks/platforms/apps, active/expired/future grants, policy-shift example, non-baseline-policy example, zone-prereq link to v2.1), `DigitalResourceWorld` sub-object in WorldState, toggle action
-- [ ] **Phase 11: Demo UI & Tab Integration** — Resource Browser (hierarchy tree + detail panel), Access Resolution Explorer with evaluation-timestamp picker, wired as DemoRoot tab (no route file)
+- [ ] **Phase 11: Digital Resource Backend & Resolver Port** — 8-table digital-resource Postgres domain (+ migration, sqlx models, Rocket handlers), full gate-chain resolver ported to Rust with TS-parity test, AuthGuard read + issue API (server-side `canIssueResourceGrant`), seed→DB as single source of truth *(scope expanded from the original frontend-only Phase 11 — split 2026-06-19)*
+- [ ] **Phase 12: Demo UI, Loader & Tab Integration** — hybrid loader (API→WorldState), Resource Browser (hierarchy tree + detail panel), Access Resolution Explorer with evaluation-timestamp picker, grant toggle, grant/delegate issuing forms, wired as DemoRoot tab (no route file). Depends on Phase 11
 
 ---
 
@@ -75,20 +76,33 @@ Plans:
   5. At least one resource carries a non-baseline policy (e.g. an extra required org-role authorization); the resolver applies that policy rather than the baseline when that resource is evaluated
 **Plans**: TBD
 
-### Phase 11: Demo UI & Tab Integration
-**Goal**: A developer or stakeholder can open the demo, navigate to the "Digital Resources" tab, browse the Network → Platform → Application hierarchy, inspect org-link roles and active grants, pick a person and an evaluation timestamp, and see the full gate-chain trace with the amber advisory zone row — all without touching any TanStack route files.
-**Depends on**: Phase 10 (UI reads `useWorld()` — WorldState must be seeded before components render)
-**Requirements**: RSRC-UI-01, RSRC-UI-02, RSRC-UI-03
+### Phase 11: Digital Resource Backend & Resolver Port
+**Goal**: The digital-resource model becomes persisted and server-authoritative — 8 Postgres tables back the Network → Platform → Application domain, the full gate-chain resolver is re-implemented in Rust with parity to the TS resolver, and AuthGuard read + issue endpoints expose it (issue endpoints re-validate authority server-side); `seed.ts` fixtures are loaded into Postgres as the single source of truth.
+**Depends on**: Phase 10 (TS model/seed/resolver are the parity reference and the fixture source)
+**Requirements**: RSRC-BE-01, RSRC-BE-02, RSRC-BE-03, RSRC-BE-04, RSRC-BE-05 *(new backend requirements added 2026-06-19 when Phase 11 was split into backend + UI)*
 **Success Criteria** (what must be TRUE):
-  1. The demo shell shows a "Digital Resources" tab; clicking it renders `DigitalResourcesPanel` without touching `routeTree.gen.ts` (`git diff frontend/src/routeTree.gen.ts` is empty)
-  2. The Resource Browser displays the Network → Platform → Application hierarchy with classification badges; Application badges show the inherited Platform classification; selecting a resource shows its org links grouped by role, the active policy summary, active grants, delegates, and (for platforms) NSM annotation badges
-  3. The Access Resolution Explorer evaluates clearance + own-tier explicit grant + parent-tier prerequisite for the selected person, resource, and evaluation timestamp and renders a labeled gate-chain trace; the zone-prerequisite row (when present) renders in amber with an explicit "Advisory (non-blocking)" label and does not change the ALLOW/DENY verdict
-  4. Sliding the evaluation timestamp picker across a policy-shift boundary visibly changes which policy version label appears in the trace and may change the gate requirements shown; the demo build (`npm run build`) produces zero TypeScript errors
+  1. A fresh-applied migration creates all 8 digital-resource tables and `cargo build` compiles the new domain
+  2. A Rust resolver parity test asserts equality with the TS resolver on the seed fixtures, including the inclusive policy-window boundary and the no-policy `NO_ACTIVE_POLICY` fail-closed DENY
+  3. AuthGuard-protected GET endpoints return the seeded hierarchy + policies/grants/delegates; unauthenticated requests are rejected
+  4. POST issue endpoints persist for an authorized actor and return 403 for non-ADMIN/no-delegate, expired-delegate, and out-of-window-delegate actors (server-side re-validation via ported `canIssueResourceGrant`); a duplicate issue creates no duplicate row
+  5. `seedWorld()` no longer hardcodes the digital-resource fixtures; the seeded DB serves the same 6-unit dataset
+**Spec**: `11-SPEC.md` (5 requirements, ambiguity 0.19)
+**Plans**: TBD
+
+### Phase 12: Demo UI, Loader & Tab Integration
+**Goal**: A developer or stakeholder can open the demo, navigate to the "Digital Resources" tab, browse the Network → Platform → Application hierarchy (loaded from the Phase 11 API into WorldState), inspect org-link roles and active grants, pick the current identity and an evaluation timestamp, see the full gate-chain trace with the amber advisory zone row, toggle grants, and issue new grants/delegates — all without touching any TanStack route files.
+**Depends on**: Phase 11 (the loader, resolution trace, and issuing forms consume the backend API + seeded DB)
+**Requirements**: RSRC-UI-01, RSRC-UI-02, RSRC-UI-03, RSRC-UI-04, RSRC-UI-05, RSRC-UI-06 *(UI-04/05/06 added 2026-06-19: hybrid loader, grant toggle, delegation-issuing UI)*
+**Success Criteria** (what must be TRUE):
+  1. On mount with the backend up, the loader populates `WorldState.digitalResources` from the API and the Browser renders it; an unreachable API surfaces an explicit error/empty state (no silent stale fallback)
+  2. The Resource Browser displays the hierarchy with classification badges (Application badges show the inherited Platform classification); selecting a resource shows org links grouped by role, active policy summary, active grants, delegates, and (for platforms) NSM annotation badges
+  3. The Access Resolution Explorer renders a labeled gate-chain trace for the current identity + resource + evaluation timestamp; the zone-prerequisite row renders amber with an explicit "Advisory (non-blocking)" label and does not change the ALLOW/DENY verdict
+  4. Sliding the evaluation timestamp across a policy-shift boundary visibly changes which policy version label appears in the trace; disabling the grant behind an ALLOW flips the verdict to DENY and re-enabling restores it
+  5. Issuing a grant/delegate persists it via the Phase 11 API (visible on a later GET) and updates `WorldState`; the control is hidden/disabled when the actor cannot issue; the demo shell shows a "Digital Resources" tab without touching `routeTree.gen.ts` (`git diff frontend/src/routeTree.gen.ts` is empty) and `npm run build` produces zero TypeScript errors
 **UI hint**: yes
-**Plans:** 2 plans
-Plans:
-- [ ] 10-01-PLAN.md - WorldState extension: DigitalResourceWorld type, TOGGLE_RESOURCE_GRANT action, seedWorld() init, 6-unit seed dataset
-- [ ] 10-02-PLAN.md - Pure read selectors: buildResourceTree, activeGrantsForResource, resolveResourceAt + seed-validation tests
+**UI Spec**: `12-UI-SPEC.md` (approved 2026-06-19)
+**Spec**: `12-SPEC.md` (6 requirements, ambiguity 0.18)
+**Plans**: TBD
 
 ---
 
@@ -106,4 +120,5 @@ Plans:
 | 8. Mock Dataset & Demo UI | v2.1 | 3/3 | Complete | 2026-05-23 |
 | 9. Digital Resource Model & Policy Engine | v2.2 | 4/4 | Complete   | 2026-06-02 |
 | 10. Mock Dataset & WorldState | v2.2 | 2/2 | Complete | 2026-06-18 |
-| 11. Demo UI & Tab Integration | v2.2 | 0/? | Not started | - |
+| 11. Digital Resource Backend & Resolver Port | v2.2 | 0/? | Not started | - |
+| 12. Demo UI, Loader & Tab Integration | v2.2 | 0/? | Not started | - |
