@@ -2,7 +2,12 @@
 
 **Created:** 2026-06-19
 **Ambiguity score:** 0.19 (gate: ≤ 0.20)
-**Requirements:** 5 locked
+**Requirements:** 6 locked
+
+> **Amendment 2026-06-19 (discuss-phase D-01).** Scope expanded to include **migration-chain
+> repair**: the previously-additive-only migration constraint is superseded. A clean database
+> must now migrate end-to-end with zero errors before the 8 new tables are added. New
+> requirement RSRC-BE-06 + a new acceptance criterion added; Constraints updated.
 
 > **Split note.** This phase was split out of the original Phase 11 ("Demo UI & Tab
 > Integration") on 2026-06-19 when the user expanded scope to a full-stack vertical. The
@@ -13,13 +18,18 @@
 
 ## Goal
 
-The Janus digital-resource model becomes persisted and server-authoritative: eight new Postgres tables back the Network→Platform→Application domain, the complete gate-chain resolver is re-implemented in Rust with parity to the TS resolver, and AuthGuard-protected read + issue endpoints expose it — with the issue endpoints re-validating issuing authority server-side and the `seed.ts` fixtures loaded into Postgres as the single source of truth.
+The Janus digital-resource model becomes persisted and server-authoritative: the broken migration chain is repaired so a clean database migrates end-to-end, eight new Postgres tables back the Network→Platform→Application domain, the complete gate-chain resolver is re-implemented in Rust with parity to the TS resolver, and AuthGuard-protected read + issue endpoints expose it — with the issue endpoints re-validating issuing authority server-side and the `seed.ts` fixtures loaded into Postgres as the single source of truth.
 
 ## Background
 
 The entire v2.2 digital-resource model currently lives **only in the frontend**: `demo/lib/model.ts` (types + `resolveResourceAccess`, `canIssueResourceGrant`, gate evaluators, `effectiveClassification`, `isWindowActive`), `demo/lib/seed.ts` (`RESOURCE_NODES`, `RSRC_POLICIES`, `RESOURCE_GRANTS`, `RSRC_DELEGATES`), and `demo/store/world-state.tsx` (`seedWorld()` hardcodes the arrays). There is **no backend domain** — no tables, no `/api` routes, no sqlx structs. The backend uses flat domain modules (`mod.rs`/`models.rs`/`handlers.rs`, no service layer, inline sqlx on `PgPool`), with `AuthGuard` Bearer-JWT on every non-login handler. Migrations are known-broken on a clean DB and the live dev DB drifts from code (CLAUDE.md gotchas). Phases 9–10 are verified.
 
 ## Requirements
+
+0. **Migration-chain repair** (`RSRC-BE-06`, prerequisite): The broken migration history is repaired so a clean database applies all migrations end-to-end.
+   - Current: `sqlx migrate run` fails on a clean DB (ALTER-before-CREATE, duplicate versions, zombie `rename_personnel_to_person` vs the authoritative unified-create); the live dev DB has drifted from the migration set
+   - Target: A clean database migrates from empty to current with zero errors; the live dev DB is not broken by the repair (verify against it)
+   - Acceptance: `sqlx migrate run` (or equivalent) against a freshly-created empty database completes with zero errors and yields a schema the backend compiles and queries against
 
 1. **Backend domain + schema** (`RSRC-BE-01`): A new digital-resource backend domain persists all 8 entities.
    - Current: No tables, models, or routes for networks/platforms/applications/org_links/resource_policies/policy_assignments/resource_access_grants/resource_access_delegates
@@ -49,6 +59,7 @@ The entire v2.2 digital-resource model currently lives **only in the frontend**:
 ## Boundaries
 
 **In scope:**
+- Migration-chain repair: a clean database migrates end-to-end with zero errors (prerequisite to the new tables)
 - New backend digital-resource domain: 8 tables + migration, sqlx models, Rocket handlers
 - Full gate-chain resolver ported to Rust with a TS-parity test
 - Read API (GET hierarchy/policies/grants/delegates) + Issue API (POST grant, POST delegate) — all AuthGuard-protected
@@ -65,7 +76,7 @@ The entire v2.2 digital-resource model currently lives **only in the frontend**:
 ## Constraints
 
 - **Stack locked** (CLAUDE.md): Rust 1.87 + Rocket 0.5 + sqlx/PostgreSQL. No new frameworks.
-- **Migration hazard (live risk):** `sqlx migrate run` is known-broken on a clean DB and the live dev DB drifts (ALTER-before-CREATE, dup versions, dead `users` FK, `personnel_id`/`issued_by` vs `person_id`). New migrations must be authored against the **live** DB state; verify column/FK names before writing SQL.
+- **Migration-chain repair is in scope** (amended 2026-06-19): the chain must be fixed so a clean DB migrates end-to-end (ALTER-before-CREATE, dup versions, dead `users` FK, zombie `rename_personnel_to_person` vs the authoritative unified-create, `personnel_id`/`issued_by` vs `person_id`). The repair must NOT break the live dev DB — verify against the live state and against a fresh empty DB. The 8 new tables are added on the repaired baseline. See project memory `project_migrations_fresh_db_broken` for the reconstruction recipe.
 - **Backend conventions:** flat domain module (`mod.rs`/`models.rs`/`handlers.rs`), no service layer, inline sqlx on `PgPool`; handlers return `Result<Json<T>, Status>` (never panic); `AuthGuard` on every handler; relative handler paths under the `/api/<x>` mount (don't double-prefix).
 - **Auth:** `AuthGuard` on all new endpoints; per-route role gating on the issue POSTs deferred to plan-phase.
 - **DB seeding mechanism** (migration vs seed script) deferred to plan-phase; the requirement (fixtures must reach Postgres) is locked.
@@ -73,6 +84,7 @@ The entire v2.2 digital-resource model currently lives **only in the frontend**:
 
 ## Acceptance Criteria
 
+- [ ] A freshly-created empty database migrates end-to-end with zero errors (chain repaired)
 - [ ] A fresh-applied migration creates all 8 digital-resource tables; `cargo build` compiles the new domain
 - [ ] Rust resolver parity test asserts equality with the TS resolver on the seed fixtures, including the inclusive policy-window boundary and the no-policy `NO_ACTIVE_POLICY` DENY
 - [ ] AuthGuard-protected GET returns the seeded hierarchy + policies/grants/delegates; unauthenticated GET is rejected

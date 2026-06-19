@@ -79,8 +79,9 @@ Plans:
 ### Phase 11: Digital Resource Backend & Resolver Port
 **Goal**: The digital-resource model becomes persisted and server-authoritative — 8 Postgres tables back the Network → Platform → Application domain, the full gate-chain resolver is re-implemented in Rust with parity to the TS resolver, and AuthGuard read + issue endpoints expose it (issue endpoints re-validate authority server-side); `seed.ts` fixtures are loaded into Postgres as the single source of truth.
 **Depends on**: Phase 10 (TS model/seed/resolver are the parity reference and the fixture source)
-**Requirements**: RSRC-BE-01, RSRC-BE-02, RSRC-BE-03, RSRC-BE-04, RSRC-BE-05 *(new backend requirements added 2026-06-19 when Phase 11 was split into backend + UI)*
+**Requirements**: RSRC-BE-01, RSRC-BE-02, RSRC-BE-03, RSRC-BE-04, RSRC-BE-05, RSRC-BE-06 *(new backend requirements added 2026-06-19 when Phase 11 was split into backend + UI; RSRC-BE-06 migration-chain repair added via discuss-phase)*
 **Success Criteria** (what must be TRUE):
+  0. A freshly-created empty database migrates end-to-end with zero errors (broken migration chain repaired — RSRC-BE-06)
   1. A fresh-applied migration creates all 8 digital-resource tables and `cargo build` compiles the new domain
   2. A Rust resolver parity test asserts equality with the TS resolver on the seed fixtures, including the inclusive policy-window boundary and the no-policy `NO_ACTIVE_POLICY` fail-closed DENY
   3. AuthGuard-protected GET endpoints return the seeded hierarchy + policies/grants/delegates; unauthenticated requests are rejected
