@@ -46,6 +46,7 @@ pub struct ResourceApplication {
 pub struct ResourceOrgLink {
     pub id: i32,
     pub resource_id: String,
+    pub resource_tier: String,
     pub org_id: String,
     pub role: String,
     pub valid_from: Option<chrono::NaiveDateTime>,
@@ -65,6 +66,7 @@ pub struct ResourcePolicy {
 pub struct ResourcePolicyAssignment {
     pub id: i32,
     pub resource_id: String,
+    pub resource_tier: String,
     pub policy_id: String,
     pub valid_from: Option<chrono::NaiveDateTime>,
     pub valid_until: Option<chrono::NaiveDateTime>,

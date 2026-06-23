@@ -1,19 +1,21 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-mod auth;
-mod person;
-mod organizations;
-mod vendor_relations;
-mod relations;
 mod access;
 mod audit;
-mod shared;
-mod info_systems;
-mod roles;
-mod nda;
+mod auth;
+mod digital_resources;
 mod discussions;
 mod document_references;
+mod info_systems;
 mod messaging;
+mod nda;
+mod organizations;
+mod person;
+mod relations;
+mod roles;
+mod shared;
+mod vendor_relations;
 
 use rocket::serde::json::Json;
 use serde::Serialize;
