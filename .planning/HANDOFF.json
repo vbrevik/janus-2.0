@@ -1,49 +1,43 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-23T12:39:25.749Z",
+  "timestamp": "2026-06-23T20:28:47.931Z",
   "phase": "11",
   "phase_name": "digital-resource-backend",
   "phase_dir": ".planning/phases/11-digital-resource-backend",
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
+  "plan": 3,
+  "task": 3,
+  "total_tasks": 3,
   "status": "paused",
-  "stage": "spec-phase update complete — 11-SPEC re-scored with security fold (SEC-01..04). Plans 11-01/02/03 exist but PREDATE the fold; next is replan/amend.",
   "completed_tasks": [
-    {"id": 1, "name": "Remapped codebase — 7 docs in .planning/codebase/ (STACK, INTEGRATIONS, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, CONCERNS)", "status": "done", "commit": "c2c4246"},
-    {"id": 2, "name": "Added Phase 13 (security hardening) to roadmap", "status": "superseded", "commit": "2b842a8"},
-    {"id": 3, "name": "Folded ALL of Phase 13 into Phase 11 as SEC-01..04; removed Phase 13 from roadmap + deleted its dir", "status": "done", "commit": "3c152cc"},
-    {"id": 4, "name": "Re-spec'd 11-SPEC.md: 10 reqs, ambiguity 0.18; SEC reqs + edge/prohibition rows; REQUIREMENTS.md SEC-01..04 + traceability; STATE roadmap-evolution", "status": "done", "commit": "baa0101"},
-    {"id": 5, "name": "(prior session) 11-01/02/03-PLAN.md written via plan-phase", "status": "done_uncommitted", "note": "untracked; predate the SEC fold"}
+    {"id": 1, "name": "Implement get_world + issue_grant + issue_delegate handlers and mount the domain (RSRC-BE-03, RSRC-BE-04)", "status": "done_but_insecure", "commit": "8ea8948", "note": "Committed but contains a confirmed IDOR / privilege-escalation vulnerability — see blockers. issue_grant/issue_delegate authorize against client-supplied org from the request body, not the authenticated principal."},
+    {"id": 2, "name": "Seed the seed.ts fixtures into Postgres idempotently (RSRC-BE-05, D-03/D-04)", "status": "done", "commit": "290fd1c"},
+    {"id": 3, "name": "Integration tests (GET 200/401, POST 403) + idempotency + remove seedWorld() hardcoding", "status": "in_progress", "progress": "backend/tests/digital_resources_api_test.rs written but UNTRACKED/uncommitted; frontend seedWorld() de-hardcode (frontend/src/demo/store/world-state.tsx) NOT done; digital_resources/models.rs + resolver.rs modified but uncommitted"}
   ],
   "remaining_tasks": [
-    {"id": 6, "name": "Re-plan Phase 11 to cover SEC-01..04 — existing plans 11-01/02/03 do not include the security work (universal AuthGuard, per-role on writes, JWT fail-loud, CORS)", "status": "not_started"},
-    {"id": 7, "name": "Decide: amend 11-03 (handlers/integration) to absorb SEC, or add a dedicated SEC plan slice (11-04)", "status": "not_started"},
-    {"id": 8, "name": "Commit the existing untracked plans (11-01/02/03) once reconciled with the new SPEC", "status": "not_started"},
-    {"id": 9, "name": "Execute Phase 11 (migration repair → schema/seed → Rust domain+resolver → read/issue API → SEC hardening)", "status": "not_started"}
+    {"id": "1-fix", "name": "FIX IDOR in handlers.rs before anything else — derive caller's authorizing org server-side from auth.claims.sub; stop trusting actor_org_id / granted_by_org_id from the request body", "status": "not_started"},
+    {"id": "3a", "name": "Commit + finish integration tests (GET 200/401, POST 403 for non-ADMIN/expired/out-of-window delegate, idempotency)", "status": "not_started"},
+    {"id": "3b", "name": "Remove digital-resource fixture hardcoding from seedWorld() (frontend/src/demo/store/world-state.tsx)", "status": "not_started"},
+    {"id": "wrap", "name": "Write 11-03-SUMMARY.md; update STATE.md + ROADMAP.md plan progress", "status": "not_started"},
+    {"id": "11-04", "name": "Wave 4 / plan 11-04: security hardening (SEC-01..04) — blocked on 11-03", "status": "not_started"}
   ],
   "blockers": [
-    {"description": "Plans 11-01/02/03 predate the 2026-06-23 SEC-01..04 fold — they cover RSRC-BE-01..06 only. Executing them as-is would ship the phase WITHOUT the security hardening the SPEC now requires.", "type": "technical", "workaround": "Re-plan or amend before execution; SEC mostly lands in 11-03 handlers/integration + likely a dedicated slice."},
-    {"description": "UI plan-gate false-positives on this backend phase (frontend:true) because the repo has a frontend. Phase 11 is backend-only.", "type": "technical", "workaround": "/gsd-plan-phase 11 --skip-ui"},
-    {"description": "Migration-chain repair (RSRC-BE-06) is large/risky. First task MUST query the live _sqlx_migrations table to decide rename-in-place vs new compensating migration; repair must not break the already-migrated live dev DB (:15530).", "type": "technical", "workaround": "Wave 0 task: SELECT version FROM _sqlx_migrations ORDER BY version;"}
+    {"description": "IDOR / privilege escalation in backend/src/digital_resources/handlers.rs: issue_grant (line ~147 discards auth with `let _ = &auth`, line ~168 checks can_issue_resource_grant(&data.actor_org_id,...)) and issue_delegate (line ~257 checks can_issue_resource_grant(&data.granted_by_org_id,...)) authorize against a CLIENT-SUPPLIED org from the request body. Any authenticated user can name any ADMIN org and issue grants. Violates RSRC-BE-04 must-have ('actor derived from AuthGuard ... never persists on the client's say-so'). Flagged by background commit security review on 8ea8948.", "type": "technical", "workaround": "Fix forward: derive authorizing org server-side from auth.claims.sub."},
+    {"description": "UNRESOLVED DECISION (user chose 'advise me'): JWT Claims = {sub, exp, iat, role} — no org field. The resolver authorizes by org (can_issue_resource_grant takes an org_id, checks ADMIN org-link / delegate). Must decide how to map authenticated caller -> authorizing org. Option A (org-based, matches resolver): query caller's org membership from auth.claims.sub via org_links/relations. Option B (role-based): authorize off JWT role (e.g. 'admin'), diverges from resolver. NEEDS INVESTIGATION: do seed users (admin/manager/operator/viewer) actually have org-link rows mapping them to orgs? If not, org-based check may not resolve for seed users — that gap is likely why the executor took the insecure shortcut.", "type": "technical", "workaround": "Investigate person->org linkage in the live DB before choosing."}
   ],
   "async_jobs": [],
-  "human_actions_pending": [],
+  "human_actions_pending": [
+    {"action": "Decide authz model (Option A org-based vs Option B role-based) after the advise/investigation step", "context": "Gates the IDOR fix; user requested advice before deciding", "blocking": true}
+  ],
   "decisions": [
-    {"decision": "Fold ALL of Phase 13 security into Phase 11; remove Phase 13", "rationale": "User chose 'All of Phase 13'. Shares the backend trust boundary with RSRC-BE-04; SEC-03/04 touch rocket_setup.rs which the phase already modifies for migration repair", "phase": "11"},
-    {"decision": "RBAC bar = AuthGuard on EVERY handler (incl. messaging/vendor_relations) + role_has_permission on all writes/mutations + sensitive (audit) reads", "rationale": "User chose pragmatic-demo bar over per-key-on-every-handler; reuses existing role_has_permission + AuthGuard, no new framework", "phase": "11"},
-    {"decision": "JWT fail-loud everywhere — remove hardcoded fallback; startup aborts when JWT_SECRET unset/empty; tests + docker-compose.dev + .env set it", "rationale": "User chose 'Fail-loud, env everywhere' over cfg(not(test)) gating", "phase": "11"},
-    {"decision": "CORS AllowedOrigins::all() -> http://localhost:15510, keep allow_credentials(true)", "rationale": "User chose single dev origin over env-configurable list", "phase": "11"},
-    {"decision": "(prior) Standalone TEXT IDs for the 8 tables, NOT FKs to organizations/person", "rationale": "organizations.id/person.id are SERIAL ints; seed uses string labels with no 1:1 map", "phase": "11"},
-    {"decision": "(prior) Embedded idempotent seed migration hand-ported from seed.ts; resolver pure module; golden-fixture parity; aggregate GET /api/digital-resources/world; issue actor from AuthGuard person->org; --skip-ui", "rationale": "discuss-phase D-03..D-09", "phase": "11"}
+    {"decision": "Paused 11-03 mid-execution rather than fix-forward or roll back", "rationale": "User chose to inspect handlers.rs and the finding personally; authz-model ambiguity needs resolution first (Rule 1 stop)", "phase": "11"},
+    {"decision": "Did NOT roll back commits 8ea8948 / 290fd1c", "rationale": "User paused for inspection; preserving state for review", "phase": "11"}
   ],
   "uncommitted_files": [
-    ".planning/HANDOFF.json",
-    ".planning/phases/11-digital-resource-backend/11-01-migration-repair-schema/",
-    ".planning/phases/11-digital-resource-backend/11-02-resolver-models/",
-    ".planning/phases/11-digital-resource-backend/11-03-handlers-integration/",
-    ".planning/phases/11-digital-resource-backend/11-PATTERNS.md"
+    "backend/src/digital_resources/models.rs",
+    "backend/src/digital_resources/resolver.rs",
+    "backend/tests/digital_resources_api_test.rs",
+    ".planning/STATE.md"
   ],
-  "next_action": "Re-plan Phase 11 to cover SEC-01..04. The 3 existing plans (11-01 migration+schema, 11-02 resolver+models, 11-03 handlers+integration) cover RSRC-BE-01..06 but NOT the security fold. Decide: amend 11-03 to absorb SEC-01..04 + add a SEC slice, or re-run /gsd-plan-phase 11 --skip-ui and let it incorporate the new SPEC. Read 11-SPEC.md reqs 6-9 first.",
-  "context_notes": "This session: codebase remap -> surfaced live security holes (CONCERNS.md) -> added Phase 13 -> user chose to fold ALL of it into Phase 11 -> re-spec'd 11-SPEC at ambiguity 0.18 with SEC-01..04. The prior deep planning session's plans (11-01/02/03) are still good for the resource-backend work but are now INCOMPLETE vs the SPEC — they don't touch messaging/vendor_relations AuthGuard, per-role write gating, JWT fail-loud, or CORS. SEC reuses existing primitives (AuthGuard, role_has_permission helper in src/shared/rbac.rs). rocket_setup.rs:22-23 (JWT fallback) + :58/:65 (CORS all + credentials) are the exact edit sites. messaging/handlers.rs + vendor_relations/handlers.rs are the two unguarded domains. Open question for execution: does the Rust resolver stub zoneAdvisory:null or fully port zone resolution."
+  "next_action": "Investigate person->org linkage in the live dev DB (psql :15530) — do seed users have org_links rows? Then advise on Option A vs B, get the user's decision, then fix the IDOR in handlers.rs.",
+  "context_notes": "Was running /gsd-execute-phase 11 (waves 3+4). Worktrees auto-degraded to sequential (branch 'exit', unresolved fork base). Dispatched the 11-03 gsd-executor; it ran partially (committed T1 handlers + T2 seed migration) before the user interrupted. Background commit security review then flagged a real IDOR in the T1 handlers. The interrupt + finding are why we paused. The pre-existing wide set of modified backend/*.rs files in git status is prior drift, NOT this session's work — ignore them. The only 11-03 uncommitted artifacts are the 4 files above."
 }
