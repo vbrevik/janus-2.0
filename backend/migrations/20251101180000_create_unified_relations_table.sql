@@ -82,6 +82,5 @@ SELECT
     valid_until,
     created_at,
     updated_at
-FROM vendor_relations
-WHERE (deleted_at IS NULL OR deleted_at IS NOT NULL);  -- Include all rows, deleted_at may not exist
+FROM vendor_relations;
 

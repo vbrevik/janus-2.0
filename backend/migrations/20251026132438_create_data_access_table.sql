@@ -14,11 +14,12 @@ CREATE TABLE IF NOT EXISTS data_access (
 );
 
 -- Create indexes
-CREATE INDEX idx_data_access_personnel ON data_access(personnel_id) WHERE status = 'ACTIVE';
-CREATE INDEX idx_data_access_classification ON data_access(data_classification) WHERE status = 'ACTIVE';
-CREATE INDEX idx_data_access_status ON data_access(status) WHERE status = 'ACTIVE';
+CREATE INDEX IF NOT EXISTS idx_data_access_personnel ON data_access(personnel_id) WHERE status = 'ACTIVE';
+CREATE INDEX IF NOT EXISTS idx_data_access_classification ON data_access(data_classification) WHERE status = 'ACTIVE';
+CREATE INDEX IF NOT EXISTS idx_data_access_status ON data_access(status) WHERE status = 'ACTIVE';
 
 -- Create trigger to update updated_at
+DROP TRIGGER IF EXISTS update_data_access_updated_at ON data_access;
 CREATE TRIGGER update_data_access_updated_at
     BEFORE UPDATE ON data_access
     FOR EACH ROW

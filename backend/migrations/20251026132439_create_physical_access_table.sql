@@ -14,11 +14,12 @@ CREATE TABLE IF NOT EXISTS physical_access (
 );
 
 -- Create indexes
-CREATE INDEX idx_physical_access_personnel ON physical_access(personnel_id) WHERE status = 'ACTIVE';
-CREATE INDEX idx_physical_access_zone ON physical_access(zone_name) WHERE status = 'ACTIVE';
-CREATE INDEX idx_physical_access_valid_until ON physical_access(valid_until) WHERE valid_until IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_physical_access_personnel ON physical_access(personnel_id) WHERE status = 'ACTIVE';
+CREATE INDEX IF NOT EXISTS idx_physical_access_zone ON physical_access(zone_name) WHERE status = 'ACTIVE';
+CREATE INDEX IF NOT EXISTS idx_physical_access_valid_until ON physical_access(valid_until) WHERE valid_until IS NOT NULL;
 
 -- Create trigger to update updated_at
+DROP TRIGGER IF EXISTS update_physical_access_updated_at ON physical_access;
 CREATE TRIGGER update_physical_access_updated_at
     BEFORE UPDATE ON physical_access
     FOR EACH ROW

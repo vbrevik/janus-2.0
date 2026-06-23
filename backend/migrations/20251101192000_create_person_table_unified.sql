@@ -54,6 +54,16 @@ SELECT
     updated_at
 FROM users;
 
+-- Step 2b: Advance the person id sequence past the explicitly-inserted user ids.
+-- Step 2 inserts person rows with explicit ids copied from users, which does NOT
+-- bump the SERIAL sequence. Without this, Step 3's sequence-allocated inserts would
+-- collide with those ids and violate person_pkey. (Repaired during Phase 11-01.)
+SELECT setval(
+    pg_get_serial_sequence('person', 'id'),
+    COALESCE((SELECT MAX(id) FROM person), 1),
+    true
+);
+
 -- Step 3: Migrate personnel that don't have matching users (by email)
 -- Try to match by email first, if no match, insert as new person
 INSERT INTO person (first_name, last_name, email, phone, clearance_level, department, position, deleted_at, created_at, updated_at)
