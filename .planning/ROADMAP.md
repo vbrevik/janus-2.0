@@ -87,7 +87,7 @@ Plans:
 
 **Goal**: The digital-resource model becomes persisted and server-authoritative — 8 Postgres tables back the Network → Platform → Application domain, the full gate-chain resolver is re-implemented in Rust with parity to the TS resolver, and AuthGuard read + issue endpoints expose it (issue endpoints re-validate authority server-side); `seed.ts` fixtures are loaded into Postgres as the single source of truth.
 **Depends on**: Phase 10 (TS model/seed/resolver are the parity reference and the fixture source)
-**Requirements**: RSRC-BE-01, RSRC-BE-02, RSRC-BE-03, RSRC-BE-04, RSRC-BE-05, RSRC-BE-06 *(new backend requirements added 2026-06-19 when Phase 11 was split into backend + UI; RSRC-BE-06 migration-chain repair added via discuss-phase)*
+**Requirements**: RSRC-BE-01, RSRC-BE-02, RSRC-BE-03, RSRC-BE-04, RSRC-BE-05, RSRC-BE-06, SEC-01, SEC-02, SEC-03, SEC-04 *(RSRC-BE added 2026-06-19 when Phase 11 was split into backend + UI; RSRC-BE-06 migration-chain repair added via discuss-phase; SEC-01..04 security hardening folded in from removed Phase 13 on 2026-06-23 — see REQUIREMENTS.md + 11-SPEC.md)*
 **Success Criteria** (what must be TRUE):
 
   0. A freshly-created empty database migrates end-to-end with zero errors (broken migration chain repaired — RSRC-BE-06)
@@ -97,13 +97,14 @@ Plans:
   4. POST issue endpoints persist for an authorized actor and return 403 for non-ADMIN/no-delegate, expired-delegate, and out-of-window-delegate actors (server-side re-validation via ported `canIssueResourceGrant`); a duplicate issue creates no duplicate row
   5. `seedWorld()` no longer hardcodes the digital-resource fixtures; the seeded DB serves the same 6-unit dataset
 
-**Spec**: `11-SPEC.md` (6 requirements, ambiguity 0.19)
-**Plans**: 3 plans
+**Spec**: `11-SPEC.md` (10 requirements, ambiguity 0.18 — re-planned 2026-06-23 with the SEC-01..04 fold)
+**Plans**: 4 plans
 Plans:
 
-- [ ] 11-01-PLAN.md — Migration chain repair + 8 digital-resource tables schema (RSRC-BE-06, RSRC-BE-01)
-- [ ] 11-02-PLAN.md — Rust resolver port + sqlx models + golden-fixture parity test (RSRC-BE-02)
-- [ ] 11-03-PLAN.md — Handlers (get_world, issue_grant, issue_delegate) + mount + seed migration + seedWorld removal (RSRC-BE-03, RSRC-BE-04, RSRC-BE-05)
+- [ ] 11-01-PLAN.md — Migration-chain repair + 8 digital-resource tables schema (RSRC-BE-06, RSRC-BE-01) [wave 1]
+- [ ] 11-02-PLAN.md — Rust resolver port + sqlx models + golden-fixture parity test (RSRC-BE-02) [wave 2]
+- [ ] 11-03-PLAN.md — Handlers (get_world, issue_grant, issue_delegate) + mount + seed migration + seedWorld removal (RSRC-BE-03, RSRC-BE-04, RSRC-BE-05) [wave 3]
+- [ ] 11-04-PLAN.md — Security hardening: vendor_relations AuthGuard, per-role RBAC on writes + audit read, JWT fail-loud, CORS single origin (SEC-01, SEC-02, SEC-03, SEC-04) [wave 4]
 
 ### Phase 12: Demo UI, Loader & Tab Integration
 
