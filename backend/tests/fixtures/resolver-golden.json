@@ -1,0 +1,59 @@
+{
+  "milnet_now_a": {
+    "allow": true,
+    "gates": [
+      {
+        "kind": "CLEARANCE",
+        "pass": true,
+        "reason": "CLEARANCE_OK"
+      },
+      {
+        "kind": "OWN_TIER_GRANT",
+        "pass": true,
+        "reason": "OWN_TIER_GRANT_FOUND"
+      },
+      {
+        "kind": "PARENT_TIER_GRANT",
+        "pass": true,
+        "reason": "NO_PARENT_TIER"
+      }
+    ],
+    "zone_advisory": null,
+    "policy_version": {
+      "valid_from": "2026-02-01T00:00:00",
+      "valid_until": "2026-02-28T23:59:59"
+    }
+  },
+  "milnet_boundary": {
+    "allow": true,
+    "gates": [
+      {
+        "kind": "CLEARANCE",
+        "pass": true,
+        "reason": "CLEARANCE_OK"
+      },
+      {
+        "kind": "OWN_TIER_GRANT",
+        "pass": true,
+        "reason": "OWN_TIER_GRANT_FOUND"
+      },
+      {
+        "kind": "PARENT_TIER_GRANT",
+        "pass": true,
+        "reason": "NO_PARENT_TIER"
+      }
+    ],
+    "zone_advisory": null,
+    "policy_version": {
+      "valid_from": "2026-02-01T00:00:00",
+      "valid_until": "2026-02-28T23:59:59"
+    }
+  },
+  "no_policy_deny": {
+    "allow": false,
+    "gates": [],
+    "zone_advisory": null,
+    "policy_version": null,
+    "reason": "NO_ACTIVE_POLICY"
+  }
+}
