@@ -83,6 +83,7 @@ None.
 ### Roadmap Evolution
 
 - Phase 11 edited: split original Phase 11 (full-stack scope expansion): Phase 11 = digital-resource backend + Rust resolver port + read/issue API; new Phase 12 = demo UI/loader/tab. RSRC-BE-01..05 added; RSRC-UI-01..03 remapped to 12 + UI-04/05/06 added.
+- Phase 13 added: Security hardening — server-side RBAC across all backend domains, remove JWT secret hardcoded fallback, tighten CORS. Sourced from `.planning/codebase/CONCERNS.md` after 2026-06-23 codebase remap.
 
 ## Deferred Items
 
