@@ -98,11 +98,11 @@ Plans:
   5. `seedWorld()` no longer hardcodes the digital-resource fixtures; the seeded DB serves the same 6-unit dataset
 
 **Spec**: `11-SPEC.md` (10 requirements, ambiguity 0.18 — re-planned 2026-06-23 with the SEC-01..04 fold)
-**Plans**: 4 plans
+**Plans**: 1/4 plans executed
 Plans:
 **Wave 1**
 
-- [ ] 11-01-PLAN.md — Migration-chain repair + 8 digital-resource tables schema (RSRC-BE-06, RSRC-BE-01) [wave 1]
+- [x] 11-01-PLAN.md — Migration-chain repair + 8 digital-resource tables schema (RSRC-BE-06, RSRC-BE-01) [wave 1]
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -154,5 +154,5 @@ Plans:
 | 8. Mock Dataset & Demo UI | v2.1 | 3/3 | Complete | 2026-05-23 |
 | 9. Digital Resource Model & Policy Engine | v2.2 | 4/4 | Complete   | 2026-06-02 |
 | 10. Mock Dataset & WorldState | v2.2 | 2/2 | Complete | 2026-06-18 |
-| 11. Digital Resource Backend & Resolver Port | v2.2 | 0/? | Not started | - |
+| 11. Digital Resource Backend & Resolver Port | v2.2 | 1/4 | In Progress|  |
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 0/? | Not started | - |
