@@ -106,7 +106,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 11-02-PLAN.md — Rust resolver port + sqlx models + golden-fixture parity test (RSRC-BE-02) [wave 2]
+- [x] 11-02-PLAN.md — Rust resolver port + sqlx models + golden-fixture parity test (RSRC-BE-02) [wave 2]
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -154,5 +154,5 @@ Plans:
 | 8. Mock Dataset & Demo UI | v2.1 | 3/3 | Complete | 2026-05-23 |
 | 9. Digital Resource Model & Policy Engine | v2.2 | 4/4 | Complete   | 2026-06-02 |
 | 10. Mock Dataset & WorldState | v2.2 | 2/2 | Complete | 2026-06-18 |
-| 11. Digital Resource Backend & Resolver Port | v2.2 | 1/4 | In Progress|  |
+| 11. Digital Resource Backend & Resolver Port | v2.2 | 2/4 | In Progress|  |
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 0/? | Not started | - |
