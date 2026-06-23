@@ -107,6 +107,6 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-19T11:46:51.176Z
-Stopped at: Phase 11 context gathered
-Resume file: .planning/phases/11-digital-resource-backend/11-CONTEXT.md
+Last session: 2026-06-23T12:39:25.749Z
+Stopped at: Session resumed — stale 11-01/02/03 plans (pre-SEC-fold) backed up to scratchpad + cleared; proceeding to /gsd-plan-phase 11 --skip-ui to regenerate plans covering RSRC-BE-01..06 + SEC-01..04 from re-scored 11-SPEC.
+Resume file: none (replanning from 11-SPEC.md)

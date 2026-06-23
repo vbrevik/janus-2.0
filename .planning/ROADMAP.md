@@ -100,10 +100,20 @@ Plans:
 **Spec**: `11-SPEC.md` (10 requirements, ambiguity 0.18 — re-planned 2026-06-23 with the SEC-01..04 fold)
 **Plans**: 4 plans
 Plans:
+**Wave 1**
 
 - [ ] 11-01-PLAN.md — Migration-chain repair + 8 digital-resource tables schema (RSRC-BE-06, RSRC-BE-01) [wave 1]
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 11-02-PLAN.md — Rust resolver port + sqlx models + golden-fixture parity test (RSRC-BE-02) [wave 2]
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 11-03-PLAN.md — Handlers (get_world, issue_grant, issue_delegate) + mount + seed migration + seedWorld removal (RSRC-BE-03, RSRC-BE-04, RSRC-BE-05) [wave 3]
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 11-04-PLAN.md — Security hardening: vendor_relations AuthGuard, per-role RBAC on writes + audit read, JWT fail-loud, CORS single origin (SEC-01, SEC-02, SEC-03, SEC-04) [wave 4]
 
 ### Phase 12: Demo UI, Loader & Tab Integration
