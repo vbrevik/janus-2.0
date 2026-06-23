@@ -1,22 +1,24 @@
 // Library crate for testing
 // Re-export all modules needed for rocket setup
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-pub mod auth;
-pub mod person;
-pub mod organizations;
-pub mod vendor_relations;
-pub mod relations;
 pub mod access;
 pub mod audit;
-pub mod shared;
-pub mod info_systems;
-pub mod roles;
-pub mod nda;
+pub mod auth;
+pub mod digital_resources;
 pub mod discussions;
 pub mod document_references;
+pub mod info_systems;
 pub mod messaging;
+pub mod nda;
+pub mod organizations;
+pub mod person;
+pub mod relations;
+pub mod roles;
+pub mod shared;
+pub mod vendor_relations;
 
 // Re-export routes and handlers needed for rocket setup
 use rocket::serde::json::Json;
@@ -47,4 +49,3 @@ pub fn health() -> Json<HealthResponse> {
 
 // Re-export create_rocket for integration tests
 pub use shared::rocket_setup::create_rocket;
-
