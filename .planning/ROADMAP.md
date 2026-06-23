@@ -123,16 +123,9 @@ Plans:
 **Spec**: `12-SPEC.md` (6 requirements, ambiguity 0.18)
 **Plans**: TBD
 
-### Phase 13: Security hardening — server-side RBAC, JWT secret, CORS
-
-**Goal:** Close the live security holes surfaced in `.planning/codebase/CONCERNS.md` so no unauthorized user can read or mutate data: (1) enforce server-side RBAC across ALL backend domains — `messaging` and `vendor_relations` currently lack `AuthGuard` entirely; only `roles/handlers.rs` enforces per-role permissions; (2) remove the JWT secret silent hardcoded fallback (`backend/src/shared/rocket_setup.rs:22-23`) so an unset `JWT_SECRET` fails loud instead of letting anyone forge admin tokens; (3) tighten CORS from `AllowedOrigins::all()` to the dev frontend origin.
-**Requirements**: TBD
-**Depends on:** Phase 12
-**Plans:** 0 plans
-
-Plans:
-
-- [ ] TBD (run /gsd-plan-phase 13 to break down)
+> **Phase 13 (Security hardening) folded into Phase 11 and removed — 2026-06-23.** Its scope
+> (server-side RBAC across all domains, JWT-secret fail-loud, CORS restriction) is now Phase 11
+> requirements SEC-01..04. See `11-SPEC.md`.
 
 ---
 

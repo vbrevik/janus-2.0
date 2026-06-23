@@ -70,6 +70,15 @@
 - [ ] **RSRC-BE-05**: The `seed.ts` digital-resource fixtures are loaded into Postgres as the single source of truth; `seedWorld()` no longer hardcodes the digital-resource arrays.
 - [ ] **RSRC-BE-06**: The broken migration chain is repaired so a freshly-created empty database migrates end-to-end with zero errors; the repair must not break the live dev DB. *(Added 2026-06-19 via discuss-phase — prerequisite to the 8-table create; supersedes the prior additive-only constraint.)*
 
+### Security Hardening (SEC) — Phase 11
+
+*Added 2026-06-23. Folded in from the cancelled Phase 13 after the codebase remap (`.planning/codebase/CONCERNS.md`) surfaced live server-side security holes. Scoped into Phase 11 because they share the backend trust boundary with RSRC-BE-04 and touch `rocket_setup.rs`, which Phase 11 already modifies for migration repair.*
+
+- [ ] **SEC-01**: Every backend handler across every domain is `AuthGuard`-protected; `messaging` and `vendor_relations` (currently unauthenticated) gain it. No endpoint except login is reachable without a valid Bearer JWT.
+- [ ] **SEC-02**: Every write/mutation handler and every sensitive read (audit) gates via `role_has_permission(&auth.claims.role, "<domain>.<action>")`; the required permission keys are seeded; an authenticated actor whose role lacks the permission gets **403** (not 500).
+- [ ] **SEC-03**: The hardcoded JWT-secret fallback (`rocket_setup.rs:22-23`) is removed; backend startup aborts before serving when `JWT_SECRET` is unset or empty; tests, `docker-compose.dev`, and `.env` supply it explicitly.
+- [ ] **SEC-04**: `CORS AllowedOrigins::all()` is replaced with `http://localhost:15510` (dev frontend); credentials remain allowed; a disallowed Origin is not granted CORS access.
+
 ### Demo UI (RSRC-UI) — Phase 12
 
 - [ ] **RSRC-UI-01**: A Resource Browser renders the Network → Platform → Application hierarchy with classification badges (Application badge shown as inherited).
@@ -139,6 +148,10 @@
 | RSRC-BE-04 | Phase 11 | Pending |
 | RSRC-BE-05 | Phase 11 | Pending |
 | RSRC-BE-06 | Phase 11 | Pending |
+| SEC-01 | Phase 11 | Pending |
+| SEC-02 | Phase 11 | Pending |
+| SEC-03 | Phase 11 | Pending |
+| SEC-04 | Phase 11 | Pending |
 | RSRC-UI-01 | Phase 12 | Pending |
 | RSRC-UI-02 | Phase 12 | Pending |
 | RSRC-UI-03 | Phase 12 | Pending |
