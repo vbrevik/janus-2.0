@@ -1,222 +1,177 @@
-<!-- refreshed: 2026-06-18 -->
+<!-- refreshed: 2026-06-23 -->
 # Architecture
 
-**Analysis Date:** 2026-06-18
+**Analysis Date:** 2026-06-23
 
 ## System Overview
 
 ```text
-┌───────────────────────────────────────────────────────────────┐
-│                  Browser (React SPA :15510)                    │
-│  Routes (TanStack file-based)  ·  Demo/Spike subsystems       │
-├────────────────┬──────────────────┬───────────────────────────┤
-│  Auth / RBAC   │   React Query    │    WebSocket Context       │
-│  AuthContext   │   hooks (cache)  │    :15540                  │
-│ `contexts/`    │  `hooks/`        │  `contexts/`               │
-└───────┬────────┴────────┬─────────┴─────────────┬─────────────┘
-        │  REST /api/*    │                        │  WS
-        ▼                 ▼                        ▼
-┌───────────────────────────────────────────────────────────────┐
-│                  Rocket HTTP API (:15520)                      │
-│  Domain modules: person · access · roles · nda · audit …     │
-│  `backend/src/<domain>/handlers.rs`                           │
-│  Cross-cutting: AuthGuard (JWT) · CORS · PgPool               │
-│  `backend/src/shared/`                                        │
-└───────────────────────────────┬───────────────────────────────┘
-                                │ sqlx
-                                ▼
-┌───────────────────────────────────────────────────────────────┐
-│             PostgreSQL (:15530)                                │
-│             Migrations: `backend/migrations/`                 │
-└───────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    React 19 SPA (frontend)                   │
+├──────────────────┬──────────────────┬───────────────────────┤
+│  TanStack Routes │  React Query     │   Contexts            │
+│  `src/routes/`   │  hooks           │   (Auth / WebSocket)  │
+│  (admin/enduser/ │  `src/hooks/     │   `src/contexts/`     │
+│   official)      │   use-*.ts`      │                       │
+└────────┬─────────┴────────┬─────────┴──────────┬────────────┘
+         │ apiFetch (`src/lib/api.ts`, Bearer JWT)│ WS :15540
+         ▼                  ▼                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Rust + Rocket 0.5 REST API (backend)            │
+│  `shared::rocket_setup::create_rocket()` mounts domains      │
+│  AuthGuard (Bearer-JWT) on every non-login handler           │
+│  Domain modules: handlers.rs query PgPool inline (no service)│
+└─────────────────────────────────────────────────────────────┘
+         │ sqlx (raw SQL)
+         ▼
+┌─────────────────────────────────────────────────────────────┐
+│  PostgreSQL :15530   (migrations in `backend/migrations/`)   │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Component Responsibilities
 
 | Component | Responsibility | File |
 |-----------|----------------|------|
-| `create_rocket()` | Wire DB pool, CORS, JWT secret, mount all routes | `backend/src/shared/rocket_setup.rs` |
-| `AuthGuard` | Per-request Bearer JWT validation on every non-login handler | `backend/src/auth/middleware.rs` |
-| `rbac::role_has_permission` | DB-backed permission check by role name + permission key | `backend/src/shared/rbac.rs` |
-| `ApiResponse<T>` / `PaginatedResponse<T>` | Canonical JSON envelope for all responses | `backend/src/shared/response.rs` |
-| `AuthProvider` / `useAuth` | JWT storage (localStorage), login/logout, role access | `frontend/src/contexts/auth-context.tsx` |
-| `WebSocketProvider` | Connects to WS :15540, propagates messages | `frontend/src/contexts/websocket-context.tsx` |
-| `ProtectedRoute` (PascalCase) | Role-based guard — checks `allowedRoles` | `frontend/src/components/ProtectedRoute.tsx` |
-| `apiFetch` / `api.*` | HTTP client — injects Bearer token, throws `ApiError` | `frontend/src/lib/api.ts` |
-| React Query hooks (`use-*.ts`) | Server-state cache layer between pages and `apiFetch` | `frontend/src/hooks/` |
-| Demo world-state store | In-memory ABAC/grant simulation via `useReducer` | `frontend/src/demo/store/world-state.tsx` |
+| Rocket bootstrap | Connect DB pool, mount routes, configure CORS, spawn WS server | `backend/src/shared/rocket_setup.rs` |
+| Domain module | One bounded context: `mod.rs` (exports + `routes()`), `models.rs`, `handlers.rs` | `backend/src/person/` (template) |
+| AuthGuard | Bearer-JWT request guard on protected handlers | `backend/src/auth/middleware.rs` |
+| Shared infra | `PaginatedResponse<T>`, `ApiResponse<T>`, pagination, error, rbac | `backend/src/shared/` |
+| WebSocket manager | Real-time messaging on :15540 | `backend/src/messaging/` |
+| Router bootstrap | Mount generated route tree under React Query + StrictMode | `frontend/src/main.tsx` |
+| Data layer | `apiFetch`, `ApiError{status}`, auth-header injection | `frontend/src/lib/api.ts` |
+| Query hooks | React Query wrappers per domain | `frontend/src/hooks/use-*.ts` |
+| Global state | JWT in localStorage + WS connection | `frontend/src/contexts/auth-context.tsx`, `websocket-context.tsx` |
 
 ## Pattern Overview
 
-**Overall:** Layered monolith — Rocket REST + React SPA with a parallel in-memory demo/spike subsystem
+**Overall:** Layered client-server. Rust REST API with a flat domain-module backend (no service layer — handlers query the DB directly); React SPA with file-based routing and a React Query data layer.
 
 **Key Characteristics:**
-- Backend: flat domain modules, no service layer — handlers query `PgPool` directly with inline `sqlx`
-- Frontend: TanStack file-based routes; data fetched via React Query hooks, never in route components directly
-- Auth: JWT-based; token lives in `localStorage`; injected by `apiFetch`; enforced server-side by `AuthGuard` request guard
-- Demo subsystem (`src/demo/`) is an entirely self-contained offline simulation — no backend calls
+- Backend domains are self-contained 3-file modules (`mod.rs`/`models.rs`/`handlers.rs`); cross-cutting concerns live only in `shared/`.
+- Handlers return `Result<Json<T>, Status>` and never panic — errors map to HTTP status codes inline.
+- Frontend is role-aware: parallel route subtrees (`admin/`, `enduser/`, `official/`) gated by `ProtectedRoute` with `allowedRoles`.
 
 ## Layers
 
-**Backend — Domain Handlers:**
-- Purpose: HTTP request handling + SQL queries + response serialization
-- Location: `backend/src/<domain>/handlers.rs`
-- Contains: Rocket `#[get]`/`#[post]`/`#[put]`/`#[delete]` functions
-- Depends on: `sqlx::PgPool`, `AuthGuard`, `shared/response.rs`
-- Used by: Rocket router (mounted in `rocket_setup.rs`)
+**Frontend routes (presentation):**
+- Purpose: File-based pages; heavy page logic in co-located `_component.tsx`.
+- Location: `frontend/src/routes/` (subtrees `admin/`, `enduser/`, `official/`).
+- Depends on: query hooks, contexts, UI components.
+- Used by: TanStack router (`routeTree.gen.ts` — generated, never hand-edit).
 
-**Backend — Domain Models:**
-- Purpose: sqlx + serde structs for DB rows and API payloads
-- Location: `backend/src/<domain>/models.rs`
-- Contains: `#[derive(sqlx::FromRow, Serialize, Deserialize)]` structs
-- Depends on: nothing (plain structs)
-- Used by: handlers
+**Frontend data layer:**
+- Purpose: Server-state fetching/caching.
+- Location: `frontend/src/hooks/use-*.ts` → `frontend/src/lib/api.ts`.
+- Depends on: `apiFetch` (injects Bearer token, throws `ApiError{status}`).
 
-**Backend — Shared Infrastructure:**
-- Purpose: Cross-cutting concerns: DB setup, JWT, RBAC, pagination, error types
-- Location: `backend/src/shared/`
-- Contains: `rocket_setup.rs`, `auth/middleware.rs`, `rbac.rs`, `response.rs`, `pagination.rs`, `error.rs`, `database.rs`
-- Depends on: external crates (sqlx, rocket, jwt)
-- Used by: all domain handlers
+**Backend domain layer:**
+- Purpose: Per-domain HTTP handlers + sqlx models.
+- Location: `backend/src/<domain>/`.
+- Depends on: `PgPool` (managed state), `shared/`, `auth::middleware::AuthGuard`.
 
-**Frontend — Routes:**
-- Purpose: Page components organized by role subtree
-- Location: `frontend/src/routes/`
-- Contains: `admin/`, `enduser/`, `official/` subtrees + flat legacy routes
-- Depends on: React Query hooks, `ProtectedRoute`, `Layout`
-- Used by: TanStack Router
-
-**Frontend — React Query Hooks:**
-- Purpose: Server-state cache; wrap `apiFetch` calls; expose `useQuery`/`useMutation`
-- Location: `frontend/src/hooks/use-*.ts`
-- Contains: `use-person.ts`, `use-access.ts`, `use-nda.ts`, `use-roles.ts`, etc.
-- Depends on: `src/lib/api.ts`, `src/types/`
-- Used by: route components
-
-**Frontend — Demo Subsystem:**
-- Purpose: Offline ABAC/grant/zone simulation for prototyping — no backend required
-- Location: `frontend/src/demo/`
-- Contains: `lib/model.ts` (types), `lib/seed.ts` (fixture data), `lib/abac.ts`, `lib/policy.ts`, `store/world-state.tsx` (useReducer store), `components/`, `DemoRoot.tsx`
-- Depends on: nothing outside `src/demo/` and `src/spikes/`
-
-**Frontend — Spike Subsystem:**
-- Purpose: Earlier prototype implementations of ABAC, audit, contracts — read-only reference
-- Location: `frontend/src/spikes/`
-- Contains: `lib/*.ts` (models + logic), `components/`
+**Backend shared infra:**
+- Purpose: Cross-cutting setup and response envelopes.
+- Location: `backend/src/shared/`.
+- Used by: all domain modules and `main.rs`.
 
 ## Data Flow
 
-### Primary REST Request Path
+### Primary Request Path
 
-1. User action in route component (`frontend/src/routes/admin/person/_component.tsx`)
-2. `useMutation` / `useQuery` hook in `frontend/src/hooks/use-person.ts`
-3. `apiFetch('/api/person', ...)` → `frontend/src/lib/api.ts` adds `Authorization: Bearer <token>`
-4. Rocket receives request → `AuthGuard` validates JWT (`backend/src/auth/middleware.rs`)
-5. Handler function in `backend/src/person/handlers.rs` runs inline `sqlx` query against `PgPool`
-6. Handler returns `Json<PaginatedResponse<Person>>` or `Result<Json<T>, Status>`
-7. React Query caches response; component re-renders
+1. UI calls a query hook, e.g. `useQuery` in `frontend/src/hooks/use-person.ts`.
+2. Hook calls `apiFetch('/api/person')` which injects the Bearer JWT (`frontend/src/lib/api.ts`).
+3. Rocket routes to the mounted handler `person::handlers::list_persons` (`backend/src/shared/rocket_setup.rs:109`).
+4. `AuthGuard` validates the JWT (`backend/src/auth/middleware.rs`).
+5. Handler runs inline `sqlx` against `PgPool` and returns `Json<PaginatedResponse<Person>>` (`backend/src/person/handlers.rs`).
+6. Hook caches the response; React Query staleTime is 5 min (`frontend/src/main.tsx`).
 
-### WebSocket Flow
+### Real-time Messaging Flow
 
-1. `WebSocketProvider` connects to `ws://localhost:15540` on mount (`frontend/src/contexts/websocket-context.tsx`)
-2. WS server validates JWT on handshake (`backend/src/messaging/handlers.rs`)
-3. Backend events broadcast via `WebSocketManager` (`backend/src/messaging/websocket.rs`)
-4. Frontend consumers read from `WebSocketContext`
-
-### Demo / ABAC Evaluation Flow (offline)
-
-1. `DemoRoot.tsx` wraps tree with `WorldStateProvider` (from `frontend/src/demo/store/world-state.tsx`)
-2. User actions dispatch reducer actions → new immutable world state
-3. Views call `useMemo(evaluate(...))` to derive access decisions — never stored in state
-4. `AttrEvent` log appended on every mutation for event-sourced audit trail
+1. Rocket bootstrap spawns a separate WebSocket server on :15540 (`rocket_setup.rs:40`).
+2. Frontend connects via `WebSocketContext` (`frontend/src/contexts/websocket-context.tsx`, hook `use-websocket.ts`).
+3. WS server validates JWT and routes messages via `WebSocketManager` (`backend/src/messaging/`).
 
 **State Management:**
-- Server state: React Query (keyed by entity type + ID)
-- Auth state: `AuthContext` (React context + `localStorage`)
-- Demo/simulation state: `useReducer` in `WorldStateProvider` (no persistence)
-- No global client state store (Redux etc.) — all state is either server-synced or context-local
+- Server state: React Query cache.
+- Auth/session: `AuthContext` with JWT in `localStorage`; redirect-by-role via `getDefaultRoute` (`frontend/src/contexts/auth-context.tsx`).
 
 ## Key Abstractions
 
-**`ApiResponse<T>` / `PaginatedResponse<T>`:**
-- Purpose: Uniform JSON envelope for all backend responses
-- Examples: `backend/src/shared/response.rs`
-- Pattern: `{success, data, error}` for single items; `{items, total, page, per_page, total_pages}` for lists
+**Domain module (backend):**
+- Purpose: One bounded context.
+- Examples: `backend/src/person/`, `backend/src/access/`, `backend/src/nda/`.
+- Pattern: `mod.rs` exposes `routes() -> Vec<rocket::Route>` + re-exports models.
 
-**`AuthGuard` (Rocket request guard):**
-- Purpose: Validates `Authorization: Bearer` JWT on every protected handler
-- Examples: `backend/src/auth/middleware.rs`
-- Pattern: Implement `FromRequest` — returns `Outcome::Forward` on failure
+**Response envelope:**
+- Purpose: Consistent list/single payloads.
+- Examples: `PaginatedResponse<T>` = `{items,total,page,per_page,total_pages}`, `ApiResponse<T>` (`backend/src/shared/response.rs`).
 
-**`ProtectedRoute` (React component, PascalCase):**
-- Purpose: Wraps route trees to enforce `allowedRoles`; redirects unauthenticated users
-- Examples: `frontend/src/components/ProtectedRoute.tsx`
-- Pattern: `<ProtectedRoute allowedRoles={['admin']}><Page /></ProtectedRoute>`
-
-**Domain Module (Rust):**
-- Purpose: Self-contained vertical slice per domain
-- Examples: `backend/src/person/`, `backend/src/access/`, `backend/src/nda/`
-- Pattern: `mod.rs` (exports + `routes()`), `models.rs` (structs), `handlers.rs` (Rocket fns)
-
-**React Query Hook (`use-*.ts`):**
-- Purpose: Encapsulate `useQuery`/`useMutation` for a domain, expose typed data + mutations
-- Examples: `frontend/src/hooks/use-person.ts`, `frontend/src/hooks/use-access.ts`
-- Pattern: `export function usePersons() { return useQuery({...}) }`
+**Query hook (frontend):**
+- Purpose: Encapsulate one domain's server-state access.
+- Examples: `frontend/src/hooks/use-access.ts`, `use-relations.ts`.
 
 ## Entry Points
 
 **Backend:**
-- Location: `backend/src/main.rs` → `shared::rocket_setup::create_rocket()`
-- Triggers: `cargo run` in `backend/`
-- Responsibilities: Load `.env`, connect DB pool, spawn WS server, configure CORS, mount all routes
+- Location: `backend/src/main.rs` → `shared::rocket_setup::create_rocket()`.
+- Triggers: `cargo run`.
+- Responsibilities: Build pool, mount routes, spawn WS, launch Rocket on :15520 (container default 8000, overridable via `ROCKET_PORT`).
 
 **Frontend:**
-- Location: `frontend/src/main.tsx` → `RouterProvider`
-- Triggers: `npm run dev` in `frontend/`
-- Responsibilities: Mount React tree with TanStack Router; root layout provides `AuthProvider` + `WebSocketProvider`
-
-**Route Index:**
-- Location: `frontend/src/routes/index.tsx`
-- Responsibilities: Redirect `/` to role-appropriate default route via `getDefaultRoute(role)`
+- Location: `frontend/src/main.tsx` → `RouterProvider` under `QueryClientProvider`.
+- Triggers: Vite dev server on :15510.
+- `routes/index.tsx` redirects `/` by role; `routes/__root.tsx` provides `AuthContext`/`WebSocketContext` and `Layout` chrome.
 
 ## Architectural Constraints
 
-- **No service layer (backend):** Handlers call `sqlx` directly on `PgPool` — no service/repository abstraction exists
-- **Route tree generation:** `frontend/src/routeTree.gen.ts` is GENERATED by TanStack — never hand-edit; regenerate after adding route files
-- **API prefix discipline:** `apiFetch` base URL has no `/api` suffix; every endpoint string passed to it MUST start with `/api/...`
-- **Backend route mount prefix:** domain handlers use relative paths (e.g. `#[get("/<id>")]`); the prefix is set in `rocket_setup.rs` (`.mount("/api/person", ...)`)
-- **WebSocket port (:15540):** spawned as a separate `tokio::spawn` task inside `create_rocket()` — auth failures cause a reconnect flood in frontend console (known, non-blocking)
-- **Global state:** `PgPool`, `jwt_secret` (String), and `WebSocketManager` are Rocket managed state (module-level singletons injected at startup)
+- **No service layer (backend):** Handlers query `PgPool` directly via inline `sqlx`. Do not introduce a service/repository layer.
+- **Generated routing:** `frontend/src/routeTree.gen.ts` is generated — never hand-edit; regenerate after route changes and commit new route dirs first.
+- **Threading:** Rocket async runtime (tokio); the WS server is spawned as a separate `tokio::spawn` task on :15540.
+- **Global state:** `db_pool`, `jwt_secret`, and `WebSocketManager` are Rocket-managed singletons (`rocket_setup.rs:81-83`).
+- **No new frameworks:** Match the existing stack (Rocket/sqlx; TanStack/shadcn).
 
 ## Anti-Patterns
 
-### Flat (legacy) route files
+### Hardcoding `/api/...` inside route macros for mounted modules
 
-**What happens:** Routes directly under `frontend/src/routes/` (e.g. `src/routes/access/`, `src/routes/ndas/`, `src/routes/roles/`) duplicate pages that exist under `src/routes/admin/`
-**Why it's wrong:** These are unlinked pre-pivot duplicates carrying stale bugs; they are NOT part of the active navigation
-**Do this instead:** Work exclusively in `frontend/src/routes/admin/`, `enduser/`, `official/` subtrees; do not revive or edit the flat routes
+**What happens:** A handler in a module mounted at `/api/person` also writes `#[get("/api/person/<id>")]`.
+**Why it's wrong:** Double-prefixes the URL — the route never matches.
+**Do this instead:** Use RELATIVE handler paths (`#[get("/<id>")]`); the mount point supplies `/api/<x>` (see `backend/src/person/mod.rs` + `rocket_setup.rs:109`).
 
-### lowercase `protected-route.tsx`
+### Omitting the `/api` prefix on the frontend
 
-**What happens:** `frontend/src/components/protected-route.tsx` (lowercase) exists alongside `ProtectedRoute.tsx` (PascalCase)
-**Why it's wrong:** Lowercase version is auth-only (no `allowedRoles`); using it skips role enforcement
-**Do this instead:** Always import from `@/components/ProtectedRoute` (PascalCase) for role-aware guards
+**What happens:** Calling `apiFetch('/person')`.
+**Why it's wrong:** `src/lib/api.ts` base is the host WITHOUT `/api`, so the call 404s silently.
+**Do this instead:** Every endpoint string must start with `/api/...` (e.g. `/api/person`).
+
+### Reviving deprecated flat routes
+
+**What happens:** Editing `frontend/src/routes/{access,roles,ndas,organizations,...}`.
+**Why it's wrong:** These are unlinked pre-pivot duplicates that still carry known bugs.
+**Do this instead:** Work in the `/admin/*` (and `enduser/`, `official/`) subtrees.
+
+### Empty `<SelectItem value="">`
+
+**What happens:** Radix throws; the root error boundary renders a blank "Something went wrong".
+**Do this instead:** Use a sentinel (`value="ALL"`) treated as "no filter".
 
 ## Error Handling
 
-**Strategy:** Backend returns typed HTTP status codes; frontend surfaces inline errors
+**Strategy:** Backend handlers return `Result<Json<T>, Status>` and never panic.
 
 **Patterns:**
-- Backend: `Result<Json<T>, Status>` — `.map_err(|_| Status::InternalServerError)?`, `.ok_or(Status::NotFound)?`
-- Frontend: `ApiError{status}` thrown by `apiFetch`; caught in React Query's `error` state; rendered inline as `bg-destructive/10 text-destructive` div; no toast notifications
-- Mutations: use `mutateAsync` in handlers; gate submit buttons on `mutation.isPending`
+- `validate().map_err(|_| Status::BadRequest)?`
+- `.map_err(|_| Status::InternalServerError)?`
+- `.ok_or(Status::NotFound)?`
+- Frontend: `ApiError{status}` propagates; rendered inline (`bg-destructive/10 text-destructive`), no toasts.
 
 ## Cross-Cutting Concerns
 
-**Logging:** Backend uses `RUST_LOG=info` via `tracing`/`env_logger`; frontend has no structured logging
-**Validation:** Backend: `validate().map_err(|_| Status::BadRequest)?`; Frontend: inline form validation in route components
-**Authentication:** JWT issued at login (`/api/auth/login`), stored in `localStorage`, injected by `apiFetch`, validated by `AuthGuard` on every backend request
+**Logging:** Backend `RUST_LOG` (tracing); frontend console.
+**Validation:** Backend `validate()` on request structs → `Status::BadRequest`.
+**Authentication:** `AuthGuard` Bearer-JWT request guard on every non-login handler (`backend/src/auth/middleware.rs`); RBAC helpers in `backend/src/shared/rbac.rs`.
 
 ---
 
-*Architecture analysis: 2026-06-18*
+*Architecture analysis: 2026-06-23*

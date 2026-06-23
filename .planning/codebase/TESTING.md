@@ -1,45 +1,45 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-06-18
+**Analysis Date:** 2026-06-23
 
 ## Test Framework
 
-**Unit/Integration Runner:**
-- Vitest (configured in `frontend/vite.config.ts` under `test:`)
-- Environment: `jsdom`
-- Globals: enabled (`describe`, `it`, `expect`, `vi` available without import — but explicit imports are used in practice)
-- Setup file: `frontend/src/test-setup.ts` (imports `@testing-library/jest-dom`)
+**Frontend unit/integration:**
+- Vitest 4 — config in `frontend/vite.config.ts` (`test` block).
+- Environment: `jsdom`, `globals: true`, setup file `./src/test-setup.ts`.
+- e2e excluded from the Vitest run via `exclude: ["e2e/**", "node_modules/**"]`.
 
-**E2E Runner:**
-- Playwright, config at `frontend/playwright.config.ts`
-- Browser: Chromium only
-- Base URL: `http://localhost:15510`
-- Web server: auto-started via `npm run dev`; reuses existing server in non-CI
+**Frontend e2e:**
+- Playwright 1.56 — config in `frontend/playwright.config.ts`. Single `chromium` project, `baseURL: http://localhost:15510`, auto-starts `npm run dev` as `webServer`.
 
-**Assertion Library:**
-- Vitest built-in (`expect`) + `@testing-library/jest-dom` matchers for DOM assertions
+**Assertion / DOM matchers:**
+- Vitest `expect` + `@testing-library/jest-dom` (loaded in `src/test-setup.ts`).
+- React component testing via `@testing-library/react` (`renderHook`, `act`).
+
+**Backend:**
+- Rust built-in `#[test]` / `#[cfg(test)] mod tests` (8 modules across `backend/src`, e.g. `auth/jwt.rs`, `person/handlers.rs`, `shared/pagination.rs`). No external Rust test framework.
 
 **Run Commands:**
 ```bash
-cd frontend && npm run test              # Vitest unit (jsdom), excludes e2e/
-cd frontend && npx playwright test       # e2e (auto-starts frontend; backend + DB must be up)
-# No watch or coverage commands observed in package.json scripts
+cd frontend && npm run test          # Vitest unit (vitest run, jsdom)
+cd frontend && npm run test:watch    # Vitest watch
+cd frontend && npx playwright test   # e2e (needs backend + DB up)
+cd backend && cargo test             # Rust unit tests
 ```
 
 ## Test File Organization
 
-**Unit tests — co-located with source:**
-- `frontend/src/hooks/use-websocket.test.ts` — alongside hook implementation
-- `frontend/src/demo/lib/*.test.ts` — alongside demo library modules
-- `frontend/src/demo/store/world-state.test.tsx` — alongside store
-- `frontend/src/spikes/lib/*.test.ts` — alongside spike modules
+**Location:**
+- Frontend unit tests co-located with source: `frontend/src/demo/lib/abac.test.ts`, `frontend/src/hooks/use-websocket.test.ts`.
+- e2e specs in a dedicated dir: `frontend/e2e/*.spec.ts` (11 specs: auth, navigation, access, audit, roles, nda, organizations, personnel, info-systems, role-based-routing, navigation-flow).
+- Backend tests inline in the module they cover, under `#[cfg(test)] mod tests`.
 
-**E2E tests — separate directory:**
-- `frontend/e2e/*.spec.ts` — one file per domain/feature
-- `frontend/e2e/helpers/` — shared helpers (`auth.ts` provides `loginViaUI`)
+**Naming:**
+- Unit: `*.test.ts(x)`. e2e: `*.spec.ts`. Rust: `mod tests` with `fn test_*`.
 
-**Excluded from Vitest:**
-- `e2e/**` and `node_modules/**` explicitly excluded in `vite.config.ts`
+**Concentration of coverage:**
+- 8 Vitest unit files (mostly pure ABAC/policy/obligations/auditlog logic under `src/demo/lib/`), plus 6 in `src/spikes/lib/` (spike scratch — not production paths).
+- Coverage is heaviest on pure decision logic and the WebSocket hook; route components and most hooks are exercised mainly through Playwright e2e.
 
 ## Test Structure
 
@@ -47,195 +47,98 @@ cd frontend && npx playwright test       # e2e (auto-starts frontend; backend + 
 ```typescript
 import { describe, it, expect } from "vitest";
 
-describe("feature/module name — short description of invariant", () => {
-  it("descriptive test name using kebab-case or plain English", () => {
-    // arrange
-    // act
-    // assert
+describe("pure-computed ABAC: per-domain tiers + deny overrides", () => {
+  it("ALLOWs when clearance, domain tier, need-to-know, and affiliation all pass", () => {
+    const d = decide("subj-1", "res-1");
+    expect(d.decision).toBe("ALLOW");
+    expect(d.rules.every((r) => r.pass)).toBe(true);
   });
 });
 ```
+- Descriptive `describe`/`it` strings stating expected behavior (often citing scenario IDs like `A7`, `A4`).
+- Local helper builders at top of file for terse fixtures (`subj()`, `res()`, `decide()` in `abac.test.ts`).
 
-**Nested describe blocks** are used for sub-feature grouping:
-```typescript
-describe("world-state reducer", () => {
-  // ...
-  describe("TOGGLE_RESOURCE_GRANT action", () => {
-    it("toggles disabledResourceGrantIds on then off", () => { /* ... */ });
-  });
-});
+**Backend (Rust):**
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_jwt_creation_and_validation() {
+        let token = create_jwt(user_id, role, secret).expect("Failed to create JWT");
+        let claims = validate_jwt(&token, secret).expect("Failed to validate JWT");
+        assert_eq!(claims.sub, user_id);
+    }
+}
 ```
-
-**E2E Organization (Playwright):**
-```typescript
-import { test, expect } from "@playwright/test";
-import { loginViaUI } from "./helpers/auth";
-
-test.describe("Feature Name", () => {
-  test.beforeEach(async ({ page }) => {
-    await loginViaUI(page);
-    await page.goto("/admin/route");
-  });
-
-  test("action description", async ({ page }) => {
-    await page.fill('[name="field"]', "value");
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL("/expected-url");
-  });
-});
-```
+- `use super::*;` to reach the module under test; `assert_eq!` / `assert!`; `.expect("...")` / `.unwrap()` for setup.
 
 ## Mocking
 
-**Framework:** Vitest `vi`
+**Framework:** Vitest `vi` (`vi.fn`, `vi.stubGlobal`, `vi.useFakeTimers`, `vi.unstubAllGlobals`).
 
-**Global stubbing pattern (WebSocket mock):**
+**Pattern (global mock + fake timers) — `use-websocket.test.ts`:**
 ```typescript
 beforeEach(() => {
   vi.useFakeTimers();
-  const mockWs = {
-    send: vi.fn(),
-    close: vi.fn(),
-    readyState: 1,
-    onopen: null, onmessage: null, onerror: null, onclose: null,
-  };
-  // Arrow fns can't be constructors — use regular function
-  const WsMock = vi.fn(function MockWS() { return mockWs; });
+  mockWs = { send: vi.fn(), close: vi.fn(), readyState: 1, onopen: null, /* ... */ };
+  // regular function, not arrow — `new WebSocket()` must be constructable
+  WsMock = vi.fn(function MockWS() { return mockWs; });
   vi.stubGlobal("WebSocket", WsMock);
 });
-
-afterEach(() => {
-  vi.useRealTimers();
-  vi.unstubAllGlobals();
-});
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 ```
+- Drive lifecycle by invoking the mock's handlers inside `act()` (`mockWs.onopen?.(new Event("open"))`).
 
-**Fake timers:** Used when testing reconnect/timeout logic. Always paired with `vi.useRealTimers()` in `afterEach`.
+**What to Mock:**
+- Browser globals not in jsdom (`WebSocket`), timers for reconnect/debounce logic.
 
-**What to mock:**
-- Global browser APIs not available in jsdom (e.g., `WebSocket`)
-- Time-dependent code (use `vi.useFakeTimers()` + `vi.advanceTimersByTime(ms)`)
-
-**What NOT to mock:**
-- Pure functions (ABAC evaluators, reducers, policy engines) — test with real inputs
-- Seed data structures — use inline fixtures or real seed imports (see D3-13 below)
+**What NOT to Mock:**
+- Pure logic (ABAC/policy/obligations) is tested directly against real seed data (`SUBJECTS`, `RESOURCES` from `./seed`) — no mocks.
 
 ## Fixtures and Factories
 
-**Pattern: Inline fixtures preferred (D3-13 pattern)**
-
-Tests for pure logic modules define fixtures inline rather than importing from seed files. This makes tests self-contained and immune to seed changes:
-```typescript
-// Good — inline fixture
-const BASELINE_POLICY: ResourcePolicy = {
-  id: "pol-baseline",
-  label: "Baseline",
-  gates: [{ kind: "CLEARANCE" }, { kind: "OWN_TIER_GRANT" }, { kind: "PARENT_TIER_GRANT" }],
-  zone_prereq_id: null,
-};
-
-// Acceptable — seed import ONLY for seed-integration tests
-import { RESOURCE_NODES, RESOURCE_GRANTS } from "./seed";
-```
-
-**Seed data** lives in `**/lib/seed.ts` or `**/store/seed.ts` files co-located with the modules they seed. Not a global fixtures directory.
-
-**Helper functions** within test files for common arrange/act steps:
+**Test Data:**
+- Pure-logic tests pull from in-repo seed arrays and use tiny lookup helpers:
 ```typescript
 const subj = (id: string): Subject => SUBJECTS.find((s) => s.id === id)!;
-const decide = (sId: string, rId: string) =>
-  evaluate(principalFromSubject(subj(sId)), requirementFromResource(res(rId)));
+const res  = (id: string): Resource => RESOURCES.find((r) => r.id === id)!;
 ```
+- e2e relies on seeded users (all password `password123`): `admin`, `manager`, `operator`, `viewer`.
 
-**E2E helpers:**
-- `frontend/e2e/helpers/auth.ts` exports `loginViaUI(page)` — shared across all e2e specs
-
-**Fixed clock for time-sensitive tests:**
-```typescript
-const NOW = new Date("2026-02-15T12:00:00Z");
-const NOW_A = new Date("2026-02-15T00:00:00Z"); // inside window A
-const NOW_B = new Date("2026-04-15T00:00:00Z"); // inside window B
-```
-Always use explicit `Date` constants, never `new Date()` (which would use real system time).
+**Location:** Co-located `seed.ts` in `src/demo/lib/`; no shared factory library.
 
 ## Coverage
 
-**Requirements:** Not enforced — no coverage threshold configured.
+**Requirements:** None enforced. No coverage provider configured in `vite.config.ts` or `package.json`, no CI threshold.
 
-**View Coverage:**
-```bash
-cd frontend && npx vitest run --coverage
-```
-(No `--coverage` script in package.json; add `@vitest/coverage-v8` for this.)
+**View Coverage:** Not wired up. Would require `vitest run --coverage` plus a coverage provider dependency.
 
 ## Test Types
 
-**Unit Tests (Vitest, jsdom):**
-- Scope: pure functions, reducers, ABAC evaluators, policy engines, hooks
-- Location: co-located with source (`*.test.ts`, `*.test.tsx`)
-- No backend required; no network calls
+**Unit:** Vitest against pure functions (ABAC evaluation, policy, obligations, auditlog) and the WebSocket hook.
 
-**Integration Tests (Vitest):**
-- Seed-integration tests in `frontend/src/demo/lib/digital-resource.test.ts` — import real seed fixtures and run engine against them
-- Still use Vitest/jsdom; no real network
+**Integration:** Light — hook-level via `@testing-library/react renderHook`.
 
-**E2E Tests (Playwright):**
-- Scope: full browser flows — auth, navigation, CRUD, role-based routing
-- Requires: backend on `:15520`, DB on `:15530`, frontend auto-started by Playwright
-- Location: `frontend/e2e/*.spec.ts`
-- All tests log in via `loginViaUI` helper (UI-based, not API shortcut)
-
-## Named Pitfall Tests
-
-For phase acceptance criteria, test names are **exactly specified** in the phase plan and must match precisely (the verifier greps for them by name). See `frontend/src/demo/lib/digital-resource.test.ts` for the pattern:
-```typescript
-it("cross-tier-inheritance-blocked", () => { /* ... */ });
-it("advisory-non-blocking", () => { /* ... */ });
-it("unknown-gate-kind-errors", () => { /* ... */ });
-```
-These named tests serve as executable acceptance criteria gates.
+**E2E:** Playwright covers auth and role-based routing plus each admin domain page. Requires backend (:15520) + Postgres (:15530) up; auto-starts the frontend dev server. Note: the WebSocket server (:15540) rejects auth and floods the console — ignore it in tests, don't chase it.
 
 ## Common Patterns
 
-**Async Testing (Playwright):**
+**Async / timer testing:**
 ```typescript
-// Use await for all page actions; assert with expect().toHaveURL / toBeVisible
-await page.fill('[name="username"]', "admin");
-await page.click('button[type="submit"]');
-await expect(page).toHaveURL("/admin/dashboard");
+vi.useFakeTimers();
+act(() => { mockWs.onclose?.(); });  // advance/trigger inside act()
 ```
 
-**Async Testing (Vitest with fake timers):**
+**Error / decision testing:**
 ```typescript
-act(() => {
-  mockWs.onopen?.(new Event("open"));
-});
-act(() => {
-  vi.advanceTimersByTime(5000);
-});
-expect(WsMock).toHaveBeenCalledTimes(1);
+expect(d.decision).toBe("DENY");
+expect(d.failed).toContain("Affiliation");
+// Rust:
+assert!(validate_jwt(&token, wrong_secret).is_err());
 ```
-
-**Immutability assertions (reducer tests):**
-```typescript
-expect(after).not.toBe(before);           // new object reference
-expect(after.flags).not.toBe(before.flags); // nested new reference
-expect(before.compartments).not.toContain("BLACKWING"); // original untouched
-```
-
-**Error path testing:**
-```typescript
-expect(result.allow).toBe(false);
-expect(result.reason).toBe("NO_ACTIVE_POLICY");
-expect(result.gates).toHaveLength(0);
-```
-
-**Playwright error rendering:**
-- Error messages render in `div.bg-destructive/10` — no `role="alert"`. Target via class selector:
-  ```typescript
-  await page.waitForSelector(".bg-destructive\\/10", { timeout: 5000 });
-  ```
 
 ---
 
-*Testing analysis: 2026-06-18*
+*Testing analysis: 2026-06-23*

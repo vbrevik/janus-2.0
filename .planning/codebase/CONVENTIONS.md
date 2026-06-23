@@ -1,164 +1,90 @@
 # Coding Conventions
 
-**Analysis Date:** 2026-06-18
+**Analysis Date:** 2026-06-23
 
 ## Naming Patterns
 
 **Files:**
-- Frontend TypeScript: kebab-case (`use-person.ts`, `auth-context.tsx`, `protected-route.tsx`)
-- React components: PascalCase files are allowed but kebab-case is the norm (`ProtectedRoute.tsx` is an explicit exception noted in CLAUDE.md as the role-aware guard; `protected-route.tsx` is auth-only)
-- Rust source files: snake_case (`handlers.rs`, `models.rs`, `rocket_setup.rs`)
+- Frontend TS/TSX: kebab-case for modules/hooks/libs — `use-person.ts`, `api.ts`, `auth-context.tsx`. Page logic co-located as `_component.tsx` under each route dir (`frontend/src/routes/admin/person/_component.tsx`).
+- React component files exporting a component use PascalCase names internally but kebab-case filenames; the canonical guard is the exception: `frontend/src/components/ProtectedRoute.tsx` (PascalCase file) vs the auth-only lowercase `protected-route.tsx` — do not confuse them.
+- Backend Rust: snake_case files — each domain is `mod.rs`, `models.rs`, `handlers.rs` under `backend/src/<domain>/`.
+- Test files: `*.test.ts(x)` co-located next to source (`frontend/src/hooks/use-websocket.test.ts`); e2e specs are `*.spec.ts` under `frontend/e2e/`.
 
-**Functions/Hooks:**
-- React hooks: `useXxx` camelCase (`usePersonList`, `useCreatePerson`, `useWebSocket`)
-- Rust functions: snake_case (`list_persons`, `create_rocket`)
-- Frontend utility functions: camelCase (`apiFetch`, `loginViaUI`)
+**Functions:**
+- Frontend: camelCase (`apiFetch`, `usePersonList`, `principalFromSubject`); React hooks prefixed `use*`.
+- Backend: snake_case Rocket handler fns (`list_persons`, `get_person`, `create_person`).
 
 **Variables:**
-- TypeScript: camelCase
-- Rust: snake_case
-- DB enum strings: SCREAMING_SNAKE_CASE (`TOP_SECRET`, `MILITARY_1`, `ALLOW`, `DENY`)
+- camelCase (frontend), snake_case (backend). Query-key factories use a frozen object pattern: `personKeys` in `frontend/src/hooks/use-person.ts` with `as const` tuples.
 
-**Types/Interfaces:**
-- TypeScript: PascalCase (`Person`, `ApiError`, `CreatePersonRequest`, `PersonListResponse`)
-- Rust structs: PascalCase (`CreatePersonRequest`, `PaginatedResponse`, `AuthGuard`)
-- Type imports use explicit `type` keyword: `import type { Person } from "@/types/person"`
-
-**Query Keys:**
-- Defined as a const object per domain: `personKeys`, with `all`, `lists()`, `list(...)`, `details()`, `detail(id)` factory methods
-- Convention: `[...personKeys.all, "list"] as const`
+**Types:**
+- PascalCase everywhere — TS interfaces/types (`Person`, `CreatePersonRequest`, `ApiError`) and Rust structs (`Person`, `PaginationParams`, `PaginatedResponse<T>`).
+- DB string enums are SCREAMING_SNAKE_CASE: clearance levels `UNCLASSIFIED | CONFIDENTIAL | SECRET | TOP_SECRET` (DB CHECK constraint — not `NONE`).
 
 ## Code Style
 
 **Formatting:**
-- No Prettier. ESLint 9 flat config enforces style.
-- Single quotes for strings in TypeScript
-- Trailing commas enabled
-- Rust: `rustfmt` (standard)
+- No Prettier. Frontend style is enforced only by ESLint + author discipline.
+- **Quote style is inconsistent in practice.** CLAUDE.md mandates single quotes + trailing commas, and core files like `frontend/src/lib/api.ts` use single quotes. But newer demo/spike/test code (`frontend/src/demo/lib/abac.test.ts`, `frontend/src/hooks/use-websocket.test.ts`) uses double quotes. **When editing an existing file, match that file's prevailing quote style; for new files prefer single quotes per CLAUDE.md.**
+- Backend: `rustfmt` defaults (no `rustfmt.toml` present). Raw SQL written in `r#"..."#` strings.
 
 **Linting:**
-- ESLint 9 flat config at `frontend/eslint.config.js`
-- Plugins: `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `typescript-eslint`
-- Strict TypeScript: `noUnusedLocals`, `noUnusedParameters` in `tsconfig.app.json`
+- ESLint 9 flat config — `frontend/eslint.config.js`. Extends `js.configs.recommended`, `tseslint.configs.recommended`, `react-hooks` recommended-latest, and `react-refresh` vite. Ignores `dist`.
+- Strict TypeScript — `frontend/tsconfig.app.json`: `strict`, `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch`, `noUncheckedSideEffectImports`, `verbatimModuleSyntax`, `erasableSyntaxOnly`.
+- Run: `cd frontend && npm run lint` (`eslint .`). Build is `tsc -b && vite build` (type errors break the build).
 
 ## Import Organization
 
-**Frontend:**
-1. External packages (e.g., `@tanstack/react-query`, `vitest`)
-2. Internal imports using `@/` alias (never relative `../../`)
-3. Type imports grouped with `import type { ... }`
+**Order (observed):**
+1. External packages (react, @tanstack/*, rocket, sqlx, validator)
+2. Internal modules
+3. Type-only imports (often grouped with `import type { ... }`)
 
-**`@/` alias** resolves to `frontend/src/`. Configured in `vite.config.ts` and `tsconfig.app.json`.
-
-**Example:**
-```typescript
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import type { Person, PersonListResponse } from "@/types/person";
-```
-
-**Rust:**
-- Standard Rust grouping: std, extern crates, crate internals
-- Handler files use `super::models::` for sibling imports, `crate::` for cross-module
-
-## API Client Pattern
-
-**Base URL:** `VITE_API_URL` env var or `http://localhost:15520` (no `/api` suffix).
-
-**Every endpoint string must start with `/api/...`** — passed to `apiFetch` / `api.*` in `frontend/src/lib/api.ts`. Omitting `/api` causes silent 404.
-
-**`api` object:**
-```typescript
-api.get<T>(endpoint)
-api.post<T>(endpoint, data)
-api.put<T>(endpoint, data)
-api.delete(endpoint)
-```
-
-**Auth:** JWT read from `localStorage.getItem('token')` and injected as `Authorization: Bearer <token>` in every request.
+**Path Aliases:**
+- Frontend: `@/` → `src/` (configured in both `vite.config.ts` and `tsconfig.app.json`). **Always use `@/`; never `../../` relative climbing.**
+- Backend: `crate::` / `super::` Rust module paths (`use crate::auth::middleware::AuthGuard;`, `use super::models::{...}`).
 
 ## Error Handling
 
-**Backend (Rust):**
-- Handlers return `Result<Json<T>, Status>` — never panic
-- Validation: `validate().map_err(|_| Status::BadRequest)?`
-- DB errors: `.map_err(|_| Status::InternalServerError)?`
-- Not found: `.ok_or(Status::NotFound)?`
-- Raw SQL only: `r#"SELECT ..."#` in `sqlx::query!` / `sqlx::query_scalar`
+**Backend:**
+- Handlers return `Result<Json<T>, Status>` and never panic.
+- Canonical mappings: `validate().map_err(|_| Status::BadRequest)?`, `.map_err(|_| Status::InternalServerError)?`, `.ok_or(Status::NotFound)?`.
+- Inputs validated with the `validator` crate (`pagination.validate()`, request structs derive `Validate`).
+- Every non-login handler takes an `AuthGuard` (Bearer-JWT request guard); use `_auth: AuthGuard` when the value is unused.
 
 **Frontend:**
-- `ApiError { status, message, data }` thrown from `apiFetch` on non-2xx responses
-- Errors rendered inline with `bg-destructive/10 text-destructive` classes — no toasts
-- Mutations: use `mutateAsync` in handlers and gate submission buttons on `mutation.isPending`
-- Never swallow `ApiError` — propagate to component for display
+- `apiFetch<T>` throws `ApiError { status, data }` (`frontend/src/lib/api.ts`) — a custom `Error` subclass carrying HTTP status.
+- API base URL has NO `/api` suffix; every endpoint string must start with `/api/...` or it 404s silently.
+- Errors propagate to React Query; render inline with `bg-destructive/10 text-destructive` — no toast system. Use `mutateAsync` in handlers and gate buttons on `mutation.isPending`.
 
-## React Query Patterns
+## Logging
 
-**Hooks structure:**
-- One hook file per domain in `frontend/src/hooks/use-*.ts`
-- Each file exports: query hooks (`usePersonList`, `usePerson`), mutation hooks (`useCreatePerson`, `useUpdatePerson`, `useDeletePerson`)
-- Mutation `onSuccess` invalidates relevant query keys via `queryClient.invalidateQueries`
+**Backend:** `RUST_LOG` env + Rocket/`log` (run with `RUST_LOG=info cargo run`). No structured logging framework.
 
-**Mutation invalidation:**
-```typescript
-onSuccess: () => {
-  queryClient.invalidateQueries({ queryKey: personKeys.lists() });
-  queryClient.invalidateQueries({ queryKey: personKeys.detail(id) });
-}
-```
-
-## Backend Handler Pattern
-
-**Every non-login handler** requires `_auth: AuthGuard` as a parameter (JWT bearer guard).
-
-**Route macro placement:** Handlers use RELATIVE paths (`#[get("/<id>")]`). The module is mounted at `/api/<domain>` in `rocket_setup.rs`. Never hardcode `/api/` in handler macros — this double-prefixes the URL.
-
-**Handler signature pattern:**
-```rust
-#[get("/?<page>&<per_page>&<search>")]
-pub async fn list_persons(
-    page: Option<i32>,
-    per_page: Option<i32>,
-    search: Option<String>,
-    db: &State<PgPool>,
-    _auth: AuthGuard,
-) -> Result<Json<PaginatedResponse<Person>>, Status>
-```
-
-## Module Structure (Backend)
-
-**Domain module layout** (`backend/src/<domain>/`):
-- `mod.rs` — exports + `routes()` function
-- `models.rs` — sqlx/serde structs, `#[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]`
-- `handlers.rs` — Rocket handler functions
-
-**No service layer** — handlers query `PgPool` directly via inline `sqlx`.
+**Frontend:** `console` only (e.g. WebSocket reconnect chatter). No client logging library.
 
 ## Comments
 
-**Frontend:** Inline comments explain non-obvious behavior, API quirks, and workarounds. File-level comments describe purpose. Avoid redundant comments that restate code.
+**When to Comment:**
+- Inline comments explain non-obvious intent and gotchas (SQL-binding safety in `person/handlers.rs`, "arrow fns can't be constructors" in the WS test mock). Keep comments to the *why*, not the *what*.
+- No enforced JSDoc/TSDoc or Rust doc-comment convention; doc comments are sparse.
 
-**Rust:** Doc comments (`///`) on pub structs and helper methods. Inline comments for SQL query construction rationale.
+## Function Design
 
-**Test files:** File-level comment blocks document acceptance criteria, phase references (e.g., `T-09-11`), and named pitfall tests. This is mandatory for tests that implement acceptance criteria.
+**Size:** Handlers and hooks are moderate; `backend/src/person/handlers.rs` is ~390 lines holding the full person CRUD surface (one fn per verb).
 
-## Routing
+**Parameters:** Rocket handlers take route params as `Option<T>` with `.unwrap_or(default)`; `db: &State<PgPool>` injected; `AuthGuard` last. Frontend hooks take primitive args with defaults (`usePersonList(page = 1, perPage = 10, search = "")`).
 
-**TanStack file-based routing** under `frontend/src/routes/`. Role subtrees: `admin/`, `enduser/`, `official/`.
+**Return Values:** Backend `Result<Json<T>, Status>`; list endpoints return `PaginatedResponse<T>` = `{ items, total, page, per_page, total_pages }`. Frontend hooks return React Query result objects.
 
-**`routeTree.gen.ts` is GENERATED** — never hand-edit. Regenerate after route changes with TanStack Router Vite plugin.
+## Module Design
 
-**ProtectedRoute distinction:**
-- `frontend/src/components/ProtectedRoute.tsx` (PascalCase) — role-aware guard with `allowedRoles` prop
-- `frontend/src/components/protected-route.tsx` (kebab-case) — auth-only, no role check
-- Always use `ProtectedRoute` with `allowedRoles` for new protected routes
+**Backend:** Flat domain modules; `mod.rs` exports + a `routes()` fn. **No service layer** — handlers query `PgPool` directly via inline `sqlx`. Cross-cutting infra lives in `backend/src/shared/` (`rocket_setup.rs`, `response.rs`, `pagination.rs`, `error.rs`, `rbac.rs`, `auth/middleware.rs`).
 
-## UI Component Rules
+**Frontend:** Data layer = React Query hooks in `src/hooks/use-*.ts` → `src/lib/api.ts`. Global state via `AuthContext` (JWT in `localStorage`) + `WebSocketContext`, provided in `routes/__root.tsx`. Query keys via centralized `*Keys` factory objects.
 
-- **shadcn/ui** (Radix-based) for all UI components. Registry config at `frontend/components.json`.
-- **`Dialog` is hand-rolled** (`frontend/src/components/ui/dialog.tsx`) — not Radix. Has `role="dialog"` but no focus-trap/portal.
-- **`<SelectItem value="">` crashes** — Radix throws on empty string value. Use sentinel (`value="ALL"`) and treat as "no filter".
+**Exports/Barrel files:** Hooks export named functions plus a `personKeys`-style const. `routeTree.gen.ts` is GENERATED — never hand-edit.
 
 ---
 
-*Convention analysis: 2026-06-18*
+*Convention analysis: 2026-06-23*
