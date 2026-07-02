@@ -5,7 +5,13 @@
 
 import { describe, it, expect } from "vitest";
 import { reducer, seedWorld } from "./world-state";
-import { ROLES, type Compartment } from "../lib/model";
+import {
+  ROLES,
+  type Compartment,
+  type DigitalResourceWorld,
+  type ResourceAccessDelegate,
+  type ResourceAccessGrant,
+} from "../lib/model";
 import { evaluate, principalFromSubject, type Requirement } from "../lib/abac";
 
 const find = (state: ReturnType<typeof seedWorld>, id: string) =>
@@ -171,6 +177,157 @@ describe("world-state reducer", () => {
       expect(toggled.disabledGrantIds.has("grant-dana-block-a")).toBe(true);
       expect(toggled.digitalResources.disabledResourceGrantIds.size).toBe(0);
       // Physical toggle only changes disabledGrantIds; digitalResources unchanged.
+    });
+  });
+
+  describe("SET_DIGITAL_RESOURCES action", () => {
+    const emptyWorld = (): DigitalResourceWorld => ({
+      networks: [],
+      platforms: [],
+      applications: [],
+      orgLinks: [],
+      policies: [],
+      policyAssignments: [],
+      grants: [],
+      delegates: [],
+      disabledResourceGrantIds: new Set(),
+    });
+
+    it("replaces digitalResources with the dispatched world", () => {
+      const state = seedWorld();
+      const world = emptyWorld();
+      world.networks = [
+        {
+          id: "net-1",
+          name: "MilNet",
+          tier: "NETWORK",
+          classification: "SECRET",
+          org_links: [],
+          policy_assignments: [],
+        },
+      ];
+
+      const next = reducer(state, {
+        type: "SET_DIGITAL_RESOURCES",
+        world,
+      });
+
+      expect(next.digitalResources.networks).toBe(world.networks);
+      expect(next.digitalResources.platforms).toBe(world.platforms);
+    });
+
+    it("preserves disabledResourceGrantIds from prior state across a dispatch with an empty Set", () => {
+      const state = seedWorld();
+      const toggled = reducer(state, {
+        type: "TOGGLE_RESOURCE_GRANT",
+        resourceGrantId: "rsrc-grant-milnet-active",
+      });
+      expect(
+        toggled.digitalResources.disabledResourceGrantIds.has(
+          "rsrc-grant-milnet-active",
+        ),
+      ).toBe(true);
+
+      // Dispatched world's disabledResourceGrantIds is a fresh empty Set (as a
+      // real mapWorldResponse() refetch always produces).
+      const next = reducer(toggled, {
+        type: "SET_DIGITAL_RESOURCES",
+        world: emptyWorld(),
+      });
+
+      expect(
+        next.digitalResources.disabledResourceGrantIds.has(
+          "rsrc-grant-milnet-active",
+        ),
+      ).toBe(true);
+    });
+  });
+
+  describe("UPSERT_RESOURCE_GRANT / UPSERT_RESOURCE_DELEGATE actions", () => {
+    const grantFixture = (
+      overrides: Partial<ResourceAccessGrant> = {},
+    ): ResourceAccessGrant => ({
+      id: "grant-1",
+      person_id: "person-1",
+      resource_id: "net-1",
+      valid_from: null,
+      valid_until: null,
+      ...overrides,
+    });
+
+    const delegateFixture = (
+      overrides: Partial<ResourceAccessDelegate> = {},
+    ): ResourceAccessDelegate => ({
+      id: "delegate-1",
+      resource_id: "net-1",
+      delegate_type: "PERSON",
+      delegate_person_id: "person-2",
+      delegate_org_id: null,
+      granted_by_org_id: "MILITARY_1",
+      valid_from: null,
+      valid_until: null,
+      ...overrides,
+    });
+
+    it("UPSERT_RESOURCE_GRANT appends when the id is novel", () => {
+      const state = seedWorld();
+      expect(state.digitalResources.grants).toHaveLength(0);
+
+      const next = reducer(state, {
+        type: "UPSERT_RESOURCE_GRANT",
+        grant: grantFixture(),
+      });
+
+      expect(next.digitalResources.grants).toHaveLength(1);
+      expect(next.digitalResources.grants[0].id).toBe("grant-1");
+    });
+
+    it("UPSERT_RESOURCE_GRANT replaces in place (same length) when the id already exists", () => {
+      const state = seedWorld();
+      const withGrant = reducer(state, {
+        type: "UPSERT_RESOURCE_GRANT",
+        grant: grantFixture(),
+      });
+
+      const until = new Date("2026-06-01T00:00:00Z");
+      const next = reducer(withGrant, {
+        type: "UPSERT_RESOURCE_GRANT",
+        grant: grantFixture({ valid_until: until }),
+      });
+
+      expect(next.digitalResources.grants).toHaveLength(1);
+      expect(next.digitalResources.grants[0].valid_until).toBe(until);
+    });
+
+    it("UPSERT_RESOURCE_DELEGATE appends when the id is novel", () => {
+      const state = seedWorld();
+      expect(state.digitalResources.delegates).toHaveLength(0);
+
+      const next = reducer(state, {
+        type: "UPSERT_RESOURCE_DELEGATE",
+        delegate: delegateFixture(),
+      });
+
+      expect(next.digitalResources.delegates).toHaveLength(1);
+      expect(next.digitalResources.delegates[0].id).toBe("delegate-1");
+    });
+
+    it("UPSERT_RESOURCE_DELEGATE replaces in place (same length) when the id already exists", () => {
+      const state = seedWorld();
+      const withDelegate = reducer(state, {
+        type: "UPSERT_RESOURCE_DELEGATE",
+        delegate: delegateFixture(),
+      });
+
+      const next = reducer(withDelegate, {
+        type: "UPSERT_RESOURCE_DELEGATE",
+        delegate: delegateFixture({ delegate_org_id: "MILITARY_2" }),
+      });
+
+      expect(next.digitalResources.delegates).toHaveLength(1);
+      expect(next.digitalResources.delegates[0].delegate_org_id).toBe(
+        "MILITARY_2",
+      );
     });
   });
 });
