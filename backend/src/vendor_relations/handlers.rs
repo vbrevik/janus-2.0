@@ -154,6 +154,7 @@ pub async fn get_vendor_hierarchy(
 pub async fn delete_vendor_relation(
     db: &State<PgPool>,
     relation_id: i32,
+    _auth: AuthGuard, // Require authentication for deleting vendor relations (SEC-01)
 ) -> Result<Json<ApiResponse<String>>, String> {
     sqlx::query("DELETE FROM vendor_relations WHERE id = $1")
         .bind(relation_id)

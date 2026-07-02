@@ -10,6 +10,21 @@ use crate::{
     messaging, nda, organizations, person, relations, roles, shared, vendor_relations,
 };
 
+/// Validate a raw JWT secret value: present and non-empty after trimming (SEC-03).
+pub fn validate_jwt_secret(raw: Option<String>) -> Result<String, String> {
+    match raw {
+        Some(s) if !s.trim().is_empty() => Ok(s),
+        _ => Err(
+            "JWT_SECRET must be set to a non-empty value (no fallback secret exists)".to_string(),
+        ),
+    }
+}
+
+/// Read JWT_SECRET from the environment, failing loud if unset or empty (SEC-03).
+pub fn read_jwt_secret() -> Result<String, String> {
+    validate_jwt_secret(env::var("JWT_SECRET").ok())
+}
+
 pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
     // Load environment variables
     dotenvy::dotenv().ok();
@@ -19,9 +34,11 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
         "postgresql://janus:janus_dev_password@localhost:15530/janus2".to_string()
     });
 
-    // Get JWT secret (with test fallback)
-    let jwt_secret = env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "test-secret-key-must-be-at-least-32-characters-long".to_string());
+    // Get JWT secret — abort startup (before DB pool / port binding) if unset or empty (SEC-03)
+    let jwt_secret = read_jwt_secret().unwrap_or_else(|e| {
+        eprintln!("FATAL: {}", e);
+        std::process::exit(1);
+    });
 
     // Create database connection pool
     let db_pool = PgPoolOptions::new()
@@ -56,9 +73,9 @@ pub async fn create_rocket() -> rocket::Rocket<rocket::Build> {
         println!("✅ JWT secret loaded");
     }
 
-    // Configure CORS
+    // Configure CORS — single dev origin only; never wildcard with credentials (SEC-04)
     let cors = CorsOptions::default()
-        .allowed_origins(AllowedOrigins::all())
+        .allowed_origins(AllowedOrigins::some_exact(&["http://localhost:15510"]))
         .allowed_methods(
             vec![
                 Method::Get,
