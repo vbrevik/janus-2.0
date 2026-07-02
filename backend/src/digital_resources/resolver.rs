@@ -365,6 +365,12 @@ pub fn resolve_resource_access(
 
 // canIssueResourceGrant (model.ts:1163). True iff the actor org holds an active
 // ADMIN org_link on the resource OR an active matching ORG delegate. Pure.
+//
+// NOT currently called: the HTTP write path uses role-based authz (Option B,
+// 11-03 decision) instead of this org-based rule. Retained for SEED-012
+// (org-based resource authz), which will wire it back in once a person→org
+// linkage exists in the schema.
+#[allow(dead_code)]
 pub fn can_issue_resource_grant(
     actor_org_id: &str,
     resource: &ResolverResource,

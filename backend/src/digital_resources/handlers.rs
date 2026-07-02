@@ -126,13 +126,13 @@ pub async fn get_world(
 // ---------------------------------------------------------------------------
 //
 // Validates issuing authority server-side before persisting.
-// Sequence (RSRC-BE-04 / T-11-08):
-//   1. Derive `now` at the HTTP edge (NOT inside the resolver — determinism).
-//   2. Load the resource's org_links + policy_assignments from DB to build a ResolverResource.
-//   3. Load all delegates for the resource from DB.
-//   4. Call can_issue_resource_grant — on false return 403 immediately.
-//   5. INSERT ... ON CONFLICT DO NOTHING (idempotent — uq_grant / T-11-11).
-//   6. Return the persisted row (or the existing row if it was a duplicate).
+// Sequence (RSRC-BE-04 / T-11-08, Option B — 11-03 decision):
+//   1. Role gate: only ADMIN-role JWTs may issue (resolver::can_issue_resource_grant
+//      is NOT called — it is retained for SEED-012's org-based model).
+//   2. assert_resource_exists — 404 on unknown resource.
+//   3. INSERT ... ON CONFLICT DO NOTHING (idempotent — uq_grant / T-11-11;
+//      NULLS NOT DISTINCT since 20260601130003 so null-window grants dedupe too).
+//   4. Return the persisted row (or the existing row if it was a duplicate).
 #[post("/grants", data = "<body>")]
 pub async fn issue_grant(
     body: Json<IssueGrantRequest>,

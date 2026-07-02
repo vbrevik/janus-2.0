@@ -127,3 +127,19 @@ None — no new surface beyond the plan's threat model; T-11-13..16 all mitigate
 ## Self-Check: PASSED
 
 All 4 created/key files exist on disk; all 3 task commits (`6d3c221`, `491708d`, `539fc5a`) present in git log.
+
+## Gap Closure (post-verification)
+
+**Gap (verifier, ROADMAP SC 4 / RSRC-BE-04):** `uq_grant UNIQUE (person_id, resource_id, valid_from, valid_until)` treated NULLs as distinct (Postgres default), so `issue_grant`'s `ON CONFLICT DO NOTHING` never fired for the endpoint's default request shape (both window fields null) — duplicate grant rows accumulated (4 identical `(test-person-idempotent, rsrc-homeguard, NULL, NULL)` rows on `janus2_fresh`). Delegates were unaffected (NULL-safe `WHERE NOT EXISTS` pattern).
+
+**Fix chosen:** constraint-level — new migration `20260601130003_fix_uq_grant_nulls_not_distinct.sql` dedupes existing null-window duplicates (`ctid`-based, `IS NOT DISTINCT FROM` grouping), then recreates `uq_grant` as `UNIQUE NULLS NOT DISTINCT` (PG 15.15 supports it).
+*Why over the handler-side `WHERE NOT EXISTS` alternative:* the constraint protects the data layer against ANY writer (future handlers, scripts), not just this code path; the existing handler (`ON CONFLICT (cols) DO NOTHING` + `IS NOT DISTINCT FROM` re-select) works unchanged because ON CONFLICT column-list inference matches the new index; and it restores the original T-11-11 design intent of a constraint-backed natural key.
+
+**Applied:** direct psql to both `janus2` and `janus2_fresh` (same path as prior migrations; `sqlx migrate run` still broken on drifted `janus2`). Constraint verified on both: `UNIQUE NULLS NOT DISTINCT (person_id, resource_id, valid_from, valid_until)`. The 6 duplicate/leftover `test-person-%` rows on `janus2_fresh` deleted — grants back to the 18 seed rows.
+
+**Verification (quoted):**
+- `DATABASE_URL=...janus2_fresh cargo test --test digital_resources_api_test test_issue_grant_idempotent -- --exact --include-ignored` → `test test_issue_grant_idempotent ... ok` / `test result: ok. 1 passed; 0 failed` — and the DB held exactly **1** matching row after the duplicate issue (cleaned after).
+- `cargo test --test security_hardening_test -- --include-ignored` → `12 passed; 0 failed` (no regression).
+- `cargo test --test resolver_parity` → `1 passed; 0 failed` (byte-parity intact).
+
+**Cleanup (verifier warning):** `resolver::can_issue_resource_grant` marked `#[allow(dead_code)]` with the comment corrected — retained for SEED-012 (org-based authz), not deleted; the stale org-based sequence comment on `issue_grant` rewritten to describe the actual Option B flow. Build warnings 34 → 29.
