@@ -7,7 +7,7 @@
 // timestamps, over the SAME fixtures. Covers the two D-06 mandatory cases:
 //   - inclusive policy-window boundary (valid_until == now still ALLOWs)
 //   - no covering policy -> fail-closed NO_ACTIVE_POLICY DENY, empty gate set
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde_json::Value;
 
 use janus_backend::digital_resources::models::GateDescriptor;
@@ -16,9 +16,12 @@ use janus_backend::digital_resources::resolver::{
     resolve_resource_access, ResolverPolicy, ResolverPolicyAssignment, ResolverResource,
 };
 
-// Parse a fixed UTC timestamp literal into NaiveDateTime (UTC wall-clock).
-fn naive(s: &str) -> NaiveDateTime {
-    NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S").expect("valid fixed timestamp")
+// Parse a fixed UTC timestamp literal into DateTime<Utc> (the resolver's time
+// type). The wall-clock string is interpreted as UTC.
+fn utc(s: &str) -> DateTime<Utc> {
+    NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S")
+        .expect("valid fixed timestamp")
+        .and_utc()
 }
 
 // Build the SAME MilNet fixture the TS exporter uses.
@@ -33,8 +36,8 @@ fn milnet_fixture() -> (ResolverResource, Vec<ResourceAccessGrant>) {
     };
     let assignment = ResolverPolicyAssignment {
         policy,
-        valid_from: Some(naive("2026-02-01T00:00:00")),
-        valid_until: Some(naive("2026-02-28T23:59:59")),
+        valid_from: Some(utc("2026-02-01T00:00:00")),
+        valid_until: Some(utc("2026-02-28T23:59:59")),
     };
     let resource = ResolverResource {
         id: "rsrc-milnet".to_string(),
@@ -54,7 +57,7 @@ fn milnet_fixture() -> (ResolverResource, Vec<ResourceAccessGrant>) {
     (resource, grants)
 }
 
-fn resolve_at(now: NaiveDateTime) -> Value {
+fn resolve_at(now: DateTime<Utc>) -> Value {
     let (resource, grants) = milnet_fixture();
     let result = resolve_resource_access(
         "subj-1",
@@ -74,11 +77,11 @@ fn resolver_parity_against_golden_fixtures() {
         serde_json::from_str(include_str!("fixtures/resolver-golden.json")).expect("golden json");
 
     // Case 1 — mid-window ALLOW.
-    let now_a = resolve_at(naive("2026-02-15T12:00:00"));
+    let now_a = resolve_at(utc("2026-02-15T12:00:00"));
     assert_eq!(now_a, golden["milnet_now_a"], "mid-window ALLOW parity");
 
     // Case 2 — inclusive boundary: now == valid_until must still ALLOW.
-    let boundary = resolve_at(naive("2026-02-28T23:59:59"));
+    let boundary = resolve_at(utc("2026-02-28T23:59:59"));
     assert_eq!(
         boundary, golden["milnet_boundary"],
         "inclusive boundary parity"
@@ -89,7 +92,7 @@ fn resolver_parity_against_golden_fixtures() {
     );
 
     // Case 3 — before all windows: fail-closed NO_ACTIVE_POLICY DENY.
-    let no_policy = resolve_at(naive("2025-06-01T00:00:00"));
+    let no_policy = resolve_at(utc("2025-06-01T00:00:00"));
     assert_eq!(no_policy, golden["no_policy_deny"], "no-policy DENY parity");
     assert_eq!(
         golden["no_policy_deny"]["allow"], false,

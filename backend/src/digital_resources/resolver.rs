@@ -5,7 +5,7 @@
 // canIssueResourceGrant ~L1163, isWindowActive ~L822, selectActivePolicy,
 // effectiveClassification, CLEARANCE_RANK ~L15). This module is PURE:
 //   - no Rocket imports, no &State<PgPool>
-//   - every time-dependent fn takes an explicit `now: NaiveDateTime`
+//   - every time-dependent fn takes an explicit `now: DateTime<Utc>`
 //   - NO Utc::now()/chrono::Utc::now() anywhere (determinism — T-11-07)
 //
 // Structural invariants enforced here (threat register):
@@ -17,7 +17,12 @@
 //     11 it is stubbed to None even when zone_prereq_id is present (documented
 //     deviation, 11-RESEARCH §Open Questions Q3; parity fixtures use
 //     zone_prereq_id == null).
-use chrono::NaiveDateTime;
+//
+// DateTime<Utc> note (Plan 03 fix): All DB timestamps are TIMESTAMPTZ; sqlx
+// decodes them as DateTime<Utc>. The resolver previously used DateTime<Utc>
+// but was updated to DateTime<Utc> throughout so handlers need no conversion.
+// The parity test (resolver_parity.rs) constructs its own DateTime<Utc> fixtures.
+use chrono::{DateTime, Utc};
 
 use super::models::{
     GateDescriptor, PolicyVersion, ResourceAccessGrant, ResourceAccessResult, ResourceGateResult,
@@ -38,8 +43,8 @@ pub const TIER_APPLICATION: &str = "APPLICATION";
 pub struct ResolverOrgLink {
     pub org_id: String,
     pub role: String,
-    pub valid_from: Option<NaiveDateTime>,
-    pub valid_until: Option<NaiveDateTime>,
+    pub valid_from: Option<DateTime<Utc>>,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 // A resource node as the resolver sees it. `classification` is the node's own
@@ -61,8 +66,8 @@ pub struct ResolverResource {
 #[derive(Debug, Clone)]
 pub struct ResolverPolicyAssignment {
     pub policy: ResolverPolicy,
-    pub valid_from: Option<NaiveDateTime>,
-    pub valid_until: Option<NaiveDateTime>,
+    pub valid_from: Option<DateTime<Utc>>,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone)]
@@ -94,9 +99,9 @@ fn clearance_rank(c: &str) -> i32 {
 
 // isWindowActive (model.ts:822). BOTH boundaries inclusive; null = unbounded.
 fn is_window_active(
-    valid_from: Option<NaiveDateTime>,
-    valid_until: Option<NaiveDateTime>,
-    now: NaiveDateTime,
+    valid_from: Option<DateTime<Utc>>,
+    valid_until: Option<DateTime<Utc>>,
+    now: DateTime<Utc>,
 ) -> bool {
     let from_ok = valid_from.map_or(true, |vf| vf <= now);
     let until_ok = valid_until.map_or(true, |vu| vu >= now); // >= NOT > (inclusive)
@@ -107,7 +112,7 @@ fn is_window_active(
 // `now`, else None — the caller turns None into NO_ACTIVE_POLICY.
 fn select_active_policy(
     assignments: &[ResolverPolicyAssignment],
-    now: NaiveDateTime,
+    now: DateTime<Utc>,
 ) -> Option<&ResolverPolicyAssignment> {
     assignments
         .iter()
@@ -136,7 +141,7 @@ fn effective_classification(
 fn active_org_links_for_role<'a>(
     org_links: &'a [ResolverOrgLink],
     role: &str,
-    now: NaiveDateTime,
+    now: DateTime<Utc>,
 ) -> Vec<&'a ResolverOrgLink> {
     org_links
         .iter()
@@ -168,7 +173,7 @@ fn evaluate_own_tier_grant_gate(
     subject: &str,
     resource: &ResolverResource,
     grants: &[ResourceAccessGrant],
-    now: NaiveDateTime,
+    now: DateTime<Utc>,
 ) -> ResourceGateResult {
     let found = grants.iter().any(|g| {
         g.person_id == subject
@@ -195,7 +200,7 @@ fn evaluate_parent_tier_grant_gate(
     subject: &str,
     resource: &ResolverResource,
     grants: &[ResourceAccessGrant],
-    now: NaiveDateTime,
+    now: DateTime<Utc>,
 ) -> ResourceGateResult {
     if resource.tier == TIER_NETWORK {
         return ResourceGateResult {
@@ -233,7 +238,7 @@ fn evaluate_required_role_gate(
     role: &str,
     subject_org_id: &str,
     resource: &ResolverResource,
-    now: NaiveDateTime,
+    now: DateTime<Utc>,
 ) -> ResourceGateResult {
     let matches = active_org_links_for_role(&resource.org_links, role, now);
     let pass = matches.iter().any(|l| l.org_id == subject_org_id);
@@ -261,7 +266,7 @@ fn evaluate_gate(
     effective_class: &str,
     resource: &ResolverResource,
     grants: &[ResourceAccessGrant],
-    now: NaiveDateTime,
+    now: DateTime<Utc>,
 ) -> ResourceGateResult {
     match gate {
         GateDescriptor::Clearance => evaluate_clearance_gate(subject_clearance, effective_class),
@@ -297,7 +302,7 @@ pub fn resolve_resource_access(
     resource: &ResolverResource,
     all_platforms: &[ResolverPlatform],
     all_grants: &[ResourceAccessGrant],
-    now: NaiveDateTime,
+    now: DateTime<Utc>,
 ) -> ResourceAccessResult {
     // Step 1: select the active policy. Uncovered timestamp => fail-closed DENY.
     let assignment = match select_active_policy(&resource.policy_assignments, now) {
@@ -349,8 +354,10 @@ pub fn resolve_resource_access(
         gates,
         zone_advisory,
         policy_version: Some(PolicyVersion {
-            valid_from: assignment.valid_from,
-            valid_until: assignment.valid_until,
+            // PolicyVersion serializes as a naive (no-tz) ISO string for TS parity;
+            // convert the DateTime<Utc> window at this output boundary.
+            valid_from: assignment.valid_from.map(|d| d.naive_utc()),
+            valid_until: assignment.valid_until.map(|d| d.naive_utc()),
         }),
         reason: None,
     }
@@ -362,7 +369,7 @@ pub fn can_issue_resource_grant(
     actor_org_id: &str,
     resource: &ResolverResource,
     all_delegates: &[super::models::ResourceAccessDelegate],
-    now: NaiveDateTime,
+    now: DateTime<Utc>,
 ) -> bool {
     // ADMIN path: an active ADMIN org_link held by the actor org.
     let admin_links = active_org_links_for_role(&resource.org_links, "ADMIN", now);

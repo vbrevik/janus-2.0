@@ -7,7 +7,6 @@
 //
 // Route mounts: no /api/... in macros — the mount point handles the prefix (D-09).
 // All handlers return Result<Json<T>, Status>; never panic (CLAUDE.md convention).
-use chrono::Utc;
 use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::{get, post, State};
@@ -18,10 +17,6 @@ use super::models::{
     DigitalResourceWorldResponse, IssueDelegateRequest, IssueGrantRequest, ResourceAccessDelegate,
     ResourceAccessGrant, ResourceApplication, ResourceNetwork, ResourceOrgLink, ResourcePlatform,
     ResourcePolicy, ResourcePolicyAssignment,
-};
-use super::resolver::{
-    can_issue_resource_grant, ResolverOrgLink, ResolverPolicy, ResolverPolicyAssignment,
-    ResolverResource, TIER_APPLICATION, TIER_NETWORK, TIER_PLATFORM,
 };
 use crate::auth::middleware::AuthGuard;
 use crate::shared::response::ApiResponse;
@@ -144,30 +139,18 @@ pub async fn issue_grant(
     db: &State<PgPool>,
     auth: AuthGuard,
 ) -> Result<Json<ApiResponse<ResourceAccessGrant>>, Status> {
-    let _ = &auth; // AuthGuard already asserts authentication; sub not needed for this endpoint.
-    let now = Utc::now().naive_utc();
-    let data = body.into_inner();
-
-    // Build a ResolverResource for the requested resource_id (may be network, platform, or app).
-    let resolver_resource = build_resolver_resource(&data.resource_id, db.inner()).await?;
-
-    // Load all delegates for this resource.
-    let delegates: Vec<ResourceAccessDelegate> = sqlx::query_as::<_, ResourceAccessDelegate>(
-        "SELECT id, resource_id, delegate_type, delegate_person_id, delegate_org_id, granted_by_org_id, valid_from, valid_until \
-         FROM resource_access_delegates WHERE resource_id = $1",
-    )
-    .bind(&data.resource_id)
-    .fetch_all(db.inner())
-    .await
-    .map_err(|e| {
-        eprintln!("DB error loading delegates for issue_grant: {:?}", e);
-        Status::InternalServerError
-    })?;
-
-    // Server-side authority re-validation (T-11-08 — never trust the client's say-so).
-    if !can_issue_resource_grant(&data.actor_org_id, &resolver_resource, &delegates, now) {
+    // Write authority is role-based (Option B): only ADMIN principals may issue
+    // resource grants. The authorizing identity is derived from the AuthGuard/JWT
+    // (auth.claims.role), NEVER from the request body — this closes the 8ea8948
+    // IDOR where actor_org_id was trusted from the client (RSRC-BE-04 / SEC-01/02).
+    if auth.claims.role != "admin" {
         return Err(Status::Forbidden);
     }
+    let data = body.into_inner();
+
+    // Validate the resource exists (404 otherwise). The org_links/policies loaded
+    // here belong to the resolver's /world semantics, not the write-authz decision.
+    assert_resource_exists(&data.resource_id, db.inner()).await?;
 
     // Generate a deterministic-enough TEXT id for the grant.
     let grant_id = Uuid::new_v4().to_string();
@@ -233,30 +216,16 @@ pub async fn issue_delegate(
     db: &State<PgPool>,
     auth: AuthGuard,
 ) -> Result<Json<ApiResponse<ResourceAccessDelegate>>, Status> {
-    let _ = &auth;
-    let now = Utc::now().naive_utc();
-    let data = body.into_inner();
-
-    // Build a ResolverResource for authority check.
-    let resolver_resource = build_resolver_resource(&data.resource_id, db.inner()).await?;
-
-    // Load all delegates for this resource (for the authority check).
-    let delegates: Vec<ResourceAccessDelegate> = sqlx::query_as::<_, ResourceAccessDelegate>(
-        "SELECT id, resource_id, delegate_type, delegate_person_id, delegate_org_id, granted_by_org_id, valid_from, valid_until \
-         FROM resource_access_delegates WHERE resource_id = $1",
-    )
-    .bind(&data.resource_id)
-    .fetch_all(db.inner())
-    .await
-    .map_err(|e| {
-        eprintln!("DB error loading delegates for issue_delegate: {:?}", e);
-        Status::InternalServerError
-    })?;
-
-    // Server-side authority re-validation.
-    if !can_issue_resource_grant(&data.granted_by_org_id, &resolver_resource, &delegates, now) {
+    // Role-based write authority (Option B) — see issue_grant. The authorizing
+    // identity comes from the JWT, never from granted_by_org_id in the body
+    // (closes the 8ea8948 IDOR — RSRC-BE-04 / SEC-01/02).
+    if auth.claims.role != "admin" {
         return Err(Status::Forbidden);
     }
+    let data = body.into_inner();
+
+    // Validate the resource exists (404 otherwise).
+    assert_resource_exists(&data.resource_id, db.inner()).await?;
 
     let delegate_id = Uuid::new_v4().to_string();
 
@@ -316,112 +285,31 @@ pub async fn issue_delegate(
 }
 
 // ---------------------------------------------------------------------------
-// Helper: build a ResolverResource for a given resource_id
+// Helper: assert a resource_id exists
 // ---------------------------------------------------------------------------
 //
-// Determines the tier from which table the id appears in, then loads its
-// org_links and policy_assignments + policies from the DB.
-// Returns 404 if the id is unknown across all three tiers.
-async fn build_resolver_resource(
-    resource_id: &str,
-    pool: &PgPool,
-) -> Result<ResolverResource, Status> {
-    // Determine tier by probing each table.
-    let (tier, classification, parent_id): (String, Option<String>, Option<String>) =
-        if let Some(row) = sqlx::query_as::<_, (String, String)>(
-            "SELECT id, classification FROM resource_networks WHERE id = $1",
-        )
-        .bind(resource_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|_| Status::InternalServerError)?
-        {
-            (TIER_NETWORK.to_string(), Some(row.1), None)
-        } else if let Some(row) = sqlx::query_as::<_, (String, String, String)>(
-            "SELECT id, classification, network_id FROM resource_platforms WHERE id = $1",
-        )
-        .bind(resource_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|_| Status::InternalServerError)?
-        {
-            (TIER_PLATFORM.to_string(), Some(row.1), Some(row.2))
-        } else if let Some(row) = sqlx::query_as::<_, (String, String)>(
-            "SELECT id, platform_id FROM resource_applications WHERE id = $1",
-        )
-        .bind(resource_id)
-        .fetch_optional(pool)
-        .await
-        .map_err(|_| Status::InternalServerError)?
-        {
-            (TIER_APPLICATION.to_string(), None, Some(row.1))
-        } else {
-            return Err(Status::NotFound);
-        };
-
-    // Load org_links for this resource.
-    let raw_links: Vec<(String, String, Option<chrono::NaiveDateTime>, Option<chrono::NaiveDateTime>)> =
-        sqlx::query_as(
-            "SELECT org_id, role, valid_from, valid_until FROM resource_org_links WHERE resource_id = $1",
-        )
-        .bind(resource_id)
-        .fetch_all(pool)
-        .await
-        .map_err(|_| Status::InternalServerError)?;
-
-    let org_links: Vec<ResolverOrgLink> = raw_links
-        .into_iter()
-        .map(|(org_id, role, valid_from, valid_until)| ResolverOrgLink {
-            org_id,
-            role,
-            valid_from,
-            valid_until,
-        })
-        .collect();
-
-    // Load policy_assignments + join policy for gates.
-    let raw_assignments: Vec<(
-        String,
-        serde_json::Value,
-        Option<String>,
-        Option<chrono::NaiveDateTime>,
-        Option<chrono::NaiveDateTime>,
-    )> = sqlx::query_as(
-        "SELECT p.id, p.gates, p.zone_prereq_id, pa.valid_from, pa.valid_until \
-         FROM resource_policy_assignments pa \
-         JOIN resource_policies p ON p.id = pa.policy_id \
-         WHERE pa.resource_id = $1 \
-         ORDER BY pa.id",
+// Write endpoints only need existence validation (404 if unknown across all
+// three tiers). Authority is decided by the Option-B role gate in the handlers,
+// NOT the resolver — so no ResolverResource is built here.
+async fn assert_resource_exists(resource_id: &str, pool: &PgPool) -> Result<(), Status> {
+    let exists: bool = sqlx::query_scalar(
+        "SELECT EXISTS ( \
+           SELECT 1 FROM resource_networks     WHERE id = $1 \
+           UNION ALL SELECT 1 FROM resource_platforms    WHERE id = $1 \
+           UNION ALL SELECT 1 FROM resource_applications WHERE id = $1 \
+         )",
     )
     .bind(resource_id)
-    .fetch_all(pool)
+    .fetch_one(pool)
     .await
-    .map_err(|_| Status::InternalServerError)?;
+    .map_err(|e| {
+        eprintln!("DB error checking resource existence: {:?}", e);
+        Status::InternalServerError
+    })?;
 
-    let policy_assignments: Vec<ResolverPolicyAssignment> = raw_assignments
-        .into_iter()
-        .map(
-            |(_pol_id, gates_json, zone_prereq_id, valid_from, valid_until)| {
-                let gates: Vec<super::models::GateDescriptor> =
-                    serde_json::from_value(gates_json).unwrap_or_default();
-                ResolverPolicyAssignment {
-                    policy: ResolverPolicy {
-                        gates,
-                        zone_prereq_id,
-                    },
-                    valid_from,
-                    valid_until,
-                }
-            },
-        )
-        .collect();
-
-    Ok(ResolverResource {
-        id: resource_id.to_string(),
-        tier,
-        classification,
-        parent_id,
-        org_links,
-        policy_assignments,
-    })
+    if exists {
+        Ok(())
+    } else {
+        Err(Status::NotFound)
+    }
 }

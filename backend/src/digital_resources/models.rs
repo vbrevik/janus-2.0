@@ -7,6 +7,15 @@
 // fail-closed sink for any injected/unknown gate kind (T-11-04). The resolver
 // output structs (ResourceGateResult / PolicyVersion / ResourceAccessResult)
 // are serde-shaped for byte-parity with the TS resolver's output.
+//
+// TIMESTAMPTZ note: all timestamp columns in the Plan 01 tables use TIMESTAMPTZ.
+// sqlx decodes them as chrono::DateTime<Utc>, and the resolver (Plan 03) uses
+// DateTime<Utc> throughout — so handlers pass DB timestamps straight through with
+// no conversion. The ONE exception is PolicyVersion below: it is a serialization
+// shape matched byte-for-byte to the TS exporter's `policyVersion`, which emits a
+// naive (no-tz) ISO string. It therefore stays NaiveDateTime and the resolver
+// converts via .naive_utc() at that boundary.
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 // --- 8 sqlx domain structs (1:1 with the Plan 01 tables) ---
@@ -16,8 +25,8 @@ pub struct ResourceNetwork {
     pub id: String,
     pub name: String,
     pub classification: String,
-    pub created_at: Option<chrono::NaiveDateTime>,
-    pub updated_at: Option<chrono::NaiveDateTime>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -26,8 +35,8 @@ pub struct ResourcePlatform {
     pub name: String,
     pub classification: String,
     pub network_id: String,
-    pub created_at: Option<chrono::NaiveDateTime>,
-    pub updated_at: Option<chrono::NaiveDateTime>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 // Application has NO classification column — derived from the parent platform at
@@ -37,8 +46,8 @@ pub struct ResourceApplication {
     pub id: String,
     pub name: String,
     pub platform_id: String,
-    pub created_at: Option<chrono::NaiveDateTime>,
-    pub updated_at: Option<chrono::NaiveDateTime>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 // SERIAL PK — no natural text id.
@@ -49,8 +58,8 @@ pub struct ResourceOrgLink {
     pub resource_tier: String,
     pub org_id: String,
     pub role: String,
-    pub valid_from: Option<chrono::NaiveDateTime>,
-    pub valid_until: Option<chrono::NaiveDateTime>,
+    pub valid_from: Option<DateTime<Utc>>,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -68,8 +77,8 @@ pub struct ResourcePolicyAssignment {
     pub resource_id: String,
     pub resource_tier: String,
     pub policy_id: String,
-    pub valid_from: Option<chrono::NaiveDateTime>,
-    pub valid_until: Option<chrono::NaiveDateTime>,
+    pub valid_from: Option<DateTime<Utc>>,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -77,8 +86,8 @@ pub struct ResourceAccessGrant {
     pub id: String,
     pub person_id: String,
     pub resource_id: String,
-    pub valid_from: Option<chrono::NaiveDateTime>,
-    pub valid_until: Option<chrono::NaiveDateTime>,
+    pub valid_from: Option<DateTime<Utc>>,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow)]
@@ -89,8 +98,8 @@ pub struct ResourceAccessDelegate {
     pub delegate_person_id: Option<String>,
     pub delegate_org_id: Option<String>,
     pub granted_by_org_id: String,
-    pub valid_from: Option<chrono::NaiveDateTime>,
-    pub valid_until: Option<chrono::NaiveDateTime>,
+    pub valid_from: Option<DateTime<Utc>>,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 // --- Request structs (Plan 03 handlers consume these) ---
@@ -100,8 +109,8 @@ pub struct IssueGrantRequest {
     pub resource_id: String,
     pub person_id: String,
     pub actor_org_id: String,
-    pub valid_from: Option<chrono::NaiveDateTime>,
-    pub valid_until: Option<chrono::NaiveDateTime>,
+    pub valid_from: Option<DateTime<Utc>>,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -111,8 +120,8 @@ pub struct IssueDelegateRequest {
     pub delegate_person_id: Option<String>,
     pub delegate_org_id: Option<String>,
     pub granted_by_org_id: String,
-    pub valid_from: Option<chrono::NaiveDateTime>,
-    pub valid_until: Option<chrono::NaiveDateTime>,
+    pub valid_from: Option<DateTime<Utc>>,
+    pub valid_until: Option<DateTime<Utc>>,
 }
 
 // --- Aggregate response (no FromRow — assembled in the handler) ---
