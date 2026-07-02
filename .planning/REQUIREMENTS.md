@@ -5,6 +5,7 @@
 **Grounding:** SEED-009 (NSM §6 info-system security — classification, sikkerhetsgodkjenning/approval-to-operate, forsvarlig sikkerhetsnivå). Mirrors and generalizes the v2.1 physical-zone model.
 
 **Key decisions:**
+
 - Application **inherits** its host Platform's classification (no independent field).
 - Zone-prerequisite link is **advisory** — surfaced in the resolution trace as a non-blocking amber warning, never affects ALLOW/DENY.
 - Access rules are **data-driven, per-resource policies** (not a hardcoded chain). Different resources/tiers may carry different policies. (Mirrors v2.0 per-entity policy divergence.)
@@ -74,10 +75,10 @@
 
 *Added 2026-06-23. Folded in from the cancelled Phase 13 after the codebase remap (`.planning/codebase/CONCERNS.md`) surfaced live server-side security holes. Scoped into Phase 11 because they share the backend trust boundary with RSRC-BE-04 and touch `rocket_setup.rs`, which Phase 11 already modifies for migration repair.*
 
-- [ ] **SEC-01**: Every backend handler across every domain is `AuthGuard`-protected; `messaging` and `vendor_relations` (currently unauthenticated) gain it. No endpoint except login is reachable without a valid Bearer JWT.
-- [ ] **SEC-02**: Every write/mutation handler and every sensitive read (audit) gates via `role_has_permission(&auth.claims.role, "<domain>.<action>")`; the required permission keys are seeded; an authenticated actor whose role lacks the permission gets **403** (not 500).
-- [ ] **SEC-03**: The hardcoded JWT-secret fallback (`rocket_setup.rs:22-23`) is removed; backend startup aborts before serving when `JWT_SECRET` is unset or empty; tests, `docker-compose.dev`, and `.env` supply it explicitly.
-- [ ] **SEC-04**: `CORS AllowedOrigins::all()` is replaced with `http://localhost:15510` (dev frontend); credentials remain allowed; a disallowed Origin is not granted CORS access.
+- [x] **SEC-01**: Every backend handler across every domain is `AuthGuard`-protected; `messaging` and `vendor_relations` (currently unauthenticated) gain it. No endpoint except login is reachable without a valid Bearer JWT.
+- [x] **SEC-02**: Every write/mutation handler and every sensitive read (audit) gates via `role_has_permission(&auth.claims.role, "<domain>.<action>")`; the required permission keys are seeded; an authenticated actor whose role lacks the permission gets **403** (not 500).
+- [x] **SEC-03**: The hardcoded JWT-secret fallback (`rocket_setup.rs:22-23`) is removed; backend startup aborts before serving when `JWT_SECRET` is unset or empty; tests, `docker-compose.dev`, and `.env` supply it explicitly.
+- [x] **SEC-04**: `CORS AllowedOrigins::all()` is replaced with `http://localhost:15510` (dev frontend); credentials remain allowed; a disallowed Origin is not granted CORS access.
 
 ### Demo UI (RSRC-UI) — Phase 12
 
@@ -148,10 +149,10 @@
 | RSRC-BE-04 | Phase 11 | Pending |
 | RSRC-BE-05 | Phase 11 | Pending |
 | RSRC-BE-06 | Phase 11 | Pending |
-| SEC-01 | Phase 11 | Pending |
-| SEC-02 | Phase 11 | Pending |
-| SEC-03 | Phase 11 | Pending |
-| SEC-04 | Phase 11 | Pending |
+| SEC-01 | Phase 11 | Complete |
+| SEC-02 | Phase 11 | Complete |
+| SEC-03 | Phase 11 | Complete |
+| SEC-04 | Phase 11 | Complete |
 | RSRC-UI-01 | Phase 12 | Pending |
 | RSRC-UI-02 | Phase 12 | Pending |
 | RSRC-UI-03 | Phase 12 | Pending |
