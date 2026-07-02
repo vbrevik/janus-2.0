@@ -132,7 +132,25 @@ Plans:
 **UI hint**: yes
 **UI Spec**: `12-UI-SPEC.md` (approved 2026-06-19)
 **Spec**: `12-SPEC.md` (6 requirements, ambiguity 0.18)
-**Plans**: TBD
+**Plans**: 6 plans
+Plans:
+**Wave 1**
+
+- [ ] 12-01-PLAN.md — Idempotent seed-apply script; seeds `janus2` with the 6-unit digital-resource dataset (RSRC-UI-04) [wave 1]
+- [ ] 12-02-PLAN.md — Mapper (denormalize backend `/world` response), 3 new WorldState reducer actions, QueryClientProvider, CLEARANCE_TONE export (RSRC-UI-04, RSRC-UI-06) [wave 1]
+
+**Wave 2** *(blocked on 12-02)*
+
+- [ ] 12-03-PLAN.md — React Query hooks (useDigitalResourcesWorld/useIssueGrant/useIssueDelegate) + auth/loader-state helpers (RSRC-UI-04, RSRC-UI-06) [wave 2]
+
+**Wave 3** *(blocked on 12-02, 12-03)*
+
+- [ ] 12-04-PLAN.md — Resource Browser (tree + detail panel) + admin-gated Issue Delegate form (RSRC-UI-01, RSRC-UI-02, RSRC-UI-06) [wave 3]
+- [ ] 12-05-PLAN.md — Access Resolution Explorer (gate-chain trace + grant toggle) + admin-gated Issue Grant form (RSRC-UI-03, RSRC-UI-05, RSRC-UI-06) [wave 3]
+
+**Wave 4** *(blocked on 12-04, 12-05)*
+
+- [ ] 12-06-PLAN.md — DigitalResourcesPanel (6-state loader gate + sub-nav) + DemoRoot 7th tab + final phase verification (RSRC-UI-01, RSRC-UI-04) [wave 4]
 
 > **Phase 13 (Security hardening) folded into Phase 11 and removed — 2026-06-23.** Its scope
 > (server-side RBAC across all domains, JWT-secret fail-loud, CORS restriction) is now Phase 11
