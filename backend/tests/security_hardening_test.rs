@@ -210,6 +210,27 @@ async fn test_guarded_write_viewer_403_not_500() {
 
 #[rocket::async_test]
 #[ignore] // requires live DB for login
+async fn test_roles_write_viewer_403_not_401() {
+    let client = create_test_client().await;
+    let token = login(&client, "viewer").await;
+
+    let response = client
+        .post("/api/roles")
+        .header(auth_header(&token))
+        .header(rocket::http::ContentType::JSON)
+        .body(r#"{"name":"uat-forbidden-probe","description":"never created"}"#)
+        .dispatch()
+        .await;
+
+    assert_eq!(
+        response.status(),
+        Status::Forbidden,
+        "viewer (no roles.write) must receive 403 — not 401 — from the roles permission gate"
+    );
+}
+
+#[rocket::async_test]
+#[ignore] // requires live DB for login
 async fn test_guarded_write_manager_403_least_privilege() {
     let client = create_test_client().await;
     let token = login(&client, "manager").await;

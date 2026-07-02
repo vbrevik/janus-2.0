@@ -15,7 +15,7 @@ pub async fn list_roles(db: &State<PgPool>, auth: AuthGuard) -> Result<Json<Vec<
         .await
         .unwrap_or(false)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
     let items = sqlx::query_as!(
         Role,
@@ -36,7 +36,7 @@ pub async fn create_role(
         .await
         .unwrap_or(false)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
     let item = sqlx::query_as!(
         Role,
@@ -61,7 +61,7 @@ pub async fn update_role(
         .await
         .unwrap_or(false)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
     let current = sqlx::query_as!(
         Role,
@@ -100,7 +100,7 @@ pub async fn delete_role(
         .await
         .unwrap_or(false)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
     sqlx::query!("DELETE FROM roles WHERE id = $1", id)
         .execute(db.inner())
@@ -117,7 +117,7 @@ pub async fn list_permissions(
         .await
         .unwrap_or(false)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
     let items = sqlx::query_as!(
         Permission,
@@ -138,7 +138,7 @@ pub async fn get_role_permissions(
         .await
         .unwrap_or(false)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
     let items = sqlx::query_scalar!(
         r#"SELECT p.key FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id WHERE rp.role_id = $1 ORDER BY p.key"#,
@@ -158,7 +158,7 @@ pub async fn set_role_permissions(
         .await
         .unwrap_or(false)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
     let mut tx = db.inner().begin().await.map_err(|_| AppError::Internal)?;
     sqlx::query!("DELETE FROM role_permissions WHERE role_id = $1", id)
