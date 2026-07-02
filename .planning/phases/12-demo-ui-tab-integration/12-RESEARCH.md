@@ -457,10 +457,10 @@ No other stack-relevant deprecations found; React 19, Rocket 0.5, sqlx are all u
 
 ## Open Questions
 
-1. **Should the client-side issuing-authority gate be `admin`-only (matching the as-built backend) or should the backend be extended to accept `manager` (matching the SPEC/UI-SPEC text)?**
+1. **(RESOLVED 2026-07-02, pre-planning)** Should the client-side issuing-authority gate be `admin`-only (matching the as-built backend) or should the backend be extended to accept `manager` (matching the SPEC/UI-SPEC text)?
    - What we know: The backend (`handlers.rs`) checks `role != "admin"` with no `manager` branch. 12-SPEC.md and 12-UI-SPEC.md both explicitly say "admin, manager". Phase 12's Boundaries explicitly prohibit "Any backend change... especially NO relaxation of AuthGuard/RBAC/CORS" — though adding a manager branch to an existing role check is arguably not a "relaxation" in the security-hole sense the prohibition targets (it was 11-04-SUMMARY's SEC-02 fold, aimed at closing unauthenticated/unauthorized holes, not at this specific business rule).
    - What's unclear: Whether "admin, manager" in the SPEC was an intentional design choice that the backend simply didn't implement correctly (a Phase-11 bug), or whether the SPEC copy is stale/wrong and admin-only was always the real intent.
-   - Recommendation: Surface this explicitly to the user before planning locks the role-gate implementation. Default (used in this research's own examples): implement admin-only in the UI, matching the server, and treat "should the backend also accept manager" as a separate, backend-touching decision outside this phase's boundary — but flag the SPEC/UI-SPEC copy strings ("Issuing controls require an admin or manager login.") as needing a matching edit to "require an admin login." if this default is accepted.
+   - **Resolution:** Surfaced to the user (AskUserQuestion, no response within session window); applied the recommended default. `12-SPEC.md` and `12-UI-SPEC.md` corrected in place to admin-only (see each doc's "Corrected 2026-07-02" note); `12-CONTEXT.md` D-01 locks it as a decision, not discretion. Zero backend changes. Verified implemented consistently across all 6 Phase 12 plans by gsd-plan-checker.
 
 ## Security Domain
 
