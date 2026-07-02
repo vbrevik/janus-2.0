@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Platform, Network & Application Access
 status: executing
-stopped_at: Session resumed — stale 11-01/02/03 plans (pre-SEC-fold) backed up to scratchpad + cleared; proceeding to /gsd-plan-phase 11 --skip-ui to regenerate plans covering RSRC-BE-01..06 + SEC-01..04 from re-scored 11-SPEC.
-last_updated: "2026-06-23T20:07:35.644Z"
-last_activity: 2026-06-23
+stopped_at: 11-03 complete — IDOR closed via role-based write authz (Option B); resolver DateTime<Utc> migration finished (parity byte-exact); seedWorld() de-hardcoded; SEED-012 filed for deferred org-based model (Option A). Ready to execute 11-04 (SEC-01..04 security hardening).
+last_updated: "2026-07-02T13:10:00.000Z"
+last_activity: 2026-07-02
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 10
-  completed_plans: 7
-  percent: 25
+  completed_plans: 8
+  percent: 80
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-02 for v2.2 milestone)
 ## Current Position
 
 Phase: 11 (digital-resource-backend) — EXECUTING
-Plan: 3 of 4
-Status: Ready to execute
-Last activity: 2026-06-23
+Plan: 4 of 4 (11-04 security hardening) — ready to execute
+Status: 11-03 complete; 11-04 next
+Last activity: 2026-07-02
 
-Progress: [███████░░░] 70%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
@@ -75,7 +75,8 @@ None.
 
 ### Blockers/Concerns
 
-None.
+- Seed migration `20260601130001_seed_digital_resources.sql` is committed but NOT applied to the dev DB (all `resource_*` tables empty; `sqlx migrate run` broken on the drifted DB — see [[project_migrations_fresh_db_broken]]). Seed-dependent integration tests are `#[ignore]` and the demo `/world` fetch returns nothing until this is applied/repaired.
+- 11-03 authz is role-based (Option B), diverging from the resolver's org-based rule. Correct long-term model deferred to SEED-012.
 
 ### Roadmap Evolution
 
@@ -97,6 +98,7 @@ Items deferred from v2.0/v2.1, carried forward:
 | seed | 009-info-system-security-requirements | active (SEED-009 grounds v2.2) |
 | seed | 010-personnel-security-annotations | dormant |
 | seed | 011-demo-to-fullstack-transition | dormant |
+| seed | 012-org-based-resource-authz | dormant (planted 11-03 — Option A deferred) |
 | seed | 001-pob-form-engine | dormant |
 | stretch | AUDIT-03 leak/anomaly indicator | future/stretch |
 | stretch | CTX-04 home guard territorial scoping | future/stretch |
@@ -104,6 +106,6 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-06-23T20:07:35.638Z
-Stopped at: Session resumed — stale 11-01/02/03 plans (pre-SEC-fold) backed up to scratchpad + cleared; proceeding to /gsd-plan-phase 11 --skip-ui to regenerate plans covering RSRC-BE-01..06 + SEC-01..04 from re-scored 11-SPEC.
-Resume file: None
+Last session: 2026-07-02T13:10:00.000Z
+Stopped at: 11-03 executed to completion — IDOR fix (Option B role-based authz), resolver DateTime migration finished, seedWorld de-hardcoded, SEED-012 filed, 11-03-SUMMARY written. Backend lib compiles clean; parity + security tests green. Next: execute 11-04 (SEC-01..04). NOTE: seed migration still unapplied to the drifted dev DB — apply/repair before seed-dependent tests or the demo /world fetch return data.
+Resume file: None (HANDOFF.json + .continue-here consumed and removed)

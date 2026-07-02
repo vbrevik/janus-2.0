@@ -110,7 +110,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 11-03-PLAN.md — Handlers (get_world, issue_grant, issue_delegate) + mount + seed migration + seedWorld removal (RSRC-BE-03, RSRC-BE-04, RSRC-BE-05) [wave 3]
+- [x] 11-03-PLAN.md — Handlers (get_world, issue_grant, issue_delegate) + mount + seed migration + seedWorld removal (RSRC-BE-03, RSRC-BE-04, RSRC-BE-05) [wave 3] — role-based authz (Option B) closed the IDOR; org-based model deferred to SEED-012; seed migration committed but not yet applied to dev DB
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
