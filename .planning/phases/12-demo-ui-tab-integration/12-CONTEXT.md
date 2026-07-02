@@ -10,6 +10,8 @@ The demo's "Digital Resources" tab (7th tab, no route file) loads digital-resour
 
 **Note:** This discussion round asked 3 implementation-rigor questions (test coverage scope, seed-apply mechanism, verification method) but received no user response within the session window. Per workflow guidance, proceeded on best judgment — see `<decisions>` § Claude's Discretion below. These are NOT locked user preferences; the planner/executor may deviate if a better-grounded reason surfaces during research or planning.
 
+**⚠ SPEC/UI-SPEC correction (2026-07-02, during plan-phase pre-planning research):** `12-SPEC.md` and `12-UI-SPEC.md` said issuing authority was "Option B: admin, manager." `gsd-phase-researcher` grep-verified the as-built Phase 11 backend (`backend/src/digital_resources/handlers.rs:146,222`) checks `auth.claims.role != "admin"` only — no `manager` anywhere in the domain. Both spec docs have been corrected in place (admin-only) rather than left contradictory — see each file's "Corrected 2026-07-02" note. This IS now a locked decision, not discretion: **the role-gate is `admin`-only.** Widening the backend to add `manager` is out of scope (would violate the SPEC's own no-RBAC-relaxation prohibition). A second AskUserQuestion round to confirm this went unanswered like the first — proceeded on the only option that doesn't touch backend/security code.
+
 </domain>
 
 <spec_lock>
@@ -39,7 +41,11 @@ Downstream agents MUST read `12-SPEC.md` before planning or implementing. Requir
 <decisions>
 ## Implementation Decisions
 
-No user-adjudicated decisions this round (question unanswered — see domain note). The 3 questions posed, with the default judgment applied, are recorded under Claude's Discretion so the planner knows these are open to revisit, not locked.
+No user-adjudicated decisions this round (question unanswered — see domain note). The 3 questions posed, with the default judgment applied, are recorded under Claude's Discretion so the planner knows these are open to revisit, not locked. One correction (role-gate) IS locked — see below.
+
+### Role-gate correction (locked)
+
+- **D-01:** The issuing-affordance role gate (RSRC-UI-06) checks `admin` only — NOT "admin, manager" as `12-SPEC.md`/`12-UI-SPEC.md` originally read. Grep-verified against the as-built Phase 11 backend (`backend/src/digital_resources/handlers.rs:146,222`: `auth.claims.role != "admin"`, zero `manager` references). Both spec docs corrected in place 2026-07-02. No backend change — widening the backend role check is out of scope (SPEC's own no-RBAC-relaxation prohibition). Applies to: the "+ Issue new grant"/"+ Issue new delegate" trigger visibility check, the "Issuing controls require an admin login." copy (singular, not "admin or manager"), and the Gating Contract Summary table in `12-UI-SPEC.md` §Role-Gated Issuing Affordances.
 
 ### Claude's Discretion
 

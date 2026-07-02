@@ -30,12 +30,20 @@ updated: 2026-07-02
 > cause-naming states (the demo is a standalone entry that reuses the main-app JWT
 > from localStorage; SEC-01 made every endpoint require Bearer auth); (2) issuing
 > affordance gating re-based from the org-model `canIssueResourceGrant` (deferred to
-> SEED-012) to **JWT-role gating (Option B: admin, manager)** — the §Can-Issue
-> Affordance Gating section is superseded by §Role-Gated Issuing Affordances;
-> (3) duplicate-submit feedback contract pinned (silence + upsert-by-id).
+> SEED-012) to **JWT-role gating (Option B: admin only — see correction below)** —
+> the §Can-Issue Affordance Gating section is superseded by §Role-Gated Issuing
+> Affordances; (3) duplicate-submit feedback contract pinned (silence + upsert-by-id).
 > Spacing, typography, color tokens, the amber "Advisory (non-blocking)" row,
 > NSM `tone="slate"` badges, the `(inherited)` badge, and all other locked
 > decisions are unchanged.
+>
+> **Corrected 2026-07-02 (pre-planning research):** the line above originally read
+> "Option B: admin, manager." Grep-verified against `backend/src/digital_resources/handlers.rs`
+> (lines 146, 222): the as-built Phase 11 backend checks `auth.claims.role != "admin"` only —
+> no `manager` anywhere in the domain. §Role-Gated Issuing Affordances below is corrected to
+> gate on `admin` only; every "admin or manager" copy string and table row in this document is
+> corrected to "admin" to match. Widening the backend to accept `manager` is out of scope for
+> Phase 12 (would be an RBAC relaxation, prohibited by 12-SPEC.md).
 >
 > No TanStack route file is touched. `git diff frontend/src/routeTree.gen.ts`
 > must be empty after all Phase 12 commits.
@@ -377,7 +385,7 @@ The zone advisory row must NEVER use green or red styling. The "Advisory (non-bl
 | Issue grant valid-until hint | "Leave blank for permanent grant." | RSRC-UI-06 |
 | Issue delegate valid-until hint | "Leave blank for open delegation." | RSRC-UI-06 |
 | ~~Can-issue hidden note~~ | ~~"Issuing controls are only available to ADMIN-role org members and active delegates."~~ | SUPERSEDED 2026-07-02 — org-based copy was wrong for Option B; replaced by row below |
-| Role-gated hidden note | "Issuing controls require an admin or manager login." | RSRC-UI-06 (2026-07-02 — Option B role model; shown when data loaded + role lacks permission) |
+| Role-gated hidden note | "Issuing controls require an admin login." | RSRC-UI-06 (2026-07-02 — Option B role model, corrected to admin-only; shown when data loaded + role lacks permission) |
 | Duplicate submit feedback | (none — silence is the contract; see §Duplicate-Submit Feedback) | RSRC-UI-06 (2026-07-02) |
 
 No destructive actions in this phase. No confirmation dialogs needed.
@@ -638,7 +646,7 @@ The server dedupes duplicate grant POSTs (`uq_grant UNIQUE NULLS NOT DISTINCT`, 
 
 ---
 
-## Role-Gated Issuing Affordances (RSRC-UI-06) — supersedes §Can-Issue Affordance Gating, 2026-07-02
+## Role-Gated Issuing Affordances (RSRC-UI-06) — supersedes §Can-Issue Affordance Gating, 2026-07-02; role list corrected 2026-07-02
 
 > **Supersession note:** the previous contract gated issuing on the org-based
 > `canIssueResourceGrant(currentSubject, selectedResource, now)` client check.
@@ -647,16 +655,21 @@ The server dedupes duplicate grant POSTs (`uq_grant UNIQUE NULLS NOT DISTINCT`, 
 > SEED-012. The UI gate below mirrors the server model. Everything else in the
 > superseded section (hidden-not-disabled triggers, advisory-only gate, coexisting
 > 403 path) carries forward unchanged in spirit.
+>
+> **Correction note (2026-07-02, pre-planning research):** this section originally listed
+> authorized roles as `admin` and `manager`. Grep-verified against
+> `backend/src/digital_resources/handlers.rs:146,222`: the as-built check is
+> `auth.claims.role != "admin"` only. Corrected below to `admin`-only.
 
 The **"+ Issue new grant"** and **"+ Issue new delegate"** expand triggers (and their forms) are conditionally rendered based on the **role of the main-app JWT** — NOT the demo role-switcher, and NOT any per-resource org check.
 
-**Authority source:** the role claim of the stored main-app auth session (JWT payload or the main app's stored user object in `localStorage`). Authorized roles: **`admin` and `manager`** — exactly the roles holding the server-side write permission (Option B). The check is session-wide and constant for the visit: it does not vary with the selected resource or the role-switcher subject.
+**Authority source:** the role claim of the stored main-app auth session (JWT payload or the main app's stored user object in `localStorage`). Authorized role: **`admin`** — exactly the role holding the server-side write permission (Option B, corrected 2026-07-02). The check is session-wide and constant for the visit: it does not vary with the selected resource or the role-switcher subject.
 
 This is a client-side pre-check only — the backend re-validates the JWT role on every POST. The UI gate prevents dead-end form exposure, not security.
 
 ### Hidden, not disabled (decision)
 
-When the JWT role is not `admin` or `manager`, both expand triggers are **not rendered** (hidden). No permanently-disabled button is shown.
+When the JWT role is not `admin`, both expand triggers are **not rendered** (hidden). No permanently-disabled button is shown.
 
 Rationale: role gating is constant for the entire session — a disabled trigger could never become enabled without logging out, so it would be permanent dead UI inviting clicks that can't succeed. Hidden trigger + one explanatory note communicates the capability boundary honestly. (Note: `disabled` remains the correct treatment for the *transient* `mutation.isPending` state on the submit button — see below; hidden-vs-disabled splits exactly on permanent-vs-transient.)
 
@@ -664,7 +677,7 @@ Rationale: role gating is constant for the entire session — a disabled trigger
 
 When the data has loaded successfully and the JWT role lacks issuing permission, render one note per issuing location, in place of the hidden trigger:
 
-**"Issuing controls require an admin or manager login."**
+**"Issuing controls require an admin login."**
 
 - Style: `text-xs text-slate-400` (informational — NOT `text-destructive`; lacking a permission is not an error).
 - Locations: (1) below the "Delegates" card in the Resource Browser detail panel (where "+ Issue new delegate" would render); (2) below the "Resource grants (toggle to simulate)" card in the Access Resolution Explorer (where "+ Issue new grant" would render).
@@ -684,7 +697,7 @@ The 403 path MUST coexist with the role gate: the client-visible role may be sta
 
 | JWT role | "Issue new grant" trigger | "Issue new delegate" trigger | Explanatory note |
 |----------|--------------------------|------------------------------|------------------|
-| `admin` or `manager` | Visible | Visible | Hidden |
+| `admin` | Visible | Visible | Hidden |
 | any other role (data loaded) | Hidden | Hidden | Shown at both issuing locations (`text-xs text-slate-400`) |
 | any role, loader not in success state | N/A (sub-views absent) | N/A | Hidden |
 

@@ -1,6 +1,6 @@
 # Phase 12: Demo UI, Loader & Tab Integration — Specification
 
-**Created:** 2026-06-19 · **Updated:** 2026-07-02 (post-Phase-11 reconciliation)
+**Created:** 2026-06-19 · **Updated:** 2026-07-02 (post-Phase-11 reconciliation) · **Corrected:** 2026-07-02 (pre-planning research)
 **Ambiguity score:** 0.16 (gate: ≤ 0.20)
 **Requirements:** 7 locked
 
@@ -15,6 +15,15 @@
 > (`org_links`, `valid_from`) vs the camelCase TS model — a mapping layer is required;
 > (3) the dev DB `janus2` has schema but **no seed data** — applying it is now in scope (R7);
 > (4) issuing authority is **role-based (Option B)**, not the org-based can-issue (deferred to SEED-012).
+>
+> **2026-07-02 correction (pre-planning research, gsd-phase-researcher finding, verified by grep).**
+> The 2026-07-02 update above wrote Option B as "admin, manager." The as-built Phase 11 backend
+> (`backend/src/digital_resources/handlers.rs:146,222`) checks `auth.claims.role != "admin"` only —
+> zero `manager` references anywhere in the domain. **Corrected: Option B is admin-only.** Widening
+> the backend to accept `manager` would itself be an RBAC relaxation, which this SPEC's own
+> Prohibitions table forbids. The UI role-gate (requirement 5, `12-UI-SPEC.md` §Role-Gated Issuing
+> Affordances) now gates on `admin` only. This is a wording correction to match already-shipped
+> Phase 11 code, not a scope or behavior change — no backend edits.
 
 ## Goal
 
@@ -48,7 +57,7 @@ The demo shell `DemoRoot.tsx` renders tabs via `useState<ActiveView>` + a button
 
 5. **Delegation issuing UI** (`RSRC-UI-06`): Issue grant/delegate via the Phase 11 API.
    - Current: No issuing UI; only `TOGGLE_RESOURCE_GRANT` mutates `WorldState`
-   - Target: Forms issue a new grant/delegate by calling the POST endpoints (backend persist), then update `WorldState` from the server response/refetch; issuing controls are shown/enabled only when the logged-in JWT role holds the server-side write permission (admin, manager — Option B role model)
+   - Target: Forms issue a new grant/delegate by calling the POST endpoints (backend persist), then update `WorldState` from the server response/refetch; issuing controls are shown/enabled only when the logged-in JWT role holds the server-side write permission (admin only — Option B role model, corrected 2026-07-02)
    - Acceptance: An authorized actor issues a grant via the form; the new grant is persisted (visible on a subsequent GET) and appears in `WorldState`; the submit button is disabled while `mutation.isPending`; after a duplicate submit `WorldState` contains exactly one copy of the grant (server-deduped; state from response/refetch, never blind append); the control is disabled/hidden for a role without the permission; a server 403 surfaces inline (`bg-destructive/10 text-destructive`)
 
 6. **Tab integration, no route file** (`RSRC-UI-02`): A "Digital Resources" tab in `DemoRoot`.
@@ -73,7 +82,7 @@ The demo shell `DemoRoot.tsx` renders tabs via `useState<ActiveView>` + a button
 - Any backend change — endpoints, guards, migrations beyond applying the already-committed seed; especially NO relaxation of AuthGuard/RBAC/CORS (see Prohibitions)
 - Editing/creating policies, org-links, resources, or the hierarchy — only grant toggle + grant/delegate issuing are mutations; everything else is read-only
 - New TanStack route files — tab-only; `routeTree.gen.ts` must stay byte-identical (hard criterion)
-- Org-based issuing authority (SEED-012) — UI mirrors the server's role-based Option B model
+- Org-based issuing authority (SEED-012) — UI mirrors the server's role-based Option B model (admin-only, corrected 2026-07-02)
 - A demo-local login flow — token comes from the main app; absent token is an explicit error state, not a login form
 
 ## Constraints
@@ -150,6 +159,7 @@ The demo shell `DemoRoot.tsx` renders tabs via `useState<ActiveView>` + a button
 | U1    | Researcher (update, 2026-07-02) | Demo auth? Seed data? Issue gating? | Reuse main-app token; seed apply in scope (R7); JWT-role gating (Option B) |
 | U5.5  | Edge probe (update) | Two-grant toggle, double-submit, seed re-apply, tab | All specified; tab dismissed edge-free |
 | U5.6  | Prohibition (update) | Guard relaxation, embedded creds       | No-relax (test tier, security suite); no-creds (judgment)    |
+| U2    | Researcher (correction, 2026-07-02 pre-planning) | Option B roles vs as-built backend? | Backend is admin-only (grep-verified, handlers.rs:146,222) — corrected Option B to admin-only; no backend change |
 
 ---
 
