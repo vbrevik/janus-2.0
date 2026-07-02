@@ -65,3 +65,6 @@ src/routeTree.gen.ts
 # Playwright MCP artifacts (logs, screenshots, page state)
 .playwright-mcp/
 
+
+# Local tool runtime state
+.omo/
