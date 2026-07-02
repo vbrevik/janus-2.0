@@ -1,0 +1,39 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-07-02T13:20:00.000Z",
+  "phase": "11",
+  "phase_name": "digital-resource-backend",
+  "phase_dir": ".planning/phases/11-digital-resource-backend",
+  "plan": 4,
+  "task": 0,
+  "total_tasks": 0,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": "11-01", "name": "Migration-chain repair + 8 digital-resource tables (RSRC-BE-01/06)", "status": "done"},
+    {"id": "11-02", "name": "Resolver port + sqlx models + golden-fixture parity (RSRC-BE-02)", "status": "done"},
+    {"id": "11-03", "name": "Endpoints (get_world/issue_grant/issue_delegate) + seed migration + seedWorld de-hardcode + IDOR fix (RSRC-BE-03/04/05)", "status": "done", "commit": "3984a12", "note": "IDOR closed via Option B role-based authz; resolver DateTime<Utc> migration finished (parity byte-exact); seedWorld emptied; SEED-012 filed for deferred Option A. Commits 5e7bcb5, 987c3d8, 3984a12."}
+  ],
+  "remaining_tasks": [
+    {"id": "11-04", "name": "Security hardening (SEC-01..04): vendor_relations AuthGuard, per-role RBAC on writes + audit read, JWT fail-loud (no fallback secret), CORS single-origin (localhost:15510)", "status": "not_started"}
+  ],
+  "blockers": [
+    {"description": "Seed migration 20260601130001_seed_digital_resources.sql is committed but NOT applied to the dev DB — all resource_* tables are empty. `sqlx migrate run` is broken on the drifted DB (ALTER-before-CREATE, dup versions, zombie rename migration). Seed-dependent integration tests are #[ignore]; the demo GET /world returns nothing until this is applied or the migration baseline is repaired.", "type": "technical", "workaround": "Either repair the migration chain (see project_migrations_fresh_db_broken memory) or hand-apply the seed SQL directly to the running Postgres."},
+    {"description": "11-03 write authz is role-based (Option B), diverging from the resolver's org-based can_issue_resource_grant. Correct long-term model deferred to SEED-012 (blocked on building person->org linkage: no org col on person, relations forbids orgs, resource_org_links empty, int-vs-text org-id split).", "type": "technical", "workaround": "Deferred by decision — SEED-012 dormant."}
+  ],
+  "async_jobs": [],
+  "human_actions_pending": [
+    {"action": "Decide whether to apply/repair the digital-resource seed migration before 11-04 or before demoing /world", "context": "resource_* tables empty; demo tab + seed-dependent tests need data", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Digital-resource write authz = Option B (role-based JWT gate), not Option A (org-based)", "rationale": "No person->org linkage exists in the schema; Option A is a data-model build, not a code change. Option B closes the IDOR minimally and matches the codebase's role-based guard convention. Option A deferred to SEED-012.", "phase": "11"},
+    {"decision": "Completed the paused resolver NaiveDateTime->DateTime<Utc> migration; backed the prematurely-started 11-04 CORS change out to HEAD", "rationale": "DB cols are TIMESTAMPTZ (DateTime<Utc>); the CORS change used the wrong rocket_cors API and belongs to 11-04. PolicyVersion kept NaiveDateTime for TS golden byte-parity.", "phase": "11"}
+  ],
+  "uncommitted_files": [],
+  "background_processes": [
+    {"name": "postgres (docker)", "port": 15530, "state": "running", "manage": "docker compose -f docker-compose.dev.yml {ps|down}"},
+    {"name": "frontend (vite npm run dev)", "port": 15510, "state": "running (background task, may not persist across session)", "url": "http://localhost:15510/"},
+    {"name": "backend (rocket cargo run)", "port": 15520, "state": "running but ORPHANED/untracked — pid was 61763; a 2nd tracked cargo run failed with 'address already in use'. Login probe returned HTTP 200.", "manage": "pkill -f 'target/debug/janus-backend' then `cd backend && RUST_LOG=info cargo run` to relaunch cleanly"}
+  ],
+  "next_action": "Execute Phase 11 wave 4: /gsd-execute-phase 11 (runs 11-04-PLAN.md — SEC-01..04). When redoing CORS, use rocket_cors 0.6 AllowedOrigins::some_exact(&[\"http://localhost:15510\"]) (NOT ::exact/::all — that was the broken start we reverted).",
+  "context_notes": "Resumed from a prior pause that stopped at 11-03 task 3/3 with a confirmed IDOR + an undecided authz model. This session: investigated the live DB (proved no person->org linkage), chose Option B with the user (Hybrid: fix now + SEED-012 for Option A), applied the role-based gate, completed the half-done resolver DateTime migration, simplified build_resolver_resource to an existence probe, rewrote the integration tests for role-based authz, backed out the 11-04 CORS start, de-hardcoded seedWorld, wrote 11-03-SUMMARY, updated STATE/ROADMAP. Verified: resolver_parity 1 passed (byte-exact), security tests pass on live DB (non-admin->403 grants+delegates, admin->404 clears gate), world-state vitest 8 passed, backend lib compiles clean. Then started the full stack for the user. Pre-existing/out-of-scope issues left untouched: organizations/handlers.rs inline unit tests miss a `department` field (breaks lib UNIT-test target only, not the integration test binaries); person/handlers.rs:257 unused-params warning; 6 react-refresh lint errors in world-state.tsx; wide backend/*.rs git drift predates this session. Phase 11 is 3/4 plans done; only 11-04 remains."
+}
