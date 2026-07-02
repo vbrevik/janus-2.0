@@ -8,7 +8,7 @@ last_updated: "2026-07-02T13:10:00.000Z"
 last_activity: 2026-07-02
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 10
   completed_plans: 8
   percent: 80
@@ -73,6 +73,12 @@ v2.2 key decisions (from research/ARCHITECTURE.md and PITFALLS.md):
 
 None.
 
+## Quick Tasks Completed
+
+| Date | Task | Outcome |
+|------|------|---------|
+| 2026-07-02 | tidy-loose-ends | rustfmt sweep committed; .planning/codebase retired → TECH-DEBT-SCAN.md; 10-02-SUMMARY backfilled (tests 37/37); stray artifacts committed; .omo/ ignored |
+
 ### Blockers/Concerns
 
 - Seed migration `20260601130001_seed_digital_resources.sql` is committed but NOT applied to the dev DB (all `resource_*` tables empty; `sqlx migrate run` broken on the drifted DB — see [[project_migrations_fresh_db_broken]]). Seed-dependent integration tests are `#[ignore]` and the demo `/world` fetch returns nothing until this is applied/repaired.
@@ -81,7 +87,7 @@ None.
 ### Roadmap Evolution
 
 - Phase 11 edited: split original Phase 11 (full-stack scope expansion): Phase 11 = digital-resource backend + Rust resolver port + read/issue API; new Phase 12 = demo UI/loader/tab. RSRC-BE-01..05 added; RSRC-UI-01..03 remapped to 12 + UI-04/05/06 added.
-- Phase 13 added then folded into Phase 11 + removed (2026-06-23): Security hardening (server-side RBAC across all domains, JWT fail-loud, CORS) sourced from `.planning/codebase/CONCERNS.md`. Now Phase 11 requirements SEC-01..04 (AuthGuard-all + per-role on writes/sensitive reads; JWT no-fallback fail-loud; CORS → localhost:15510). Re-scored 11-SPEC.md at ambiguity 0.18. **Plans 11-01/02/03 predate the fold and need replan to cover SEC-01..04.**
+- Phase 13 added then folded into Phase 11 + removed (2026-06-23): Security hardening (server-side RBAC across all domains, JWT fail-loud, CORS) sourced from `.planning/codebase/CONCERNS.md` (since retired — see `.planning/TECH-DEBT-SCAN.md`). Now Phase 11 requirements SEC-01..04 (AuthGuard-all + per-role on writes/sensitive reads; JWT no-fallback fail-loud; CORS → localhost:15510). Re-scored 11-SPEC.md at ambiguity 0.18. **Plans 11-01/02/03 predate the fold and need replan to cover SEC-01..04.**
 
 ## Deferred Items
 
@@ -108,4 +114,4 @@ Items deferred from v2.0/v2.1, carried forward:
 
 Last session: 2026-07-02T13:10:00.000Z
 Stopped at: 11-03 executed to completion — IDOR fix (Option B role-based authz), resolver DateTime migration finished, seedWorld de-hardcoded, SEED-012 filed, 11-03-SUMMARY written. Backend lib compiles clean; parity + security tests green. Next: execute 11-04 (SEC-01..04). NOTE: seed migration still unapplied to the drifted dev DB — apply/repair before seed-dependent tests or the demo /world fetch return data.
-Resume file: None (HANDOFF.json + .continue-here consumed and removed)
+Resume file: `.planning/phases/11-digital-resource-backend/.continue-here.md` (pause before 11-04; written by c0c3afd)
