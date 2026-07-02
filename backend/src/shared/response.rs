@@ -35,4 +35,3 @@ pub struct PaginatedResponse<T> {
     pub per_page: i32,
     pub total_pages: i32,
 }
-

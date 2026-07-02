@@ -1,7 +1,7 @@
 // Authentication middleware for route guards
-use rocket::request::{FromRequest, Request, Outcome};
-use rocket::http::Status;
 use super::jwt::{validate_jwt, Claims};
+use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome, Request};
 
 #[allow(dead_code)]
 pub struct AuthGuard {
@@ -19,7 +19,7 @@ impl<'r> FromRequest<'r> for AuthGuard {
         };
 
         let token = request.headers().get_one("Authorization");
-        
+
         match token {
             Some(token) => {
                 let token = token.trim_start_matches("Bearer ");
@@ -32,4 +32,3 @@ impl<'r> FromRequest<'r> for AuthGuard {
         }
     }
 }
-

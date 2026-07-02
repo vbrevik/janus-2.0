@@ -1,13 +1,13 @@
 // Information Systems HTTP handlers
-use rocket::{State, get, post, put, delete, http::Status};
 use rocket::serde::json::Json;
+use rocket::{delete, get, http::Status, post, put, State};
 use sqlx::PgPool;
 use validator::Validate;
 
-use super::models::{InfoSystem, CreateInfoSystemRequest, UpdateInfoSystemRequest};
-use crate::shared::response::{PaginatedResponse, ApiResponse};
-use crate::shared::pagination::PaginationParams;
+use super::models::{CreateInfoSystemRequest, InfoSystem, UpdateInfoSystemRequest};
 use crate::auth::middleware::AuthGuard;
+use crate::shared::pagination::PaginationParams;
+use crate::shared::response::{ApiResponse, PaginatedResponse};
 
 #[get("/api/info-systems?<page>&<per_page>")]
 pub async fn list_info_systems(
@@ -22,13 +22,11 @@ pub async fn list_info_systems(
     };
 
     // Get total count
-    let total: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM info_systems"
-    )
-    .fetch_one(db.inner())
-    .await
-    .map_err(|_| Status::InternalServerError)?
-    .unwrap_or(0);
+    let total: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM info_systems")
+        .fetch_one(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?
+        .unwrap_or(0);
 
     // Get paginated info systems
     let systems = sqlx::query_as!(
@@ -92,13 +90,15 @@ pub async fn create_info_system(
 ) -> Result<Json<InfoSystem>, Status> {
     request.validate().map_err(|_| Status::BadRequest)?;
 
-        // Parse last_audit_date if provided
-        let audit_date = request.last_audit_date.as_ref()
-            .map(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d"))
-            .transpose()
-            .map_err(|_| Status::BadRequest)?;
+    // Parse last_audit_date if provided
+    let audit_date = request
+        .last_audit_date
+        .as_ref()
+        .map(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d"))
+        .transpose()
+        .map_err(|_| Status::BadRequest)?;
 
-        let system = sqlx::query_as!(
+    let system = sqlx::query_as!(
         InfoSystem,
         r#"
         INSERT INTO info_systems (system_name, description, environment, status, 
@@ -148,7 +148,9 @@ pub async fn update_info_system(
     }
 
     // Parse last_audit_date if provided
-    let audit_date = request.last_audit_date.as_ref()
+    let audit_date = request
+        .last_audit_date
+        .as_ref()
         .map(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d"))
         .transpose()
         .map_err(|_| Status::BadRequest)?;
@@ -198,14 +200,11 @@ pub async fn delete_info_system(
     db: &State<PgPool>,
     _auth: AuthGuard,
 ) -> Result<Json<ApiResponse<String>>, Status> {
-    let rows_affected = sqlx::query!(
-        "DELETE FROM info_systems WHERE id = $1",
-        id
-    )
-    .execute(db.inner())
-    .await
-    .map_err(|_| Status::InternalServerError)?
-    .rows_affected();
+    let rows_affected = sqlx::query!("DELETE FROM info_systems WHERE id = $1", id)
+        .execute(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?
+        .rows_affected();
 
     if rows_affected == 0 {
         return Err(Status::NotFound);
@@ -213,4 +212,3 @@ pub async fn delete_info_system(
 
     Ok(Json(ApiResponse::success("Deleted".to_string())))
 }
-

@@ -25,13 +25,19 @@ pub struct CreateVendorRelationRequest {
     pub related_vendor_id: Option<i32>,
     pub related_person_id: Option<i32>, // Changed from related_personnel_id
     pub notes: Option<String>,
-    pub valid_from: Option<String>, // ISO date string
+    pub valid_from: Option<String>,  // ISO date string
     pub valid_until: Option<String>, // ISO date string
 }
 
 #[allow(dead_code)]
 fn validate_relation_type(relation_type: &str) -> Result<(), validator::ValidationError> {
-    let valid_types = ["sub_vendor", "employee", "consultant", "partner", "subcontractor"];
+    let valid_types = [
+        "sub_vendor",
+        "employee",
+        "consultant",
+        "partner",
+        "subcontractor",
+    ];
     if valid_types.contains(&relation_type) {
         Ok(())
     } else {
@@ -56,4 +62,3 @@ pub struct VendorHierarchy {
     pub level: i32,
     pub sub_vendors: Vec<VendorHierarchy>,
 }
-

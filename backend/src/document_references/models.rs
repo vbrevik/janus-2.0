@@ -56,8 +56,3 @@ pub struct AttachmentUploadRequest {
     #[validate(length(min = 10))]
     pub data_base64: String,
 }
-
-
-
-
-

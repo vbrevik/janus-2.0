@@ -34,7 +34,7 @@ pub struct CreateRelationRequest {
     #[validate(length(min = 1))]
     pub relation_type: String,
     pub notes: Option<String>,
-    pub valid_from: Option<String>, // ISO date string
+    pub valid_from: Option<String>,  // ISO date string
     pub valid_until: Option<String>, // ISO date string
 }
 
@@ -65,4 +65,3 @@ pub struct EntityHierarchy {
     pub level: i32,
     pub children: Vec<EntityHierarchy>,
 }
-

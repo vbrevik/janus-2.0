@@ -1,8 +1,8 @@
+use crate::messaging::models::WebSocketMessage;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{RwLock, mpsc};
+use tokio::sync::{mpsc, RwLock};
 use tokio_tungstenite::tungstenite::Message;
-use crate::messaging::models::WebSocketMessage;
 
 pub type ConnectionMap = Arc<RwLock<HashMap<i32, Vec<mpsc::UnboundedSender<Message>>>>>;
 
@@ -19,10 +19,7 @@ impl WebSocketManager {
 
     pub async fn add_connection(&self, user_id: i32, tx: mpsc::UnboundedSender<Message>) {
         let mut connections = self.connections.write().await;
-        connections
-            .entry(user_id)
-            .or_insert_with(Vec::new)
-            .push(tx);
+        connections.entry(user_id).or_insert_with(Vec::new).push(tx);
     }
 
     pub async fn remove_connection(&self, user_id: i32, tx_id: usize) {
@@ -94,4 +91,3 @@ impl Default for WebSocketManager {
         Self::new()
     }
 }
-

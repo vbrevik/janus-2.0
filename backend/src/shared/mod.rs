@@ -1,10 +1,9 @@
 // Shared utilities and common code
 
-pub mod response;
-pub mod pagination;
 pub mod database;
-pub mod handlers;
 pub mod error;
+pub mod handlers;
+pub mod pagination;
 pub mod rbac;
+pub mod response;
 pub mod rocket_setup;
-

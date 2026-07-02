@@ -1,8 +1,8 @@
 // Organization management module
 // Handles CRUD operations for organization records
 
-pub mod models;
 pub mod handlers;
+pub mod models;
 
 pub fn routes() -> Vec<rocket::Route> {
     routes![
@@ -13,4 +13,3 @@ pub fn routes() -> Vec<rocket::Route> {
         handlers::delete_organization,
     ]
 }
-

@@ -10,7 +10,7 @@ pub struct NDA {
     pub title: String,
     pub content: String,
     pub version: String,
-    pub status: String, // PENDING, ACTIVE, SIGNED, EXPIRED, REVOKED
+    pub status: String,           // PENDING, ACTIVE, SIGNED, EXPIRED, REVOKED
     pub issued_by_person_id: i32, // Changed from issued_by
     pub issued_at: NaiveDateTime,
     pub signed_at: Option<NaiveDateTime>,
@@ -54,4 +54,3 @@ pub struct RejectNDARequest {
     #[validate(length(min = 1))]
     pub reason: String,
 }
-

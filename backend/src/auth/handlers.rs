@@ -1,14 +1,16 @@
 // Authentication HTTP handlers
-use rocket::{State, post, get, put, http::Status};
+use bcrypt;
 use rocket::serde::json::Json;
+use rocket::{get, http::Status, post, put, State};
 use sqlx::PgPool;
 use validator::Validate;
-use bcrypt;
 
-use super::models::{LoginRequest, LoginResponse, PersonAuth, ProfileResponse, ChangePasswordRequest};
-use crate::person::models::Person;
 use super::jwt::create_jwt;
 use super::middleware::AuthGuard;
+use super::models::{
+    ChangePasswordRequest, LoginRequest, LoginResponse, PersonAuth, ProfileResponse,
+};
+use crate::person::models::Person;
 
 #[post("/api/auth/login", data = "<login_request>")]
 pub async fn login(
@@ -23,7 +25,7 @@ pub async fn login(
     let person_auth = sqlx::query_as::<_, PersonAuth>(
         "SELECT id, username, password_hash, role, created_at, updated_at 
          FROM person 
-         WHERE username = $1 AND password_hash IS NOT NULL"
+         WHERE username = $1 AND password_hash IS NOT NULL",
     )
     .bind(&login_request.username)
     .fetch_optional(db.inner())
@@ -32,7 +34,9 @@ pub async fn login(
     .ok_or(Status::Unauthorized)?;
 
     // Verify password_hash exists
-    let password_hash = person_auth.password_hash.as_ref()
+    let password_hash = person_auth
+        .password_hash
+        .as_ref()
         .ok_or(Status::Unauthorized)?;
 
     // Verify password
@@ -44,7 +48,9 @@ pub async fn login(
     }
 
     // Get role (must exist for users)
-    let role = person_auth.role.as_ref()
+    let role = person_auth
+        .role
+        .as_ref()
         .ok_or(Status::InternalServerError)?;
 
     // Create JWT token
@@ -72,7 +78,7 @@ pub async fn get_profile(
                 clearance_level, department, position,
                 deleted_at, created_at, updated_at 
          FROM person 
-         WHERE id = $1 AND deleted_at IS NULL"
+         WHERE id = $1 AND deleted_at IS NULL",
     )
     .bind(person_id)
     .fetch_optional(db.inner())
@@ -111,7 +117,7 @@ pub async fn change_password(
     let person_auth = sqlx::query_as::<_, PersonAuth>(
         "SELECT id, username, password_hash, role, created_at, updated_at 
          FROM person 
-         WHERE id = $1 AND password_hash IS NOT NULL"
+         WHERE id = $1 AND password_hash IS NOT NULL",
     )
     .bind(person_id)
     .fetch_optional(db.inner())
@@ -120,7 +126,9 @@ pub async fn change_password(
     .ok_or(Status::NotFound)?;
 
     // Verify password_hash exists
-    let password_hash = person_auth.password_hash.as_ref()
+    let password_hash = person_auth
+        .password_hash
+        .as_ref()
         .ok_or(Status::InternalServerError)?;
 
     // Verify old password
@@ -137,7 +145,7 @@ pub async fn change_password(
 
     // Update password in person table
     sqlx::query(
-        "UPDATE person SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2"
+        "UPDATE person SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
     )
     .bind(&new_hash)
     .bind(person_id)

@@ -8,7 +8,7 @@ pub struct ComputerAccess {
     pub id: i32,
     pub person_id: i32, // Changed from personnel_id
     pub system_name: String,
-    pub access_level: String, // READ, WRITE, ADMIN
+    pub access_level: String,      // READ, WRITE, ADMIN
     pub granted_by_person_id: i32, // Changed from granted_by
     pub granted_at: chrono::NaiveDateTime,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -22,12 +22,12 @@ pub struct ComputerAccess {
 pub struct CreateComputerAccessRequest {
     #[validate(length(min = 1, max = 100))]
     pub system_name: String,
-    
+
     pub access_level: String, // READ, WRITE, ADMIN
-    
+
     #[validate(range(min = 1))]
     pub person_id: i32, // Changed from personnel_id
-    
+
     pub expires_at: Option<chrono::NaiveDateTime>,
 }
 
@@ -35,10 +35,10 @@ pub struct CreateComputerAccessRequest {
 #[derive(Serialize, Deserialize, FromRow, Clone, Debug)]
 pub struct DataAccess {
     pub id: i32,
-    pub person_id: i32, // Changed from personnel_id
+    pub person_id: i32,              // Changed from personnel_id
     pub data_classification: String, // UNCLASSIFIED, CONFIDENTIAL, SECRET, TOP_SECRET
-    pub access_level: String, // READ, WRITE, DELETE
-    pub granted_by_person_id: i32, // Changed from granted_by
+    pub access_level: String,        // READ, WRITE, DELETE
+    pub granted_by_person_id: i32,   // Changed from granted_by
     pub granted_at: chrono::NaiveDateTime,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<chrono::NaiveDateTime>,
@@ -50,12 +50,12 @@ pub struct DataAccess {
 #[derive(Deserialize, Validate, Debug)]
 pub struct CreateDataAccessRequest {
     pub data_classification: String, // UNCLASSIFIED, CONFIDENTIAL, SECRET, TOP_SECRET
-    
+
     pub access_level: String, // READ, WRITE, DELETE
-    
+
     #[validate(range(min = 1))]
     pub person_id: i32, // Changed from personnel_id
-    
+
     pub expires_at: Option<chrono::NaiveDateTime>,
 }
 
@@ -70,7 +70,7 @@ pub struct PhysicalAccess {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub valid_until: Option<chrono::NaiveDateTime>,
     pub granted_by_person_id: i32, // Changed from granted_by
-    pub status: String, // ACTIVE, REVOKED, EXPIRED
+    pub status: String,            // ACTIVE, REVOKED, EXPIRED
     pub created_at: chrono::NaiveDateTime,
     pub updated_at: chrono::NaiveDateTime,
 }
@@ -79,12 +79,12 @@ pub struct PhysicalAccess {
 pub struct CreatePhysicalAccessRequest {
     #[validate(length(min = 1, max = 100))]
     pub zone_name: String,
-    
+
     pub access_level: String, // VISITOR, STANDARD, RESTRICTED, FULL
-    
+
     #[validate(range(min = 1))]
     pub person_id: i32, // Changed from personnel_id
-    
+
     pub valid_until: Option<chrono::NaiveDateTime>,
 }
 

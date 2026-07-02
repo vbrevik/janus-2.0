@@ -1,11 +1,11 @@
 // Shared HTTP handlers (stats, health, etc.)
-use rocket::{State, get, http::Status};
 use rocket::serde::json::Json;
+use rocket::{get, http::Status, State};
 use serde::Serialize;
 use sqlx::PgPool;
 
-use crate::shared::response::ApiResponse;
 use crate::auth::middleware::AuthGuard;
+use crate::shared::response::ApiResponse;
 
 #[derive(Serialize)]
 pub struct DashboardStats {
@@ -22,22 +22,20 @@ pub async fn get_stats(
     _auth: AuthGuard,
 ) -> Result<Json<ApiResponse<DashboardStats>>, Status> {
     // Get total persons
-    let total_persons: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM person WHERE deleted_at IS NULL"
-    )
-    .fetch_one(db.inner())
-    .await
-    .map_err(|_| Status::InternalServerError)?
-    .unwrap_or(0);
+    let total_persons: i64 =
+        sqlx::query_scalar!("SELECT COUNT(*) FROM person WHERE deleted_at IS NULL")
+            .fetch_one(db.inner())
+            .await
+            .map_err(|_| Status::InternalServerError)?
+            .unwrap_or(0);
 
     // Get total organizations
-    let total_organizations: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM organizations WHERE deleted_at IS NULL"
-    )
-    .fetch_one(db.inner())
-    .await
-    .map_err(|_| Status::InternalServerError)?
-    .unwrap_or(0);
+    let total_organizations: i64 =
+        sqlx::query_scalar!("SELECT COUNT(*) FROM organizations WHERE deleted_at IS NULL")
+            .fetch_one(db.inner())
+            .await
+            .map_err(|_| Status::InternalServerError)?
+            .unwrap_or(0);
 
     // Get total access grants (all access types)
     let total_access_grants: i64 = sqlx::query_scalar!(
@@ -88,4 +86,3 @@ pub async fn get_stats(
 
     Ok(Json(ApiResponse::success(stats)))
 }
-

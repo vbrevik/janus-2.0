@@ -1,5 +1,5 @@
-use rocket::{State, http::Status};
 use rocket::serde::json::Json;
+use rocket::{http::Status, State};
 use sqlx::PgPool;
 
 use crate::access::models::*;
@@ -13,9 +13,12 @@ pub async fn grant_computer_access(
     auth: AuthGuard,
     data: Json<CreateComputerAccessRequest>,
 ) -> Result<Json<ApiResponse<ComputerAccess>>, Status> {
-    let granted_by_person_id = auth.claims.sub.parse::<i32>()
+    let granted_by_person_id = auth
+        .claims
+        .sub
+        .parse::<i32>()
         .map_err(|_| Status::InternalServerError)?;
-    
+
     // Insert computer access
     let access = sqlx::query_as::<_, ComputerAccess>(
         r#"
@@ -25,7 +28,7 @@ pub async fn grant_computer_access(
         RETURNING 
             id, person_id, system_name, access_level, granted_by_person_id,
             granted_at, expires_at, status, created_at, updated_at
-        "#
+        "#,
     )
     .bind(data.person_id)
     .bind(&data.system_name)
@@ -35,7 +38,7 @@ pub async fn grant_computer_access(
     .fetch_one(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?;
-    
+
     Ok(Json(ApiResponse::success(access)))
 }
 
@@ -46,9 +49,12 @@ pub async fn grant_data_access(
     auth: AuthGuard,
     data: Json<CreateDataAccessRequest>,
 ) -> Result<Json<ApiResponse<DataAccess>>, Status> {
-    let granted_by_person_id = auth.claims.sub.parse::<i32>()
+    let granted_by_person_id = auth
+        .claims
+        .sub
+        .parse::<i32>()
         .map_err(|_| Status::InternalServerError)?;
-    
+
     // Insert data access
     let access = sqlx::query_as::<_, DataAccess>(
         r#"
@@ -58,7 +64,7 @@ pub async fn grant_data_access(
         RETURNING 
             id, person_id, data_classification, access_level, granted_by_person_id,
             granted_at, expires_at, status, created_at, updated_at
-        "#
+        "#,
     )
     .bind(data.person_id)
     .bind(&data.data_classification)
@@ -68,7 +74,7 @@ pub async fn grant_data_access(
     .fetch_one(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?;
-    
+
     Ok(Json(ApiResponse::success(access)))
 }
 
@@ -79,9 +85,12 @@ pub async fn grant_physical_access(
     auth: AuthGuard,
     data: Json<CreatePhysicalAccessRequest>,
 ) -> Result<Json<ApiResponse<PhysicalAccess>>, Status> {
-    let granted_by_person_id = auth.claims.sub.parse::<i32>()
+    let granted_by_person_id = auth
+        .claims
+        .sub
+        .parse::<i32>()
         .map_err(|_| Status::InternalServerError)?;
-    
+
     // Insert physical access
     let access = sqlx::query_as::<_, PhysicalAccess>(
         r#"
@@ -91,7 +100,7 @@ pub async fn grant_physical_access(
         RETURNING 
             id, person_id, zone_name, access_level, valid_from, valid_until,
             granted_by_person_id, status, created_at, updated_at
-        "#
+        "#,
     )
     .bind(data.person_id)
     .bind(&data.zone_name)
@@ -101,7 +110,7 @@ pub async fn grant_physical_access(
     .fetch_one(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?;
-    
+
     Ok(Json(ApiResponse::success(access)))
 }
 
@@ -112,7 +121,6 @@ pub async fn list_person_access(
     _auth: AuthGuard,
     id: i32,
 ) -> Result<Json<ApiResponse<PersonAccess>>, Status> {
-    
     // Query computer access
     let computer_access = sqlx::query_as::<_, ComputerAccess>(
         r#"
@@ -121,13 +129,13 @@ pub async fn list_person_access(
         FROM computer_access
         WHERE person_id = $1 AND status = 'ACTIVE'
         ORDER BY granted_at DESC
-        "#
+        "#,
     )
     .bind(id)
     .fetch_all(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?;
-    
+
     // Query data access
     let data_access = sqlx::query_as::<_, DataAccess>(
         r#"
@@ -136,13 +144,13 @@ pub async fn list_person_access(
         FROM data_access
         WHERE person_id = $1 AND status = 'ACTIVE'
         ORDER BY granted_at DESC
-        "#
+        "#,
     )
     .bind(id)
     .fetch_all(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?;
-    
+
     // Query physical access
     let physical_access = sqlx::query_as::<_, PhysicalAccess>(
         r#"
@@ -151,19 +159,19 @@ pub async fn list_person_access(
         FROM physical_access
         WHERE person_id = $1 AND status = 'ACTIVE'
         ORDER BY valid_from DESC
-        "#
+        "#,
     )
     .bind(id)
     .fetch_all(db.inner())
     .await
     .map_err(|_| Status::InternalServerError)?;
-    
+
     let access = PersonAccess {
         computer_access,
         data_access,
         physical_access,
     };
-    
+
     Ok(Json(ApiResponse::success(access)))
 }
 
@@ -207,6 +215,6 @@ pub async fn revoke_access(
             return Err(Status::BadRequest);
         }
     }
-    
+
     Ok(Json(ApiResponse::success("Access revoked successfully")))
 }

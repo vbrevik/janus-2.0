@@ -6,7 +6,7 @@ use validator::Validate;
 pub struct LoginRequest {
     #[validate(length(min = 3, max = 50))]
     pub username: String,
-    
+
     #[validate(length(min = 8))]
     pub password: String,
 }
@@ -53,8 +53,7 @@ pub struct ProfileResponse {
 pub struct ChangePasswordRequest {
     #[validate(length(min = 8))]
     pub old_password: String,
-    
+
     #[validate(length(min = 8))]
     pub new_password: String,
 }
-

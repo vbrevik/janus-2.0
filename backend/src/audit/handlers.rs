@@ -1,12 +1,12 @@
 // Audit log HTTP handlers
-use rocket::{State, get, http::Status};
 use rocket::serde::json::Json;
+use rocket::{get, http::Status, State};
 use sqlx::PgPool;
 
 use super::models::{AuditLog, CreateAuditLogRequest};
 use crate::auth::middleware::AuthGuard;
-use crate::shared::response::PaginatedResponse;
 use crate::shared::pagination::PaginationParams;
+use crate::shared::response::PaginatedResponse;
 
 /// List audit logs with optional filtering and pagination
 #[get("/api/audit?<page>&<per_page>&<username>&<action>&<resource_type>")]
@@ -43,7 +43,7 @@ pub async fn list_audit_logs(
 
     // Get total count with filters
     let mut count_query = sqlx::query_scalar::<_, i64>(&query);
-    
+
     if let Some(ref u) = username {
         count_query = count_query.bind(u);
     }
@@ -59,13 +59,13 @@ pub async fn list_audit_logs(
         .await
         .map_err(|_| Status::InternalServerError)?;
 
-    // Build select query  
+    // Build select query
     let mut select_query = String::from(
         "SELECT id, person_id, username, action, resource_type, resource_id, details, ip_address, user_agent, created_at FROM audit_log WHERE 1=1"
     );
-    
+
     let mut select_param_count = 1;
-    
+
     if username.is_some() {
         select_query.push_str(&format!(" AND username = ${}", select_param_count));
         select_param_count += 1;
@@ -78,13 +78,16 @@ pub async fn list_audit_logs(
         select_query.push_str(&format!(" AND resource_type = ${}", select_param_count));
         select_param_count += 1;
     }
-    
-    select_query.push_str(&format!(" ORDER BY created_at DESC LIMIT ${} OFFSET ${}", 
-        select_param_count, select_param_count + 1));
+
+    select_query.push_str(&format!(
+        " ORDER BY created_at DESC LIMIT ${} OFFSET ${}",
+        select_param_count,
+        select_param_count + 1
+    ));
 
     // Execute select with filters and pagination
     let mut logs_query = sqlx::query_as::<_, AuditLog>(&select_query);
-    
+
     if let Some(ref u) = username {
         logs_query = logs_query.bind(u);
     }
@@ -94,7 +97,7 @@ pub async fn list_audit_logs(
     if let Some(ref rt) = resource_type {
         logs_query = logs_query.bind(rt);
     }
-    
+
     logs_query = logs_query.bind(pagination.limit());
     logs_query = logs_query.bind(pagination.offset());
 

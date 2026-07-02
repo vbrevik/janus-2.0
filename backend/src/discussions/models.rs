@@ -9,10 +9,10 @@ pub struct Discussion {
     pub person_id: i32, // Changed from personnel_id
     pub subject: String,
     pub message: String,
-    pub r#type: String, // discussion, report, request
-    pub status: String, // OPEN, IN_PROGRESS, RESOLVED, CLOSED
-    pub priority: String, // LOW, NORMAL, HIGH, URGENT
-    pub created_by_person_id: i32, // Changed from created_by
+    pub r#type: String,                     // discussion, report, request
+    pub status: String,                     // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+    pub priority: String,                   // LOW, NORMAL, HIGH, URGENT
+    pub created_by_person_id: i32,          // Changed from created_by
     pub assigned_to_person_id: Option<i32>, // Changed from assigned_to
     pub resolved_at: Option<NaiveDateTime>,
     pub resolved_by_person_id: Option<i32>, // Changed from resolved_by
@@ -36,7 +36,7 @@ pub struct CreateDiscussionRequest {
     pub subject: String,
     #[validate(length(min = 10))]
     pub message: String,
-    pub r#type: String, // discussion, report, request
+    pub r#type: String,           // discussion, report, request
     pub priority: Option<String>, // LOW, NORMAL, HIGH, URGENT
 }
 
@@ -52,8 +52,3 @@ pub struct DiscussionWithReplies {
     pub discussion: Discussion,
     pub replies: Vec<DiscussionReply>,
 }
-
-
-
-
-

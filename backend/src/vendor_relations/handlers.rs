@@ -2,14 +2,16 @@ use rocket::serde::json::Json;
 use rocket::State;
 use sqlx::PgPool;
 
-use crate::vendor_relations::models::*;
+use crate::auth::middleware::AuthGuard;
 use crate::shared::response::ApiResponse;
+use crate::vendor_relations::models::*;
 
 /// List all relations for a specific vendor
 #[get("/api/vendors/<vendor_id>/relations")]
 pub async fn list_vendor_relations(
     db: &State<PgPool>,
     vendor_id: i32,
+    _auth: AuthGuard, // Require authentication for all vendor relations access (SEC-01)
 ) -> Result<Json<ApiResponse<Vec<VendorRelation>>>, String> {
     let relations = sqlx::query_as::<sqlx::Postgres, VendorRelation>(
         r#"
@@ -18,13 +20,13 @@ pub async fn list_vendor_relations(
         FROM vendor_relations
         WHERE vendor_id = $1
         ORDER BY relation_type, created_at DESC
-        "#
+        "#,
     )
     .bind(vendor_id)
     .fetch_all(db.inner())
     .await
     .map_err(|e| format!("Database error: {}", e))?;
-    
+
     Ok(Json(ApiResponse::success(relations)))
 }
 
@@ -33,12 +35,13 @@ pub async fn list_vendor_relations(
 pub async fn create_vendor_relation(
     db: &State<PgPool>,
     data: Json<CreateVendorRelationRequest>,
+    _auth: AuthGuard, // Require authentication for creating vendor relations (SEC-01)
 ) -> Result<Json<ApiResponse<VendorRelation>>, String> {
     // Validate that either related_vendor_id or related_person_id is set
     if data.related_vendor_id.is_none() && data.related_person_id.is_none() {
         return Err("Either related_vendor_id or related_person_id must be provided".to_string());
     }
-    
+
     // Simple date parsing: YYYY-MM-DD format
     let valid_from = match &data.valid_from {
         Some(d) => chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d")
@@ -47,13 +50,13 @@ pub async fn create_vendor_relation(
             .unwrap_or_else(|| chrono::Utc::now().naive_utc()),
         None => chrono::Utc::now().naive_utc(),
     };
-    
+
     let valid_until = data.valid_until.as_ref().and_then(|d| {
         chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d")
             .ok()
             .and_then(|date| date.and_hms_opt(23, 59, 59))
     });
-    
+
     let relation = sqlx::query_as::<sqlx::Postgres, VendorRelation>(
         r#"
         INSERT INTO vendor_relations (vendor_id, related_vendor_id, related_person_id, relation_type, notes, valid_from, valid_until)
@@ -72,7 +75,7 @@ pub async fn create_vendor_relation(
     .fetch_one(db.inner())
     .await
     .map_err(|e| format!("Database error: {}", e))?;
-    
+
     Ok(Json(ApiResponse::success(relation)))
 }
 
@@ -81,16 +84,16 @@ pub async fn create_vendor_relation(
 pub async fn get_vendor_hierarchy(
     db: &State<PgPool>,
     vendor_id: i32,
+    _auth: AuthGuard, // Require authentication for vendor hierarchy access (SEC-01)
 ) -> Result<Json<ApiResponse<Vec<VendorHierarchy>>>, String> {
     // First, get the vendor name (using runtime query to avoid compile-time schema checks)
-    let _vendor_name: Option<String> = sqlx::query_scalar(
-        "SELECT company_name FROM vendors WHERE id = $1"
-    )
-    .bind(vendor_id)
-    .fetch_optional(db.inner())
-    .await
-    .map_err(|e| format!("Database error: {}", e))?;
-    
+    let _vendor_name: Option<String> =
+        sqlx::query_scalar("SELECT company_name FROM vendors WHERE id = $1")
+            .bind(vendor_id)
+            .fetch_optional(db.inner())
+            .await
+            .map_err(|e| format!("Database error: {}", e))?;
+
     // Use recursive CTE to build hierarchy (simplified - not fully implemented)
     // Note: This query uses runtime binding to avoid compile-time schema checks
     let _hierarchy_raw: Vec<sqlx::postgres::PgRow> = sqlx::query(
@@ -133,16 +136,16 @@ pub async fn get_vendor_hierarchy(
             level
         FROM vendor_tree
         ORDER BY level, relation_type, company_name
-        "#
+        "#,
     )
     .bind(vendor_id)
     .fetch_all(db.inner())
     .await
     .map_err(|e| format!("Database error: {}", e))?;
-    
+
     // Build hierarchical structure - simplified for now
     let hierarchy: Vec<VendorHierarchy> = vec![];
-    
+
     Ok(Json(ApiResponse::success(hierarchy)))
 }
 
@@ -157,7 +160,8 @@ pub async fn delete_vendor_relation(
         .execute(db.inner())
         .await
         .map_err(|e| format!("Database error: {}", e))?;
-    
-    Ok(Json(ApiResponse::success("Relation deleted successfully".to_string())))
-}
 
+    Ok(Json(ApiResponse::success(
+        "Relation deleted successfully".to_string(),
+    )))
+}

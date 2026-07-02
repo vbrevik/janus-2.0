@@ -1,17 +1,21 @@
 // JWT token creation and validation
-use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey};
+use chrono::{Duration, Utc};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
-use chrono::{Utc, Duration};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: String,        // User ID
-    pub exp: i64,           // Expiration time
-    pub iat: i64,           // Issued at
-    pub role: String,       // User role
+    pub sub: String,  // User ID
+    pub exp: i64,     // Expiration time
+    pub iat: i64,     // Issued at
+    pub role: String, // User role
 }
 
-pub fn create_jwt(user_id: &str, role: &str, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn create_jwt(
+    user_id: &str,
+    role: &str,
+    secret: &str,
+) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = Utc::now()
         .checked_add_signed(Duration::hours(8))
         .expect("Valid timestamp")
@@ -67,4 +71,3 @@ mod tests {
         assert!(validate_jwt(&token, wrong_secret).is_err());
     }
 }
-

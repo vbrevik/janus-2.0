@@ -2,10 +2,10 @@
 // Handles CRUD operations for person entities
 // Replaces both personnel and users modules
 
-pub mod models;
 pub mod handlers;
+pub mod models;
 
-pub use models::{Person, CreatePersonRequest, UpdatePersonRequest};
+pub use models::{CreatePersonRequest, Person, UpdatePersonRequest};
 
 pub fn routes() -> Vec<rocket::Route> {
     routes![
@@ -16,4 +16,3 @@ pub fn routes() -> Vec<rocket::Route> {
         handlers::delete_person,
     ]
 }
-

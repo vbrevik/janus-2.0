@@ -21,21 +21,21 @@ pub struct InfoSystem {
 pub struct CreateInfoSystemRequest {
     #[validate(length(min = 1, max = 100))]
     pub system_name: String,
-    
+
     pub description: Option<String>,
-    
+
     #[validate(custom = "validate_environment")]
     pub environment: String,
-    
+
     #[validate(custom = "validate_status")]
     pub status: String,
-    
+
     pub ip_address: Option<String>,
-    
+
     pub domain: Option<String>,
-    
+
     pub managed_by: Option<String>,
-    
+
     pub last_audit_date: Option<String>,
 }
 
@@ -43,21 +43,21 @@ pub struct CreateInfoSystemRequest {
 pub struct UpdateInfoSystemRequest {
     #[validate(length(min = 1, max = 100))]
     pub system_name: Option<String>,
-    
+
     pub description: Option<String>,
-    
+
     #[validate(custom = "validate_environment")]
     pub environment: Option<String>,
-    
+
     #[validate(custom = "validate_status")]
     pub status: Option<String>,
-    
+
     pub ip_address: Option<String>,
-    
+
     pub domain: Option<String>,
-    
+
     pub managed_by: Option<String>,
-    
+
     pub last_audit_date: Option<String>,
 }
 
@@ -236,4 +236,3 @@ mod tests {
         assert!(invalid_request.validate().is_err());
     }
 }
-

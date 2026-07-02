@@ -1,15 +1,15 @@
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
-use rocket::{get, post, put, delete};
-use rocket::http::Status;
+use rocket::{delete, get, post, put};
 use sqlx::PgPool;
 
-use crate::document_references::models::*;
 use crate::auth::middleware::AuthGuard;
-use validator::Validate;
+use crate::document_references::models::*;
 use base64::Engine as _;
-use s3::{Bucket, Region};
 use s3::creds::Credentials;
+use s3::{Bucket, Region};
+use validator::Validate;
 
 /// List document references for a personnel
 #[get("/?<person_id>&<document_type>&<status>")]
@@ -27,7 +27,7 @@ pub async fn list_document_references(
     let documents = if let Some(pid) = person_id {
         let doc_type_str = document_type.as_ref().map(|s| s.as_str());
         let status_str = status.as_ref().map(|s| s.as_str());
-        
+
         if let (Some(t), Some(s)) = (doc_type_str, status_str) {
             sqlx::query_as::<sqlx::Postgres, DocumentReference>(
                 "SELECT id, person_id, title, document_type, description, issued_date, location, self_reported_by_person_id, self_reported_at, verified_by_person_id, verified_at, status, notes, attachment_path, attachment_mime_type, attachment_original_name, created_at, updated_at FROM document_references WHERE person_id = $1 AND document_type = $2 AND status = $3 ORDER BY issued_date DESC NULLS LAST, created_at DESC"
@@ -111,7 +111,10 @@ pub async fn create_document_reference(
     let person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
     // The authenticated user's person_id is already in auth.claims.sub
     // No need to look up - the person_id is the authenticated person
-    let document_type = data.document_type.clone().unwrap_or_else(|| "security_brief".to_string());
+    let document_type = data
+        .document_type
+        .clone()
+        .unwrap_or_else(|| "security_brief".to_string());
 
     let issued_date = match &data.issued_date {
         Some(d) => chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok(),
@@ -151,7 +154,9 @@ pub async fn update_document_reference(
     data: Json<UpdateDocumentReferenceRequest>,
     _auth: AuthGuard,
 ) -> Result<Json<DocumentReference>, Status> {
-    let issued_date_opt = data.issued_date.as_ref()
+    let issued_date_opt = data
+        .issued_date
+        .as_ref()
         .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok());
 
     let doc = sqlx::query_as::<sqlx::Postgres, DocumentReference>(
@@ -202,41 +207,41 @@ pub async fn upload_document_attachment(
         .map_err(|_| Status::BadRequest)?;
 
     // MinIO configuration from environment
-    let endpoint = std::env::var("MINIO_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".to_string());
+    let endpoint =
+        std::env::var("MINIO_ENDPOINT").unwrap_or_else(|_| "http://localhost:9000".to_string());
     let access_key = std::env::var("MINIO_ACCESS_KEY").unwrap_or_else(|_| "janusminio".to_string());
-    let secret_key = std::env::var("MINIO_SECRET_KEY").unwrap_or_else(|_| "janusminio_password".to_string());
-    let bucket_name = std::env::var("MINIO_BUCKET").unwrap_or_else(|_| "janus-documents".to_string());
+    let secret_key =
+        std::env::var("MINIO_SECRET_KEY").unwrap_or_else(|_| "janusminio_password".to_string());
+    let bucket_name =
+        std::env::var("MINIO_BUCKET").unwrap_or_else(|_| "janus-documents".to_string());
     let region = std::env::var("MINIO_REGION").unwrap_or_else(|_| "us-east-1".to_string());
 
     // Create credentials and bucket
-    let credentials = Credentials::new(
-        Some(&access_key),
-        Some(&secret_key),
-        None,
-        None,
-        None,
-    ).map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?;
+    let credentials = Credentials::new(Some(&access_key), Some(&secret_key), None, None, None)
+        .map_err(|e| {
+            eprintln!("Database error: {:?}", e);
+            Status::InternalServerError
+        })?;
 
-    let region = Region::Custom { region: region.clone(), endpoint: endpoint.clone() };
+    let region = Region::Custom {
+        region: region.clone(),
+        endpoint: endpoint.clone(),
+    };
     let bucket = Bucket::new(&bucket_name, region, credentials)
         .map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?
+            eprintln!("Database error: {:?}", e);
+            Status::InternalServerError
+        })?
         .with_path_style();
 
     // Upload file to MinIO
     let sanitized = data.filename.replace('/', "_");
     let key = format!("document_references/{}/{}", id, sanitized);
-    
-    bucket.put_object(&key, &bytes).await
-        .map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?;
+
+    bucket.put_object(&key, &bytes).await.map_err(|e| {
+        eprintln!("Database error: {:?}", e);
+        Status::InternalServerError
+    })?;
 
     let path = format!("s3://{}/{}", bucket_name, key);
 
@@ -277,11 +282,10 @@ pub async fn delete_document_reference(
         .bind(id)
         .execute(db.inner())
         .await
-    .map_err(|e| {
-    eprintln!("Database error: {:?}", e);
-    Status::InternalServerError
-})?;
+        .map_err(|e| {
+            eprintln!("Database error: {:?}", e);
+            Status::InternalServerError
+        })?;
 
     Ok(Json("Deleted"))
 }
-

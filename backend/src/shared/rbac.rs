@@ -1,6 +1,10 @@
 use sqlx::PgPool;
 
-pub async fn role_has_permission(db: &PgPool, role_name: &str, perm_key: &str) -> Result<bool, sqlx::Error> {
+pub async fn role_has_permission(
+    db: &PgPool,
+    role_name: &str,
+    perm_key: &str,
+) -> Result<bool, sqlx::Error> {
     let exists = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (
@@ -20,4 +24,3 @@ pub async fn role_has_permission(db: &PgPool, role_name: &str, perm_key: &str) -
 
     Ok(exists)
 }
-

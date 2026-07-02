@@ -1,14 +1,14 @@
+use futures_util::{SinkExt, StreamExt};
+use sqlx::PgPool;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
-use tokio_tungstenite::{accept_async, WebSocketStream};
 use tokio::sync::mpsc;
-use futures_util::{SinkExt, StreamExt};
 use tokio_tungstenite::tungstenite::Message;
-use sqlx::PgPool;
+use tokio_tungstenite::{accept_async, WebSocketStream};
 
-use crate::messaging::websocket::WebSocketManager;
-use crate::messaging::models::WebSocketMessage;
 use crate::auth::jwt::validate_jwt;
+use crate::messaging::models::WebSocketMessage;
+use crate::messaging::websocket::WebSocketManager;
 
 /// WebSocket connection handler
 pub async fn handle_websocket_connection(
@@ -23,7 +23,7 @@ pub async fn handle_websocket_connection(
     // Authenticate: Wait for first message with JWT token
     let mut user_id = initial_user_id;
     let mut authenticated = jwt_secret.is_none(); // If no JWT secret, skip auth
-    
+
     if let Some(secret) = jwt_secret.as_ref() {
         // Wait for authentication message (first message should be: {"type":"auth","token":"..."})
         if let Some(msg) = ws_receiver.next().await {
@@ -37,16 +37,21 @@ pub async fn handle_websocket_connection(
                                         user_id = uid;
                                         authenticated = true;
                                         // Send auth success
-                                        let _ = ws_sender.send(Message::Text(
-                                            r#"{"type":"auth","status":"success"}"#.to_string()
-                                        )).await;
+                                        let _ = ws_sender
+                                            .send(Message::Text(
+                                                r#"{"type":"auth","status":"success"}"#.to_string(),
+                                            ))
+                                            .await;
                                     }
                                 }
                                 Err(e) => {
                                     eprintln!("JWT validation error: {:?}", e);
-                                    let _ = ws_sender.send(Message::Text(
-                                        r#"{"type":"error","message":"Invalid token"}"#.to_string()
-                                    )).await;
+                                    let _ = ws_sender
+                                        .send(Message::Text(
+                                            r#"{"type":"error","message":"Invalid token"}"#
+                                                .to_string(),
+                                        ))
+                                        .await;
                                     return;
                                 }
                             }
@@ -63,11 +68,13 @@ pub async fn handle_websocket_connection(
         } else {
             return; // Connection closed
         }
-        
+
         if !authenticated {
-            let _ = ws_sender.send(Message::Text(
-                r#"{"type":"error","message":"Authentication required"}"#.to_string()
-            )).await;
+            let _ = ws_sender
+                .send(Message::Text(
+                    r#"{"type":"error","message":"Authentication required"}"#.to_string(),
+                ))
+                .await;
             return;
         }
     }
@@ -78,7 +85,7 @@ pub async fn handle_websocket_connection(
         let connections = connection_map.read().await;
         connections.get(&user_id).map(|v| v.len()).unwrap_or(0)
     };
-    
+
     // Register this connection
     manager.add_connection(user_id, tx.clone()).await;
 
@@ -92,7 +99,9 @@ pub async fn handle_websocket_connection(
                 break;
             }
         }
-        manager_clone.remove_connection(user_id_clone, tx_index).await;
+        manager_clone
+            .remove_connection(user_id_clone, tx_index)
+            .await;
     });
 
     // Handle incoming messages from client
@@ -104,9 +113,15 @@ pub async fn handle_websocket_connection(
                         WebSocketMessage::Ping => {
                             let _ = tx.send(Message::Text(WebSocketMessage::Pong.to_json()));
                         }
-                        WebSocketMessage::MarkRead { discussion_id, user_id: _ } => {
+                        WebSocketMessage::MarkRead {
+                            discussion_id,
+                            user_id: _,
+                        } => {
                             // Handle mark as read - could broadcast to other users
-                            eprintln!("Mark read request for discussion {} from user {}", discussion_id, user_id);
+                            eprintln!(
+                                "Mark read request for discussion {} from user {}",
+                                discussion_id, user_id
+                            );
                         }
                         _ => {
                             // Ignore other message types for now
@@ -162,7 +177,8 @@ pub async fn start_websocket_server(
                 0, // Temporary user_id, will be set after authentication
                 manager_clone,
                 Some(jwt_secret_clone),
-            ).await;
+            )
+            .await;
         });
     }
 

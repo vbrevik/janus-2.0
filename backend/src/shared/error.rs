@@ -1,4 +1,8 @@
-use rocket::{http::Status, request::Request, response::{Responder, Result as ResponseResult}};
+use rocket::{
+    http::Status,
+    request::Request,
+    response::{Responder, Result as ResponseResult},
+};
 
 #[derive(Debug)]
 pub enum AppError {
@@ -9,11 +13,15 @@ pub enum AppError {
 }
 
 impl From<sqlx::Error> for AppError {
-    fn from(_: sqlx::Error) -> Self { AppError::Internal }
+    fn from(_: sqlx::Error) -> Self {
+        AppError::Internal
+    }
 }
 
 impl From<validator::ValidationErrors> for AppError {
-    fn from(_: validator::ValidationErrors) -> Self { AppError::BadRequest }
+    fn from(_: validator::ValidationErrors) -> Self {
+        AppError::BadRequest
+    }
 }
 
 impl<'r> Responder<'r, 'static> for AppError {
@@ -27,4 +35,3 @@ impl<'r> Responder<'r, 'static> for AppError {
         Err(status)
     }
 }
-

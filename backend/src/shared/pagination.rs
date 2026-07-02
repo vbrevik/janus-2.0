@@ -42,29 +42,49 @@ mod tests {
 
     #[test]
     fn test_pagination_offset() {
-        let params = PaginationParams { page: 1, per_page: 20 };
+        let params = PaginationParams {
+            page: 1,
+            per_page: 20,
+        };
         assert_eq!(params.offset(), 0);
 
-        let params = PaginationParams { page: 2, per_page: 20 };
+        let params = PaginationParams {
+            page: 2,
+            per_page: 20,
+        };
         assert_eq!(params.offset(), 20);
 
-        let params = PaginationParams { page: 3, per_page: 10 };
+        let params = PaginationParams {
+            page: 3,
+            per_page: 10,
+        };
         assert_eq!(params.offset(), 20);
     }
 
     #[test]
     fn test_pagination_validation() {
-        let params = PaginationParams { page: 0, per_page: 20 };
+        let params = PaginationParams {
+            page: 0,
+            per_page: 20,
+        };
         assert!(params.validate().is_err());
 
-        let params = PaginationParams { page: 1, per_page: 0 };
+        let params = PaginationParams {
+            page: 1,
+            per_page: 0,
+        };
         assert!(params.validate().is_err());
 
-        let params = PaginationParams { page: 1, per_page: 101 };
+        let params = PaginationParams {
+            page: 1,
+            per_page: 101,
+        };
         assert!(params.validate().is_err());
 
-        let params = PaginationParams { page: 1, per_page: 20 };
+        let params = PaginationParams {
+            page: 1,
+            per_page: 20,
+        };
         assert!(params.validate().is_ok());
     }
 }
-

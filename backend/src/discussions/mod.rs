@@ -1,5 +1,5 @@
-pub mod models;
 pub mod handlers;
+pub mod models;
 
 pub fn routes() -> Vec<rocket::Route> {
     routes![

@@ -31,5 +31,3 @@ pub struct UpdateRoleRequest {
 pub struct SetRolePermissionsRequest {
     pub permissions: Vec<String>,
 }
-
-

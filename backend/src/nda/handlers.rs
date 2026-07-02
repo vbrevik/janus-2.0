@@ -1,13 +1,13 @@
+use chrono::Utc;
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
-use rocket::http::Status;
 use sqlx::PgPool;
-use chrono::Utc;
 
-use crate::nda::models::*;
 use crate::audit::handlers::create_audit_log;
 use crate::audit::models::CreateAuditLogRequest;
 use crate::auth::middleware::AuthGuard;
+use crate::nda::models::*;
 
 /// List NDAs for person or by person email
 #[get("/?<person_id>&<status>&<email>")]
@@ -86,11 +86,7 @@ pub async fn list_ndas(
 
 /// Get a specific NDA
 #[get("/<id>")]
-pub async fn get_nda(
-    db: &State<PgPool>,
-    id: i32,
-    _auth: AuthGuard,
-) -> Result<Json<NDA>, Status> {
+pub async fn get_nda(db: &State<PgPool>, id: i32, _auth: AuthGuard) -> Result<Json<NDA>, Status> {
     let nda = sqlx::query_as::<sqlx::Postgres, NDA>(
         r#"
         SELECT id, person_id, title, content, version, status, issued_by_person_id, issued_at, signed_at, expires_at, signature, rejection_reason, sent_by_vendor_id, sent_at, created_at, updated_at
@@ -144,16 +140,23 @@ pub async fn create_nda(
     .map_err(|_| Status::InternalServerError)?;
 
     // Audit: NDA_SENT
-    let _ = create_audit_log(&CreateAuditLogRequest {
-        person_id: Some(issued_by_person_id), // Changed from user_id
-        username: "system".to_string(),
-        action: "NDA_SENT".to_string(),
-        resource_type: "nda".to_string(),
-        resource_id: Some(nda.id),
-        details: Some(format!("NDA '{}' sent to person_id={}", nda.title, nda.person_id)),
-        ip_address: None,
-        user_agent: None,
-    }, db.inner()).await;
+    let _ = create_audit_log(
+        &CreateAuditLogRequest {
+            person_id: Some(issued_by_person_id), // Changed from user_id
+            username: "system".to_string(),
+            action: "NDA_SENT".to_string(),
+            resource_type: "nda".to_string(),
+            resource_id: Some(nda.id),
+            details: Some(format!(
+                "NDA '{}' sent to person_id={}",
+                nda.title, nda.person_id
+            )),
+            ip_address: None,
+            user_agent: None,
+        },
+        db.inner(),
+    )
+    .await;
 
     Ok(Json(nda))
 }
@@ -188,16 +191,20 @@ pub async fn sign_nda(
     .ok_or(Status::NotFound)?;
 
     // Audit: NDA_SIGNED
-    let _ = create_audit_log(&CreateAuditLogRequest {
-        person_id: auth.claims.sub.parse::<i32>().ok(), // Changed from user_id
-        username: auth.claims.sub.clone(),
-        action: "NDA_SIGNED".to_string(),
-        resource_type: "nda".to_string(),
-        resource_id: Some(nda.id),
-        details: Some("NDA signed by end user".to_string()),
-        ip_address: None,
-        user_agent: None,
-    }, db.inner()).await;
+    let _ = create_audit_log(
+        &CreateAuditLogRequest {
+            person_id: auth.claims.sub.parse::<i32>().ok(), // Changed from user_id
+            username: auth.claims.sub.clone(),
+            action: "NDA_SIGNED".to_string(),
+            resource_type: "nda".to_string(),
+            resource_id: Some(nda.id),
+            details: Some("NDA signed by end user".to_string()),
+            ip_address: None,
+            user_agent: None,
+        },
+        db.inner(),
+    )
+    .await;
 
     Ok(Json(nda))
 }
@@ -231,16 +238,20 @@ pub async fn reject_nda(
     .ok_or(Status::NotFound)?;
 
     // Audit: NDA_REJECTED
-    let _ = create_audit_log(&CreateAuditLogRequest {
-        person_id: auth.claims.sub.parse::<i32>().ok(), // Changed from user_id
-        username: auth.claims.sub.clone(),
-        action: "NDA_REJECTED".to_string(),
-        resource_type: "nda".to_string(),
-        resource_id: Some(nda.id),
-        details: Some(format!("Reason: {}", data.reason)),
-        ip_address: None,
-        user_agent: None,
-    }, db.inner()).await;
+    let _ = create_audit_log(
+        &CreateAuditLogRequest {
+            person_id: auth.claims.sub.parse::<i32>().ok(), // Changed from user_id
+            username: auth.claims.sub.clone(),
+            action: "NDA_REJECTED".to_string(),
+            resource_type: "nda".to_string(),
+            resource_id: Some(nda.id),
+            details: Some(format!("Reason: {}", data.reason)),
+            ip_address: None,
+            user_agent: None,
+        },
+        db.inner(),
+    )
+    .await;
 
     Ok(Json(nda))
 }

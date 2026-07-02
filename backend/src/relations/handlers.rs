@@ -1,11 +1,11 @@
-use rocket::{serde::json::Json, State, get, post, put, delete};
-use rocket::http::Status;
-use sqlx::PgPool;
 use chrono::Utc;
+use rocket::http::Status;
+use rocket::{delete, get, post, put, serde::json::Json, State};
+use sqlx::PgPool;
 use validator::Validate;
 
-use crate::relations::models::*;
 use crate::auth::middleware::AuthGuard;
+use crate::relations::models::*;
 
 /// List all relations for a specific entity (both incoming and outgoing)
 #[get("/relations?<entity_type>&<entity_id>&<direction>")]
@@ -20,44 +20,41 @@ pub async fn list_relations(
     if entity_type != "person" && entity_type != "organization" {
         return Err(Status::BadRequest);
     }
-    
+
     let dir = direction.as_deref().unwrap_or("outgoing");
 
     let relations = match dir {
-        "incoming" => {
-            sqlx::query_as::<sqlx::Postgres, Relation>(
-                r#"
+        "incoming" => sqlx::query_as::<sqlx::Postgres, Relation>(
+            r#"
                 SELECT id, entity_type, entity_id, related_entity_type, related_entity_id,
                        relation_type, notes, valid_from, valid_until, created_at, updated_at
                 FROM relations
                 WHERE related_entity_type = $1 AND related_entity_id = $2
                 ORDER BY relation_type, created_at DESC
-                "#
-            )
-            .bind(&entity_type)
-            .bind(entity_id)
-            .fetch_all(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?
-        },
-        "both" => {
-            sqlx::query_as::<sqlx::Postgres, Relation>(
-                r#"
+                "#,
+        )
+        .bind(&entity_type)
+        .bind(entity_id)
+        .fetch_all(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?,
+        "both" => sqlx::query_as::<sqlx::Postgres, Relation>(
+            r#"
                 SELECT id, entity_type, entity_id, related_entity_type, related_entity_id,
                        relation_type, notes, valid_from, valid_until, created_at, updated_at
                 FROM relations
                 WHERE (entity_type = $1 AND entity_id = $2) 
                    OR (related_entity_type = $1 AND related_entity_id = $2)
                 ORDER BY relation_type, created_at DESC
-                "#
-            )
-            .bind(&entity_type)
-            .bind(entity_id)
-            .fetch_all(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?
-        },
-        _ => { // "outgoing" or default
+                "#,
+        )
+        .bind(&entity_type)
+        .bind(entity_id)
+        .fetch_all(db.inner())
+        .await
+        .map_err(|_| Status::InternalServerError)?,
+        _ => {
+            // "outgoing" or default
             sqlx::query_as::<sqlx::Postgres, Relation>(
                 r#"
                 SELECT id, entity_type, entity_id, related_entity_type, related_entity_id,
@@ -65,7 +62,7 @@ pub async fn list_relations(
                 FROM relations
                 WHERE entity_type = $1 AND entity_id = $2
                 ORDER BY relation_type, created_at DESC
-                "#
+                "#,
             )
             .bind(&entity_type)
             .bind(entity_id)
@@ -282,12 +279,13 @@ pub async fn get_hierarchy(
         rel_type_filter
     )
     .fetch_all(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?;
+    .await
+    .map_err(|_| Status::InternalServerError)?;
 
     // Build hierarchical structure with names (organized by level and parent-child relationships)
-    let mut hierarchy_map: std::collections::HashMap<i32, EntityHierarchy> = std::collections::HashMap::new();
-    
+    let mut hierarchy_map: std::collections::HashMap<i32, EntityHierarchy> =
+        std::collections::HashMap::new();
+
     for row in hierarchy_raw {
         let entity_type_str = row.entity_type.as_deref().unwrap_or(&entity_type);
         let entity_name: String = if entity_type_str == "person" {
@@ -311,19 +309,26 @@ pub async fn get_hierarchy(
         };
 
         let entity_id_val = row.entity_id.unwrap_or(0);
-        hierarchy_map.insert(entity_id_val, EntityHierarchy {
-            entity_id: entity_id_val,
-            entity_type: entity_type_str.to_string(),
-            entity_name,
-            relation_type: row.relation_type.unwrap_or_default(),
-            level: row.level.unwrap_or(0),
-            children: Vec::new(),
-        });
+        hierarchy_map.insert(
+            entity_id_val,
+            EntityHierarchy {
+                entity_id: entity_id_val,
+                entity_type: entity_type_str.to_string(),
+                entity_name,
+                relation_type: row.relation_type.unwrap_or_default(),
+                level: row.level.unwrap_or(0),
+                children: Vec::new(),
+            },
+        );
     }
 
     // Convert map to vector, sorted by level
     let mut hierarchy: Vec<EntityHierarchy> = hierarchy_map.into_values().collect();
-    hierarchy.sort_by(|a, b| a.level.cmp(&b.level).then_with(|| a.entity_name.cmp(&b.entity_name)));
+    hierarchy.sort_by(|a, b| {
+        a.level
+            .cmp(&b.level)
+            .then_with(|| a.entity_name.cmp(&b.entity_name))
+    });
 
     Ok(Json(hierarchy))
 }
@@ -370,7 +375,7 @@ pub async fn update_relation(
     );
 
     let mut query_builder = sqlx::query_as::<_, Relation>(&query);
-    
+
     if let Some(ref relation_type) = data.relation_type {
         query_builder = query_builder.bind(relation_type);
     }
@@ -390,13 +395,13 @@ pub async fn update_relation(
             .and_then(|date| date.and_hms_opt(23, 59, 59));
         query_builder = query_builder.bind(valid_until);
     }
-    
+
     query_builder = query_builder.bind(id);
 
     let relation = query_builder
         .fetch_one(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?;
+        .await
+        .map_err(|_| Status::InternalServerError)?;
 
     Ok(Json(relation))
 }
@@ -411,9 +416,8 @@ pub async fn delete_relation(
     sqlx::query("DELETE FROM relations WHERE id = $1")
         .bind(id)
         .execute(db.inner())
-            .await
-            .map_err(|_| Status::InternalServerError)?;
+        .await
+        .map_err(|_| Status::InternalServerError)?;
 
     Ok(Json("Relation deleted successfully"))
 }
-

@@ -3,10 +3,10 @@ use rocket::State;
 use rocket::{get, post};
 use sqlx::PgPool;
 
-use crate::discussions::models::*;
 use crate::auth::middleware::AuthGuard;
-use crate::shared::response::ApiResponse;
+use crate::discussions::models::*;
 use crate::shared::error::AppError;
+use crate::shared::response::ApiResponse;
 
 /// List discussions for a person (end-user inbox)
 #[get("/?<person_id>&<status>&<type>")]
@@ -84,7 +84,7 @@ pub async fn get_discussion(
         FROM discussion_replies
         WHERE discussion_id = $1
         ORDER BY created_at ASC
-        "#
+        "#,
     )
     .bind(id)
     .fetch_all(db.inner())
@@ -106,8 +106,11 @@ pub async fn create_discussion(
     let person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
     // Find person_id - the authenticated user's person_id (from JWT claims.sub)
     // No need to look up - auth.claims.sub already contains the person_id
-    
-    let priority = data.priority.clone().unwrap_or_else(|| "NORMAL".to_string());
+
+    let priority = data
+        .priority
+        .clone()
+        .unwrap_or_else(|| "NORMAL".to_string());
     let created_by_person_id = person_id;
 
     let discussion = sqlx::query_as::<sqlx::Postgres, Discussion>(
@@ -147,7 +150,7 @@ pub async fn create_reply(
         assigned_to_person_id: Option<i32>,
     }
     let discussion = sqlx::query_as::<sqlx::Postgres, DiscussionInfo>(
-        "SELECT person_id, assigned_to_person_id FROM discussions WHERE id = $1"
+        "SELECT person_id, assigned_to_person_id FROM discussions WHERE id = $1",
     )
     .bind(id)
     .fetch_optional(db.inner())
@@ -159,7 +162,7 @@ pub async fn create_reply(
         INSERT INTO discussion_replies (discussion_id, message, created_by_person_id)
         VALUES ($1, $2, $3)
         RETURNING id, discussion_id, message, created_by_person_id, created_at, updated_at
-        "#
+        "#,
     )
     .bind(id)
     .bind(&data.message)
@@ -192,9 +195,10 @@ pub async fn create_reply(
             created_by: created_by_person_id,
             created_at: reply.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
         };
-        ws_manager.broadcast_to_users(&notify_users, ws_message).await;
+        ws_manager
+            .broadcast_to_users(&notify_users, ws_message)
+            .await;
     }
 
     Ok(Json(ApiResponse::success(reply)))
 }
-
