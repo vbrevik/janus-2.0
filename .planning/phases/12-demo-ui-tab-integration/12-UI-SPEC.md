@@ -5,8 +5,8 @@ status: approved
 shadcn_initialized: true
 preset: new-york / slate / cssVariables
 created: 2026-06-19
-reviewed_at: 2026-06-19
-updated: 2026-06-19
+reviewed_at: 2026-07-02
+updated: 2026-07-02
 ---
 
 # Phase 12 — UI Design Contract
@@ -23,6 +23,19 @@ updated: 2026-06-19
 > **Updated 2026-06-19:** Scope expanded to include three additional contracts:
 > hybrid loader states (RSRC-UI-04), delegation-issuing forms (RSRC-UI-06),
 > and can-issue affordance gating (RSRC-UI-06). All existing contracts preserved.
+>
+> **Updated 2026-07-02 (post-Phase-11 reconciliation):** Three gaps filled against
+> Phase 11's as-built reality per 12-SPEC.md: (1) loader states expanded from three
+> to four — a missing-token state and a 401/session-rejected state are now distinct,
+> cause-naming states (the demo is a standalone entry that reuses the main-app JWT
+> from localStorage; SEC-01 made every endpoint require Bearer auth); (2) issuing
+> affordance gating re-based from the org-model `canIssueResourceGrant` (deferred to
+> SEED-012) to **JWT-role gating (Option B: admin, manager)** — the §Can-Issue
+> Affordance Gating section is superseded by §Role-Gated Issuing Affordances;
+> (3) duplicate-submit feedback contract pinned (silence + upsert-by-id).
+> Spacing, typography, color tokens, the amber "Advisory (non-blocking)" row,
+> NSM `tone="slate"` badges, the `(inherited)` badge, and all other locked
+> decisions are unchanged.
 >
 > No TanStack route file is touched. `git diff frontend/src/routeTree.gen.ts`
 > must be empty after all Phase 12 commits.
@@ -95,7 +108,7 @@ CSS variable tokens from `src/index.css`. Same palette as Phase 8 with two addit
 | Mock/caution | `bg-amber-100 text-amber-900` | amber-100/900 | MockTag on clearance display |
 | Destructive | `bg-destructive/10 text-destructive` | hsl(0 84% 60%) | Error/unavailable states (existing pattern) |
 
-**Accent reserved for:** active tab button and active sub-nav button (`bg-slate-800 text-white`) only. No other elements use `bg-slate-800`.
+**Accent reserved for:** active tab button, active sub-nav button, and form submit buttons (`bg-slate-800 text-white`) only. No other elements use `bg-slate-800`. *(Amended 2026-07-02 per checker: submit buttons were already specced `bg-slate-800` in the forms sections.)*
 
 **Classification badge color mapping (Pill tones) — new for Phase 12:**
 
@@ -343,10 +356,14 @@ The zone advisory row must NEVER use green or red styling. The "Advisory (non-bl
 | About this decision card title | "About this decision" | Matches Phase 8 pattern |
 | No relevant grants empty state | "No grants for this person and resource." | Default |
 | Loader loading copy | "Loading digital resource data…" | RSRC-UI-04 (hybrid loader) |
-| Loader error heading | "Could not load digital resource data." | RSRC-UI-04 |
-| Loader error body | "The backend API is unreachable or returned an error. Check that the backend is running on :15520 and retry." | RSRC-UI-04 |
+| Loader missing-token heading | "Not logged in." | RSRC-UI-04 (2026-07-02 — SPEC R1: cause-naming states) |
+| Loader missing-token body | "The demo reuses your main-app session. Log in to the main app first, then reload this page." | RSRC-UI-04 (2026-07-02) |
+| Loader 401 heading | "Session invalid or expired." | RSRC-UI-04 (2026-07-02 — SPEC R1) |
+| Loader 401 body | "The backend rejected your main-app session. Log in to the main app again, then reload this page." | RSRC-UI-04 (2026-07-02) |
+| Loader unreachable heading | "Could not load digital resource data." | RSRC-UI-04 (now scoped to unreachable/non-401 errors) |
+| Loader unreachable body | "The backend API is unreachable or returned an error. Check that the backend is running on :15520 and retry." | RSRC-UI-04 |
 | Loader empty state | "No digital resources found. Seed the database and refresh." | RSRC-UI-04 |
-| Loader retry button | "Retry" | RSRC-UI-04 (optional) |
+| Loader retry button | "Retry" | RSRC-UI-04 (optional; unreachable state only) |
 | Issue grant expand trigger | "+ Issue new grant" | RSRC-UI-06 |
 | Issue delegate expand trigger | "+ Issue new delegate" | RSRC-UI-06 |
 | Issue grant collapse trigger | "Cancel" | RSRC-UI-06 |
@@ -359,7 +376,9 @@ The zone advisory row must NEVER use green or red styling. The "Advisory (non-bl
 | Issue generic error | "Issue failed. Check that the backend is running and retry." | RSRC-UI-06 |
 | Issue grant valid-until hint | "Leave blank for permanent grant." | RSRC-UI-06 |
 | Issue delegate valid-until hint | "Leave blank for open delegation." | RSRC-UI-06 |
-| Can-issue hidden note | "Issuing controls are only available to ADMIN-role org members and active delegates." | RSRC-UI-06 (optional, shown when resource selected + no authority) |
+| ~~Can-issue hidden note~~ | ~~"Issuing controls are only available to ADMIN-role org members and active delegates."~~ | SUPERSEDED 2026-07-02 — org-based copy was wrong for Option B; replaced by row below |
+| Role-gated hidden note | "Issuing controls require an admin or manager login." | RSRC-UI-06 (2026-07-02 — Option B role model; shown when data loaded + role lacks permission) |
+| Duplicate submit feedback | (none — silence is the contract; see §Duplicate-Submit Feedback) | RSRC-UI-06 (2026-07-02) |
 
 No destructive actions in this phase. No confirmation dialogs needed.
 
@@ -406,7 +425,14 @@ The resource `Select` must always have a non-empty initial value. The first reso
 
 ## Hybrid Loader States (RSRC-UI-04)
 
-The `DigitalResourcesPanel` (or a `useDigitalResources` hook it calls) fetches from the Phase 11 API on mount via React Query (`useQuery`). The digital-resource data initializes empty in `WorldState`; the loader populates `digitalResources` via dispatch once the fetch resolves. The three states below are mutually exclusive and rendered by `DigitalResourcesPanel` before the sub-nav is shown.
+> **Updated 2026-07-02:** expanded from three to four states. Phase 11 as-built:
+> every endpoint requires a Bearer JWT (SEC-01), and the demo is a standalone entry
+> (`src/demo/main.tsx`) that reuses the main-app token from `localStorage` — so
+> "missing token" and "server rejected the token (401)" are now distinct,
+> cause-naming states, separate from "backend unreachable". No silent stale
+> fallback in any state (SPEC prohibition).
+
+The `DigitalResourcesPanel` (or a `useDigitalResources` hook it calls) fetches `GET /api/digital-resources/world` on mount via React Query (`useQuery`), unwraps the `ApiResponse` envelope, maps snake_case→camelCase, and populates `WorldState.digitalResources` via dispatch. Before fetching, the hook reads the main-app JWT from `localStorage`; if absent, the query is disabled (`enabled: false`) and the missing-token state renders — no request is made. The four failure/pending states below are mutually exclusive and rendered by `DigitalResourcesPanel` before the sub-nav is shown.
 
 ### Loading state
 
@@ -424,9 +450,46 @@ While `isLoading` is true (first fetch, no cached data):
 - The spinner uses `animate-spin` Tailwind utility on a 16px (h-4 w-4) icon.
 - Copy: **"Loading digital resource data…"** (exact string — no ellipsis variation).
 
-### Error state (API unreachable)
+### Missing-token state (no JWT in localStorage) — new 2026-07-02
 
-When `isError` is true (network error or non-2xx response, including a 0-status fetch failure):
+Checked synchronously before any fetch. When no main-app token is present in `localStorage`:
+
+```
+<div className="rounded-md bg-destructive/10 p-4 text-destructive text-sm space-y-1">
+  <p className="font-semibold">Not logged in.</p>
+  <p>The demo reuses your main-app session. Log in to the main app first, then reload this page.</p>
+</div>
+```
+
+**Rules:**
+- Same inline error pattern as all other states: `bg-destructive/10 text-destructive` — no toast, no modal, no demo-local login form (SPEC out-of-scope: token comes from the main app).
+- Heading: **"Not logged in."** (`font-semibold`).
+- Body: **"The demo reuses your main-app session. Log in to the main app first, then reload this page."**
+- No "Retry" button — the resolution path is log in elsewhere then reload, not refetch.
+- The query MUST NOT fire in this state (`enabled: false`) — a guaranteed-401 request is noise.
+- The sub-nav and all sub-views MUST NOT render.
+- PROHIBITION: no credential literals or auto-login under `src/demo/` (SPEC prohibition — no `password123`).
+
+### 401 state (server rejected the token) — new 2026-07-02
+
+When the fetch returns HTTP 401 (`ApiError.status === 401` — expired or invalid token):
+
+```
+<div className="rounded-md bg-destructive/10 p-4 text-destructive text-sm space-y-1">
+  <p className="font-semibold">Session invalid or expired.</p>
+  <p>The backend rejected your main-app session. Log in to the main app again, then reload this page.</p>
+</div>
+```
+
+**Rules:**
+- Heading: **"Session invalid or expired."** — Body: **"The backend rejected your main-app session. Log in to the main app again, then reload this page."**
+- No "Retry" button — refetching with the same dead token cannot succeed.
+- Distinguished from the unreachable state via `ApiError.status === 401`; any other `isError` cause falls into the unreachable/other state below.
+- The sub-nav and all sub-views MUST NOT render.
+
+### Error state (API unreachable / other errors)
+
+When `isError` is true for any non-401 cause (network error, 5xx, malformed envelope, 0-status fetch failure):
 
 ```
 <div className="rounded-md bg-destructive/10 p-4 text-destructive text-sm space-y-1">
@@ -440,7 +503,7 @@ When `isError` is true (network error or non-2xx response, including a 0-status 
 - Uses the project-standard inline error pattern: `bg-destructive/10 text-destructive` — no toast, no modal.
 - Heading: **"Could not load digital resource data."** (semibold, `font-semibold`).
 - Body: **"The backend API is unreachable or returned an error. Check that the backend is running on :15520 and retry."**
-- An optional "Retry" text-button (`refetch()` from React Query) may be shown beneath the error body. If present: `<button className="underline text-xs mt-1" onClick={refetch}>Retry</button>`.
+- An optional "Retry" text-button (`refetch()` from React Query) may be shown beneath the error body. If present: `<button className="underline text-xs mt-1" onClick={refetch}>Retry</button>`. The Retry button belongs ONLY to this state (retry is plausible here; it is not for missing-token/401).
 - The sub-nav and all sub-views MUST NOT render in the error state. The loader IS the only thing rendered inside `<main>` content area.
 - PROHIBITION: never fall back to `seedWorld()` digital resource arrays or any stale hardcoded data when the API is unreachable. Show error instead.
 
@@ -458,14 +521,18 @@ When the fetch succeeds but returns zero networks/platforms/applications:
 - Centered, `text-slate-400 text-sm`.
 - The sub-nav and sub-views MUST NOT render in the empty state (there is nothing to browse or resolve).
 
-### State-to-render map
+### State-to-render map (updated 2026-07-02)
 
-| React Query state | What renders inside DigitalResourcesPanel |
-|------------------|------------------------------------------|
-| `isLoading` | Spinner + "Loading digital resource data…" |
-| `isError` | Error block (`bg-destructive/10`) + optional Retry |
-| Success, data empty | Empty-state prose |
-| Success, data present | Sub-nav + active sub-view |
+| Loader state | Detection | What renders inside DigitalResourcesPanel |
+|--------------|-----------|------------------------------------------|
+| Missing token | No JWT in `localStorage` (checked pre-fetch; query disabled) | "Not logged in." error block — no Retry |
+| `isLoading` | Query enabled, first fetch in flight | Spinner + "Loading digital resource data…" |
+| 401 rejected | `isError` and `ApiError.status === 401` | "Session invalid or expired." error block — no Retry |
+| Unreachable / other error | `isError`, any non-401 cause | "Could not load digital resource data." block + optional Retry |
+| Success, data empty | Fetch OK, zero networks/platforms/applications (seed not applied) | "No digital resources found. Seed the database and refresh." |
+| Success, data present | Fetch OK, data mapped + dispatched | Sub-nav + active sub-view |
+
+States are mutually exclusive; exactly one renders at a time. In every state except the last, the sub-nav and sub-views are absent — the panel never presents stale or partial data as live.
 
 ---
 
@@ -473,7 +540,7 @@ When the fetch succeeds but returns zero networks/platforms/applications:
 
 Two forms exist: **Issue Grant** and **Issue Delegate**. Both appear as collapsible inline sections at the bottom of the Access Resolution Explorer (below the grant-toggle card), NOT as modals or separate pages.
 
-The forms call backend POST endpoints via `mutateAsync` following the project convention (hooks in `demo/hooks/` or co-located). On success the response payload is dispatched to `WorldState` (reducer adds the new grant/delegate to `digitalResources.grants` or `digitalResources.delegates`). The identity who is issuing is derived from `world.currentRole` / the role-switcher subject — not a separate form field.
+The forms call backend POST endpoints via `mutateAsync` following the project convention (hooks in `demo/hooks/` or co-located). On success the response payload is dispatched to `WorldState` (reducer **upserts by grant/delegate id** into `digitalResources.grants` or `digitalResources.delegates` — never a blind append; see §Duplicate-Submit Feedback). **Issuing identity (updated 2026-07-02):** the acting issuer is the main-app JWT identity — the server derives the actor from the Bearer token and re-validates its role. The demo role-switcher subject is a simulation lens for *resolution*, not the issuing actor; there is no issuer form field.
 
 ### Issue Grant form
 
@@ -556,41 +623,70 @@ The forms call backend POST endpoints via `mutateAsync` following the project co
 - When expanded: the trigger label changes to **"Cancel"** (same style). Clicking "Cancel" collapses without submitting.
 - Only one form can be open at a time per section (Issue Grant and Issue Delegate are in different sections so simultaneous open is fine).
 
+### Duplicate-Submit Feedback (new 2026-07-02)
+
+The server dedupes duplicate grant POSTs (`uq_grant UNIQUE NULLS NOT DISTINCT`, 4fd2ec9) and returns **success with the single existing row** — a duplicate is not an error and never reaches the inline-error path.
+
+**Contract: silence.** No "already exists" message, toast, or badge is rendered on a duplicate submit. The success path is byte-identical to a first-issue success: the form collapses, fields reset to defaults, and the grant list shows the one existing grant.
+
+**Rationale (why silence is the deliberate design, not an omission):**
+- The client cannot reliably distinguish "created" from "deduped" without comparing response ids against local state — logic that adds no demo value; the server's envelope is success either way.
+- The visible outcome — exactly one grant row in the "Resource grants (toggle to simulate)" list / "Active grants" card — IS the feedback. The UI truthfully reflects server state.
+- An "already exists" notice styled like an error would contradict the server's success response; a non-error notice pattern (toast) is prohibited project-wide.
+
+**Mechanism requirement:** the reducer action that ingests the POST response MUST upsert by id (replace-or-add on `grant.id` / `delegate.id`), never blind-append — this is what guarantees the SPEC acceptance "after a duplicate submit `WorldState` contains exactly one copy of the grant". State comes from the server response (or a refetch), never from an optimistic local construction.
+
 ---
 
-## Can-Issue Affordance Gating (RSRC-UI-06)
+## Role-Gated Issuing Affordances (RSRC-UI-06) — supersedes §Can-Issue Affordance Gating, 2026-07-02
 
-The **"+ Issue new grant"** and **"+ Issue new delegate"** expand triggers (and their forms) are conditionally hidden based on the current identity's issuing authority.
+> **Supersession note:** the previous contract gated issuing on the org-based
+> `canIssueResourceGrant(currentSubject, selectedResource, now)` client check.
+> Phase 11 as-built uses **role-based authority (Option B)**: the server validates
+> the JWT's role on every issue POST; org-based issuing authority is deferred to
+> SEED-012. The UI gate below mirrors the server model. Everything else in the
+> superseded section (hidden-not-disabled triggers, advisory-only gate, coexisting
+> 403 path) carries forward unchanged in spirit.
 
-Authority is computed client-side by calling `canIssueResourceGrant(currentSubject, selectedResource, now)` from `demo/lib/digital-resource-selectors.ts` (or `model.ts`). This is a client-side pre-check only — the backend re-validates on the POST. The UI gate prevents unnecessary form exposure, not security.
+The **"+ Issue new grant"** and **"+ Issue new delegate"** expand triggers (and their forms) are conditionally rendered based on the **role of the main-app JWT** — NOT the demo role-switcher, and NOT any per-resource org check.
 
-### When `canIssueResourceGrant` returns `false`
+**Authority source:** the role claim of the stored main-app auth session (JWT payload or the main app's stored user object in `localStorage`). Authorized roles: **`admin` and `manager`** — exactly the roles holding the server-side write permission (Option B). The check is session-wide and constant for the visit: it does not vary with the selected resource or the role-switcher subject.
 
-Both the **"+ Issue new grant"** and **"+ Issue new delegate"** triggers are hidden (`hidden` or not rendered). No disabled button is shown, no explanation is displayed by default.
+This is a client-side pre-check only — the backend re-validates the JWT role on every POST. The UI gate prevents dead-end form exposure, not security.
 
-If the currently selected resource has no ADMIN org link (or the current identity has no active grant/delegate authority), no issuing affordance is visible.
+### Hidden, not disabled (decision)
 
-### When `canIssueResourceGrant` returns `true`
+When the JWT role is not `admin` or `manager`, both expand triggers are **not rendered** (hidden). No permanently-disabled button is shown.
 
-The expand triggers render normally. The form can be opened and submitted.
+Rationale: role gating is constant for the entire session — a disabled trigger could never become enabled without logging out, so it would be permanent dead UI inviting clicks that can't succeed. Hidden trigger + one explanatory note communicates the capability boundary honestly. (Note: `disabled` remains the correct treatment for the *transient* `mutation.isPending` state on the submit button — see below; hidden-vs-disabled splits exactly on permanent-vs-transient.)
 
-### Explanatory copy (optional disclosure)
+### Explanatory copy for the non-authorized viewer
 
-An optional `text-xs text-slate-400` note may appear below the "Delegates" card when no affordance is visible:
+When the data has loaded successfully and the JWT role lacks issuing permission, render one note per issuing location, in place of the hidden trigger:
 
-**"Issuing controls are only available to ADMIN-role org members and active delegates."**
+**"Issuing controls require an admin or manager login."**
 
-This note is optional — include it if `selectedResource !== null` and `canIssueResourceGrant` returns false for the current identity. Omit it if no resource is selected (nothing to explain).
+- Style: `text-xs text-slate-400` (informational — NOT `text-destructive`; lacking a permission is not an error).
+- Locations: (1) below the "Delegates" card in the Resource Browser detail panel (where "+ Issue new delegate" would render); (2) below the "Resource grants (toggle to simulate)" card in the Access Resolution Explorer (where "+ Issue new grant" would render).
+- The note renders only in the success/data-present loader state — never alongside a loader error/empty state.
+
+### Submit pending state (unchanged, restated for completeness)
+
+The submit button inside each form is gated on `mutation.isPending` per the existing forms contract: `disabled={mutation.isPending}`, label flips "Issue grant" → "Issuing…" / "Issue delegate" → "Issuing…", classes `disabled:opacity-50 disabled:cursor-not-allowed`.
+
+### Inline 403 presentation (unchanged, restated)
+
+The existing 403 contract stands: shown only when `mutation.isError && error.status === 403`, below the submit button, `rounded bg-destructive/10 p-3 text-sm text-destructive mt-2`, copy **"Not authorized. Your current identity does not have issuing authority for this resource."** ("Not authorized." in `font-semibold`.) Non-403 errors: **"Issue failed. Check that the backend is running and retry."** — same styling. No toast, no modal.
+
+The 403 path MUST coexist with the role gate: the client-visible role may be stale (role changed server-side, token near expiry) and the server check is authoritative. A 403 through a visible form is an expected edge, not a bug.
 
 ### Gating contract summary
 
-| `canIssueResourceGrant` result | "Issue new grant" trigger | "Issue new delegate" trigger | Optional note |
-|-------------------------------|--------------------------|------------------------------|---------------|
-| `true` | Visible | Visible | Hidden |
-| `false`, resource selected | Hidden | Hidden | Shown (text-xs text-slate-400) |
-| `false`, no resource selected | N/A | N/A | Hidden |
-
-**Important:** The gate is advisory UI only. The backend endpoint independently validates issuing authority and returns 403 if the actor is unauthorized. The UI gate does not eliminate the 403 inline error path — both must coexist because a valid-looking client state may be stale or the authority check may be more restrictive server-side.
+| JWT role | "Issue new grant" trigger | "Issue new delegate" trigger | Explanatory note |
+|----------|--------------------------|------------------------------|------------------|
+| `admin` or `manager` | Visible | Visible | Hidden |
+| any other role (data loaded) | Hidden | Hidden | Shown at both issuing locations (`text-xs text-slate-400`) |
+| any role, loader not in success state | N/A (sub-views absent) | N/A | Hidden |
 
 ---
 
@@ -608,11 +704,11 @@ All UI components in this phase are either existing demo primitives (`Card`, `Pi
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PENDING (re-verify — 20 new copy elements added 2026-06-19)
-- [ ] Dimension 2 Visuals: PENDING (re-verify — loader/form/gating layouts added 2026-06-19)
-- [ ] Dimension 3 Color: PASS (no new color tokens; existing bg-destructive/10 reused)
-- [ ] Dimension 4 Typography: PASS (no new sizes or weights)
-- [ ] Dimension 5 Spacing: PASS (no new spacing exceptions)
-- [ ] Dimension 6 Registry Safety: PASS (no registry blocks added)
+- [x] Dimension 1 Copywriting: PASS w/ FLAG (2026-07-02 checker: all new loader/role-gate/duplicate-silence copy passes; non-blocking flag on single-word "Cancel"/"Retry" secondary labels)
+- [x] Dimension 2 Visuals: PASS (2026-07-02 checker: mutually-exclusive loader state map + role-gate placement verified)
+- [x] Dimension 3 Color: PASS w/ FLAG resolved (accent reserved-for list amended to include form submit buttons)
+- [x] Dimension 4 Typography: PASS (no new sizes or weights)
+- [x] Dimension 5 Spacing: PASS (no new spacing exceptions)
+- [x] Dimension 6 Registry Safety: PASS (no registry blocks added)
 
-**Approval:** pending (re-verification required after 2026-06-19 scope expansion)
+**Approval:** APPROVED 2026-07-02 (gsd-ui-checker, 6/6 dimensions; 1 non-blocking copy recommendation outstanding)
