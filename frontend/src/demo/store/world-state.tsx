@@ -23,6 +23,8 @@ import {
   type HubPointer,
   type PhysicalAccessGrant,
   type Resource,
+  type ResourceAccessDelegate,
+  type ResourceAccessGrant,
   type RoleId,
   type Subject,
   type UnitId,
@@ -189,7 +191,10 @@ export type Action =
     }
   | { type: "FEDERATION_RESET" }
   | { type: "TOGGLE_GRANT"; grantId: string }
-  | { type: "TOGGLE_RESOURCE_GRANT"; resourceGrantId: string };
+  | { type: "TOGGLE_RESOURCE_GRANT"; resourceGrantId: string }
+  | { type: "SET_DIGITAL_RESOURCES"; world: DigitalResourceWorld }
+  | { type: "UPSERT_RESOURCE_GRANT"; grant: ResourceAccessGrant }
+  | { type: "UPSERT_RESOURCE_DELEGATE"; delegate: ResourceAccessDelegate };
 
 /** Immutable subject clone — new object, new compartments array, new flags object. */
 function cloneSubject(s: Subject): Subject {
@@ -484,6 +489,50 @@ export function reducer(state: WorldState, action: Action): WorldState {
           ...state.digitalResources,
           disabledResourceGrantIds: next,
         },
+      };
+    }
+
+    case "SET_DIGITAL_RESOURCES":
+      // Replace digitalResources wholesale, but preserve disabledResourceGrantIds:
+      // it is client-only state, never sent by the server, and a fresh
+      // mapWorldResponse() call always returns an empty Set — overwriting it here
+      // would silently un-disable every previously-disabled grant on a refetch.
+      return {
+        ...state,
+        digitalResources: {
+          ...action.world,
+          disabledResourceGrantIds:
+            state.digitalResources.disabledResourceGrantIds,
+        },
+      };
+
+    case "UPSERT_RESOURCE_GRANT": {
+      const exists = state.digitalResources.grants.some(
+        (g) => g.id === action.grant.id,
+      );
+      const grants = exists
+        ? state.digitalResources.grants.map((g) =>
+            g.id === action.grant.id ? action.grant : g,
+          )
+        : [...state.digitalResources.grants, action.grant];
+      return {
+        ...state,
+        digitalResources: { ...state.digitalResources, grants },
+      };
+    }
+
+    case "UPSERT_RESOURCE_DELEGATE": {
+      const exists = state.digitalResources.delegates.some(
+        (d) => d.id === action.delegate.id,
+      );
+      const delegates = exists
+        ? state.digitalResources.delegates.map((d) =>
+            d.id === action.delegate.id ? action.delegate : d,
+          )
+        : [...state.digitalResources.delegates, action.delegate];
+      return {
+        ...state,
+        digitalResources: { ...state.digitalResources, delegates },
       };
     }
 
