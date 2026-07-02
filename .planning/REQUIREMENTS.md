@@ -64,12 +64,12 @@
 
 *Added 2026-06-19 when the original Phase 11 was expanded to a full-stack vertical and split into a backend phase (11) + a UI phase (12).*
 
-- [ ] **RSRC-BE-01**: A new backend digital-resource domain persists all 8 entities (networks, platforms, applications, org_links, resource_policies, policy_assignments, resource_access_grants, resource_access_delegates) via migration + sqlx models + Rocket handlers, mirroring the `model.ts` shapes; Application carries **no** classification column (derived from Platform).
+- [x] **RSRC-BE-01**: A new backend digital-resource domain persists all 8 entities (networks, platforms, applications, org_links, resource_policies, policy_assignments, resource_access_grants, resource_access_delegates) via migration + sqlx models + Rocket handlers, mirroring the `model.ts` shapes; Application carries **no** classification column (derived from Platform).
 - [x] **RSRC-BE-02**: The full gate-chain resolver is ported to Rust with parity to the TS `resolveResourceAccess` (clearance + own-tier grant + parent-tier prerequisite + advisory zone + time-versioned policy selection), taking an explicit evaluation timestamp; a parity test covers the inclusive policy-window boundary and the no-policy fail-closed `NO_ACTIVE_POLICY` DENY.
-- [ ] **RSRC-BE-03**: AuthGuard-protected GET endpoints expose the hierarchy plus policies, grants, and delegates; unauthenticated requests are rejected.
-- [ ] **RSRC-BE-04**: POST issue endpoints persist a new resource grant/delegate only after the ported Rust `canIssueResourceGrant` re-validates issuing authority server-side; 403 for non-ADMIN/no-delegate, expired-delegate, and out-of-window-delegate actors; duplicate issue creates no duplicate row.
-- [ ] **RSRC-BE-05**: The `seed.ts` digital-resource fixtures are loaded into Postgres as the single source of truth; `seedWorld()` no longer hardcodes the digital-resource arrays.
-- [ ] **RSRC-BE-06**: The broken migration chain is repaired so a freshly-created empty database migrates end-to-end with zero errors; the repair must not break the live dev DB. *(Added 2026-06-19 via discuss-phase — prerequisite to the 8-table create; supersedes the prior additive-only constraint.)*
+- [x] **RSRC-BE-03**: AuthGuard-protected GET endpoints expose the hierarchy plus policies, grants, and delegates; unauthenticated requests are rejected.
+- [x] **RSRC-BE-04**: POST issue endpoints persist a new resource grant/delegate only after the ported Rust `canIssueResourceGrant` re-validates issuing authority server-side; 403 for non-ADMIN/no-delegate, expired-delegate, and out-of-window-delegate actors; duplicate issue creates no duplicate row.
+- [x] **RSRC-BE-05**: The `seed.ts` digital-resource fixtures are loaded into Postgres as the single source of truth; `seedWorld()` no longer hardcodes the digital-resource arrays.
+- [x] **RSRC-BE-06**: The broken migration chain is repaired so a freshly-created empty database migrates end-to-end with zero errors; the repair must not break the live dev DB. *(Added 2026-06-19 via discuss-phase — prerequisite to the 8-table create; supersedes the prior additive-only constraint.)*
 
 ### Security Hardening (SEC) — Phase 11
 
@@ -143,12 +143,12 @@
 | RSRC-SEED-05 | Phase 10 | Pending |
 | RSRC-SEED-06 | Phase 9 | Complete |
 | RSRC-SEED-07 | Phase 9 | Complete |
-| RSRC-BE-01 | Phase 11 | Pending |
+| RSRC-BE-01 | Phase 11 | Complete |
 | RSRC-BE-02 | Phase 11 | Complete |
-| RSRC-BE-03 | Phase 11 | Pending |
-| RSRC-BE-04 | Phase 11 | Pending |
-| RSRC-BE-05 | Phase 11 | Pending |
-| RSRC-BE-06 | Phase 11 | Pending |
+| RSRC-BE-03 | Phase 11 | Complete |
+| RSRC-BE-04 | Phase 11 | Complete |
+| RSRC-BE-05 | Phase 11 | Complete |
+| RSRC-BE-06 | Phase 11 | Complete |
 | SEC-01 | Phase 11 | Complete |
 | SEC-02 | Phase 11 | Complete |
 | SEC-03 | Phase 11 | Complete |

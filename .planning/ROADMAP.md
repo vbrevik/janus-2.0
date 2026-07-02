@@ -38,7 +38,7 @@ See `.planning/milestones/v2.1-ROADMAP.md` for full phase details. Audit: `.plan
 
 - [x] **Phase 9: Digital Resource Model & Policy Engine** — TypeScript types (NetworkNode, PlatformNode, ApplicationNode, org_links, ResourcePolicy, ResourceAccessGrant, ResourceAccessDelegate), time-versioned per-resource policy resolver (`resolveResourceAccess`), pitfall-blocking Vitest coverage (completed 2026-06-02)
 - [x] **Phase 10: Mock Dataset & WorldState** (2/2 plans, verified 2026-06-18) — 6-unit seed (≥3 networks/platforms/apps, active/expired/future grants, policy-shift example, non-baseline-policy example, zone-prereq link to v2.1), `DigitalResourceWorld` sub-object in WorldState, toggle action
-- [ ] **Phase 11: Digital Resource Backend & Resolver Port** — 8-table digital-resource Postgres domain (+ migration, sqlx models, Rocket handlers), full gate-chain resolver ported to Rust with TS-parity test, AuthGuard read + issue API (server-side `canIssueResourceGrant`), seed→DB as single source of truth *(scope expanded from the original frontend-only Phase 11 — split 2026-06-19)*
+- [x] **Phase 11: Digital Resource Backend & Resolver Port** — 8-table digital-resource Postgres domain (+ migration, sqlx models, Rocket handlers), full gate-chain resolver ported to Rust with TS-parity test, AuthGuard read + issue API (server-side `canIssueResourceGrant`), seed→DB as single source of truth *(scope expanded from the original frontend-only Phase 11 — split 2026-06-19)* (completed 2026-07-02)
 - [ ] **Phase 12: Demo UI, Loader & Tab Integration** — hybrid loader (API→WorldState), Resource Browser (hierarchy tree + detail panel), Access Resolution Explorer with evaluation-timestamp picker, grant toggle, grant/delegate issuing forms, wired as DemoRoot tab (no route file). Depends on Phase 11
 
 ---
@@ -114,7 +114,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 11-04-PLAN.md — Security hardening: vendor_relations AuthGuard, per-role RBAC on writes + audit read, JWT fail-loud, CORS single origin (SEC-01, SEC-02, SEC-03, SEC-04) [wave 4]
+- [x] 11-04-PLAN.md — Security hardening: vendor_relations AuthGuard, per-role RBAC on writes + audit read, JWT fail-loud, CORS single origin (SEC-01, SEC-02, SEC-03, SEC-04) [wave 4]
 
 ### Phase 12: Demo UI, Loader & Tab Integration
 
@@ -154,5 +154,5 @@ Plans:
 | 8. Mock Dataset & Demo UI | v2.1 | 3/3 | Complete | 2026-05-23 |
 | 9. Digital Resource Model & Policy Engine | v2.2 | 4/4 | Complete   | 2026-06-02 |
 | 10. Mock Dataset & WorldState | v2.2 | 2/2 | Complete | 2026-06-18 |
-| 11. Digital Resource Backend & Resolver Port | v2.2 | 2/4 | In Progress|  |
+| 11. Digital Resource Backend & Resolver Port | v2.2 | 4/4 | Complete    | 2026-07-02 |
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 0/? | Not started | - |

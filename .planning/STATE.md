@@ -2,16 +2,19 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Platform, Network & Application Access
-status: executing
-stopped_at: 11-03 complete — IDOR closed via role-based write authz (Option B); resolver DateTime<Utc> migration finished (parity byte-exact); seedWorld() de-hardcoded; SEED-012 filed for deferred org-based model (Option A). Ready to execute 11-04 (SEC-01..04 security hardening).
-last_updated: "2026-07-02T13:10:00.000Z"
+current_phase: 12
+current_phase_name: Demo UI, Loader & Tab Integration
+status: completed
+stopped_at: "Phase 11 complete — 11-04 (SEC-01..04) executed, verification passed 16/16 after gap closure (4fd2ec9: uq_grant NULLS NOT DISTINCT). Next: plan Phase 12 (demo UI, loader & tab integration)."
+last_updated: "2026-07-02T19:40:36.846Z"
 last_activity: 2026-07-02
+last_activity_desc: Phase 11 complete, transitioned to Phase 12
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 8
-  percent: 80
+  completed_plans: 10
+  percent: 75
 ---
 
 # Project State
@@ -21,28 +24,29 @@ progress:
 See: .planning/PROJECT.md (updated 2026-06-02 for v2.2 milestone)
 
 **Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — federated ABAC model proven through v2.1.
-**Current focus:** Phase 11 — digital-resource-backend
+**Current focus:** Phase 12 — demo-ui-tab-integration
 
 ## Current Position
 
-Phase: 11 (digital-resource-backend) — EXECUTING
-Plan: 4 of 4 (11-04 security hardening) — ready to execute
-Status: 11-03 complete; 11-04 next
-Last activity: 2026-07-02
+Phase: 12 — Demo UI, Loader & Tab Integration
+Plan: Not started
+Status: Phase 11 verified complete (16/16); Phase 12 not yet planned
+Last activity: 2026-07-02 — Phase 11 complete, transitioned to Phase 12
 
-Progress: [████████░░] 80%
+Progress: [███████▌░░] 75% (3/4 phases; plans 10/10 of phases 9–11)
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 4 (from Phase 8)
+- Total plans completed: 6 (from Phase 8)
 - Average duration: ~8 min
 - Total execution time: ~16 min (Phase 8)
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 08 | 2 | ~16 min | ~8 min |
+| 11 | 4 | - | - |
 
 *Updated after each plan completion*
 | Phase 09 P01 | 6 min | 2 tasks | 1 files |
@@ -112,6 +116,6 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-07-02T13:10:00.000Z
-Stopped at: 11-03 executed to completion — IDOR fix (Option B role-based authz), resolver DateTime migration finished, seedWorld de-hardcoded, SEED-012 filed, 11-03-SUMMARY written. Backend lib compiles clean; parity + security tests green. Next: execute 11-04 (SEC-01..04). NOTE: seed migration still unapplied to the drifted dev DB — apply/repair before seed-dependent tests or the demo /world fetch return data.
-Resume file: `.planning/phases/11-digital-resource-backend/.continue-here.md` (pause before 11-04; written by c0c3afd)
+Last session: 2026-07-02T19:40:00.000Z
+Stopped at: Phase 11 closed out — tidy-up quick task (5 commits), 11-04 SEC-01..04 executed (12/12 security tests), verifier gap (null-window grant duplication) fixed via 4fd2ec9 and independently re-verified; VERIFICATION.md passed 16/16. NOTE: schema (8 resource_* tables + NULLS NOT DISTINCT constraint) is live on BOTH janus2 and janus2_fresh, but seed DATA (20260601130001) is only on janus2_fresh (18 grants/6 networks); janus2 resource tables remain EMPTY — demo /world against the dev DB still returns nothing (carried blocker below stands).
+Resume file: None (.continue-here.md consumed and removed at phase completion)
