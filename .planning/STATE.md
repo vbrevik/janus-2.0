@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Platform, Network & Application Access
 status: executing
-stopped_at: Phase 12 context gathered
-last_updated: "2026-07-02T22:18:43.692Z"
-last_activity: 2026-07-02 -- Phase 12 planning complete
+stopped_at: Completed 12-01-PLAN.md
+last_updated: "2026-07-02T22:26:40.262Z"
+last_activity: 2026-07-02
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 16
-  completed_plans: 10
-  percent: 63
+  completed_plans: 11
+  percent: 69
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-06-02 for v2.2 milestone)
 
 ## Current Position
 
-Phase: 12 — Demo UI, Loader & Tab Integration
-Plan: Not started
+Phase: 12 (demo-ui-tab-integration) — EXECUTING
+Plan: 2 of 6
 Status: Ready to execute
-Last activity: 2026-07-02 -- Phase 12 planning complete
+Last activity: 2026-07-02
 
-Progress: [███████▌░░] 75% (3/4 phases; plans 10/10 of phases 9–11)
+Progress: [███████░░░] 69%
 
 ## Performance Metrics
 
@@ -50,6 +50,7 @@ Progress: [███████▌░░] 75% (3/4 phases; plans 10/10 of phase
 | Phase 09 P02 | 5 min | 2 tasks | 1 files |
 | Phase 09 P03 | 3 min | 2 tasks | 1 files |
 | Phase 09 P04 | 6 min | 2 tasks | 2 files |
+| Phase 12 P01 | ~5min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -69,6 +70,7 @@ v2.2 key decisions (from research/ARCHITECTURE.md and PITFALLS.md):
 - [Phase ?]: 09-04 SEED-06: MilNet two-window policy shift across 2026-03-01; subj-1 ALLOW(Feb)/DENY(Apr)
 - [Phase ?]: 09-04 SEED-07: separate IntelNet NetworkNode, single non-baseline policy; REQUIRED_ROLE gate asserted present in the trace
 - [Phase ?]: 09-04 RESOURCE_DELEGATES omitted (plan-sanctioned): canIssueResourceGrant covered by inline 09-03 fixtures
+- [Phase 12]: 12-01: Seed-apply script contains zero extra idempotency logic — relies entirely on the seed migration's own ON CONFLICT DO NOTHING / WHERE NOT EXISTS guards
 
 ### Pending Todos
 
@@ -113,6 +115,6 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-07-02T21:20:52.408Z
-Stopped at: Phase 12 context gathered
-Resume file: .planning/phases/12-demo-ui-tab-integration/12-CONTEXT.md
+Last session: 2026-07-02T22:26:40.253Z
+Stopped at: Completed 12-01-PLAN.md
+Resume file: .planning/phases/12-demo-ui-tab-integration/12-02-PLAN.md

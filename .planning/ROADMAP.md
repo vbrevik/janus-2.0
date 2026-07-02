@@ -136,7 +136,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 12-01-PLAN.md — Idempotent seed-apply script; seeds `janus2` with the 6-unit digital-resource dataset (RSRC-UI-04) [wave 1]
+- [x] 12-01-PLAN.md — Idempotent seed-apply script; seeds `janus2` with the 6-unit digital-resource dataset (RSRC-UI-04) [wave 1]
 - [ ] 12-02-PLAN.md — Mapper (denormalize backend `/world` response), 3 new WorldState reducer actions, QueryClientProvider, CLEARANCE_TONE export (RSRC-UI-04, RSRC-UI-06) [wave 1]
 
 **Wave 2** *(blocked on 12-02)*
@@ -173,4 +173,4 @@ Plans:
 | 9. Digital Resource Model & Policy Engine | v2.2 | 4/4 | Complete   | 2026-06-02 |
 | 10. Mock Dataset & WorldState | v2.2 | 2/2 | Complete | 2026-06-18 |
 | 11. Digital Resource Backend & Resolver Port | v2.2 | 4/4 | Complete    | 2026-07-02 |
-| 12. Demo UI, Loader & Tab Integration | v2.2 | 0/? | Not started | - |
+| 12. Demo UI, Loader & Tab Integration | v2.2 | 1/6 | In Progress|  |

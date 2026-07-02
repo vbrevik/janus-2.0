@@ -85,7 +85,7 @@
 - [ ] **RSRC-UI-01**: A Resource Browser renders the Network → Platform → Application hierarchy with classification badges (Application badge shown as inherited).
 - [ ] **RSRC-UI-02**: Selecting a resource shows its org links grouped by role (ADMIN / ASSET_OWNER / OPERATOR / SECURITY_APPROVAL / …), classification, the active policy summary, active grants, and delegates. Platform detail shows NSM grounding badges (sikkerhetsgodkjenning / forsvarlig sikkerhetsnivå) as **static annotations**, not gates; the SECURITY_APPROVAL org names the authorizing authority behind the badge.
 - [ ] **RSRC-UI-03**: An Access Resolution Explorer: select person + resource + **evaluation timestamp** (default "now"), compute ALLOW/DENY with the full gate-chain trace, the amber non-blocking zone advisory row, and a label for which policy version was applied. Changing the timestamp across a policy-shift boundary visibly changes the applied rules.
-- [ ] **RSRC-UI-04**: A hybrid loader fetches digital-resource data from the Phase 11 API on demo mount and populates `WorldState.digitalResources`; an unreachable API surfaces an explicit error/empty state (no silent stale fallback).
+- [x] **RSRC-UI-04**: A hybrid loader fetches digital-resource data from the Phase 11 API on demo mount and populates `WorldState.digitalResources`; an unreachable API surfaces an explicit error/empty state (no silent stale fallback).
 - [ ] **RSRC-UI-05**: A grant enable/disable toggle (`TOGGLE_RESOURCE_GRANT`) is interactive; disabling the grant behind an ALLOW flips the verdict to DENY and re-enabling restores it.
 - [ ] **RSRC-UI-06**: Delegation-issuing forms issue a grant/delegate via the Phase 11 POST endpoints (backend persist) then update `WorldState`; controls are gated by the can-issue check and a server 403 surfaces inline.
 
@@ -156,6 +156,6 @@
 | RSRC-UI-01 | Phase 12 | Pending |
 | RSRC-UI-02 | Phase 12 | Pending |
 | RSRC-UI-03 | Phase 12 | Pending |
-| RSRC-UI-04 | Phase 12 | Pending |
+| RSRC-UI-04 | Phase 12 | Complete |
 | RSRC-UI-05 | Phase 12 | Pending |
 | RSRC-UI-06 | Phase 12 | Pending |
