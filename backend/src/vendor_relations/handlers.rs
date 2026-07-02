@@ -1,8 +1,10 @@
+use rocket::http::Status;
 use rocket::serde::json::Json;
 use rocket::State;
 use sqlx::PgPool;
 
 use crate::auth::middleware::AuthGuard;
+use crate::shared::rbac::role_has_permission;
 use crate::shared::response::ApiResponse;
 use crate::vendor_relations::models::*;
 
@@ -35,11 +37,17 @@ pub async fn list_vendor_relations(
 pub async fn create_vendor_relation(
     db: &State<PgPool>,
     data: Json<CreateVendorRelationRequest>,
-    _auth: AuthGuard, // Require authentication for creating vendor relations (SEC-01)
-) -> Result<Json<ApiResponse<VendorRelation>>, String> {
+    auth: AuthGuard, // Require authentication for creating vendor relations (SEC-01)
+) -> Result<Json<ApiResponse<VendorRelation>>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "vendor_relations.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     // Validate that either related_vendor_id or related_person_id is set
     if data.related_vendor_id.is_none() && data.related_person_id.is_none() {
-        return Err("Either related_vendor_id or related_person_id must be provided".to_string());
+        return Err(Status::BadRequest);
     }
 
     // Simple date parsing: YYYY-MM-DD format
@@ -74,7 +82,7 @@ pub async fn create_vendor_relation(
     .bind(valid_until)
     .fetch_one(db.inner())
     .await
-    .map_err(|e| format!("Database error: {}", e))?;
+    .map_err(|_| Status::InternalServerError)?;
 
     Ok(Json(ApiResponse::success(relation)))
 }
@@ -154,13 +162,19 @@ pub async fn get_vendor_hierarchy(
 pub async fn delete_vendor_relation(
     db: &State<PgPool>,
     relation_id: i32,
-    _auth: AuthGuard, // Require authentication for deleting vendor relations (SEC-01)
-) -> Result<Json<ApiResponse<String>>, String> {
+    auth: AuthGuard, // Require authentication for deleting vendor relations (SEC-01)
+) -> Result<Json<ApiResponse<String>>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "vendor_relations.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     sqlx::query("DELETE FROM vendor_relations WHERE id = $1")
         .bind(relation_id)
         .execute(db.inner())
         .await
-        .map_err(|e| format!("Database error: {}", e))?;
+        .map_err(|_| Status::InternalServerError)?;
 
     Ok(Json(ApiResponse::success(
         "Relation deleted successfully".to_string(),

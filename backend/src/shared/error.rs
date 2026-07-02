@@ -8,6 +8,7 @@ use rocket::{
 pub enum AppError {
     BadRequest,
     Unauthorized,
+    Forbidden,
     NotFound,
     Internal,
 }
@@ -29,6 +30,7 @@ impl<'r> Responder<'r, 'static> for AppError {
         let status = match self {
             AppError::BadRequest => Status::BadRequest,
             AppError::Unauthorized => Status::Unauthorized,
+            AppError::Forbidden => Status::Forbidden,
             AppError::NotFound => Status::NotFound,
             AppError::Internal => Status::InternalServerError,
         };

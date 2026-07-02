@@ -4,6 +4,7 @@ use sqlx::PgPool;
 
 use crate::access::models::*;
 use crate::auth::middleware::AuthGuard;
+use crate::shared::rbac::role_has_permission;
 use crate::shared::response::ApiResponse;
 
 /// Grant computer access to a personnel member
@@ -13,6 +14,12 @@ pub async fn grant_computer_access(
     auth: AuthGuard,
     data: Json<CreateComputerAccessRequest>,
 ) -> Result<Json<ApiResponse<ComputerAccess>>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "access.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let granted_by_person_id = auth
         .claims
         .sub
@@ -49,6 +56,12 @@ pub async fn grant_data_access(
     auth: AuthGuard,
     data: Json<CreateDataAccessRequest>,
 ) -> Result<Json<ApiResponse<DataAccess>>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "access.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let granted_by_person_id = auth
         .claims
         .sub
@@ -85,6 +98,12 @@ pub async fn grant_physical_access(
     auth: AuthGuard,
     data: Json<CreatePhysicalAccessRequest>,
 ) -> Result<Json<ApiResponse<PhysicalAccess>>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "access.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let granted_by_person_id = auth
         .claims
         .sub
@@ -179,10 +198,16 @@ pub async fn list_person_access(
 #[delete("/api/access/<access_type>/<id>")]
 pub async fn revoke_access(
     db: &State<PgPool>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
     access_type: &str,
     id: i32,
 ) -> Result<Json<ApiResponse<&'static str>>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "access.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     match access_type {
         "computer" => {
             sqlx::query!(

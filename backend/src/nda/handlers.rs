@@ -8,6 +8,7 @@ use crate::audit::handlers::create_audit_log;
 use crate::audit::models::CreateAuditLogRequest;
 use crate::auth::middleware::AuthGuard;
 use crate::nda::models::*;
+use crate::shared::rbac::role_has_permission;
 
 /// List NDAs for person or by person email
 #[get("/?<person_id>&<status>&<email>")]
@@ -110,6 +111,12 @@ pub async fn create_nda(
     data: Json<CreateNDARequest>,
     auth: AuthGuard,
 ) -> Result<Json<NDA>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "nda.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let issued_by_person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
     let version = data.version.clone().unwrap_or_else(|| "1.0".to_string());
 
@@ -169,6 +176,12 @@ pub async fn sign_nda(
     data: Json<SignNDARequest>,
     auth: AuthGuard,
 ) -> Result<Json<NDA>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "nda.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let now = Utc::now().naive_utc();
 
     let nda = sqlx::query_as::<sqlx::Postgres, NDA>(
@@ -217,6 +230,12 @@ pub async fn reject_nda(
     data: Json<RejectNDARequest>,
     auth: AuthGuard,
 ) -> Result<Json<NDA>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "nda.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let now = Utc::now().naive_utc();
 
     let nda = sqlx::query_as::<sqlx::Postgres, NDA>(
@@ -262,8 +281,14 @@ pub async fn update_nda_status(
     db: &State<PgPool>,
     id: i32,
     data: Json<UpdateNDARequest>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<NDA>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "nda.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let nda = sqlx::query_as::<sqlx::Postgres, NDA>(
         r#"
         UPDATE nda
@@ -288,8 +313,14 @@ pub async fn update_nda_status(
 pub async fn delete_nda(
     db: &State<PgPool>,
     id: i32,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<&'static str>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "nda.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     sqlx::query("UPDATE nda SET status = 'REVOKED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
         .bind(id)
         .execute(db.inner())

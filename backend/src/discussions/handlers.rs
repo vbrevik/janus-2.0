@@ -6,6 +6,7 @@ use sqlx::PgPool;
 use crate::auth::middleware::AuthGuard;
 use crate::discussions::models::*;
 use crate::shared::error::AppError;
+use crate::shared::rbac::role_has_permission;
 use crate::shared::response::ApiResponse;
 
 /// List discussions for a person (end-user inbox)
@@ -103,6 +104,12 @@ pub async fn create_discussion(
     data: Json<CreateDiscussionRequest>,
     auth: crate::auth::middleware::AuthGuard,
 ) -> Result<Json<ApiResponse<Discussion>>, AppError> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "discussions.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(AppError::Forbidden);
+    }
     let person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
     // Find person_id - the authenticated user's person_id (from JWT claims.sub)
     // No need to look up - auth.claims.sub already contains the person_id
@@ -141,6 +148,12 @@ pub async fn create_reply(
     auth: AuthGuard,
     ws_manager: &State<crate::messaging::websocket::WebSocketManager>,
 ) -> Result<Json<ApiResponse<DiscussionReply>>, AppError> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "discussions.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(AppError::Forbidden);
+    }
     let created_by_person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
 
     // Get discussion to find person_id and assigned_to_person_id for notifications

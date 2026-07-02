@@ -7,6 +7,7 @@ use validator::Validate;
 use super::models::{CreateOrganizationRequest, Organization, UpdateOrganizationRequest};
 use crate::auth::middleware::AuthGuard;
 use crate::shared::pagination::PaginationParams;
+use crate::shared::rbac::role_has_permission;
 use crate::shared::response::PaginatedResponse;
 
 #[get("/?<page>&<per_page>&<top_level_only>")]
@@ -90,8 +91,14 @@ pub async fn get_organization(
 pub async fn create_organization(
     organization_request: Json<CreateOrganizationRequest>,
     db: &State<PgPool>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<Organization>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "organizations.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     // Validate input
     organization_request
         .validate()
@@ -130,8 +137,14 @@ pub async fn update_organization(
     id: i32,
     organization_request: Json<UpdateOrganizationRequest>,
     db: &State<PgPool>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<Organization>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "organizations.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     // Validate input
     organization_request
         .validate()
@@ -225,8 +238,14 @@ pub async fn update_organization(
 pub async fn delete_organization(
     id: i32,
     db: &State<PgPool>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Status, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "organizations.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     // Soft delete by setting deleted_at timestamp
     let result = sqlx::query!(
         r#"

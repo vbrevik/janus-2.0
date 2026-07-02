@@ -6,6 +6,7 @@ use sqlx::PgPool;
 
 use crate::auth::middleware::AuthGuard;
 use crate::document_references::models::*;
+use crate::shared::rbac::role_has_permission;
 use base64::Engine as _;
 use s3::creds::Credentials;
 use s3::{Bucket, Region};
@@ -108,6 +109,12 @@ pub async fn create_document_reference(
     data: Json<CreateDocumentReferenceRequest>,
     auth: AuthGuard,
 ) -> Result<Json<DocumentReference>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "document_references.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let person_id = auth.claims.sub.parse::<i32>().unwrap_or(0);
     // The authenticated user's person_id is already in auth.claims.sub
     // No need to look up - the person_id is the authenticated person
@@ -152,8 +159,14 @@ pub async fn update_document_reference(
     db: &State<PgPool>,
     id: i32,
     data: Json<UpdateDocumentReferenceRequest>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<DocumentReference>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "document_references.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let issued_date_opt = data
         .issued_date
         .as_ref()
@@ -197,8 +210,14 @@ pub async fn upload_document_attachment(
     db: &State<PgPool>,
     id: i32,
     data: Json<AttachmentUploadRequest>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<DocumentReference>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "document_references.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     data.0.validate().map_err(|_| Status::BadRequest)?;
 
     // Decode base64
@@ -276,8 +295,14 @@ pub async fn upload_document_attachment(
 pub async fn delete_document_reference(
     db: &State<PgPool>,
     id: i32,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<&'static str>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "document_references.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     sqlx::query("DELETE FROM document_references WHERE id = $1")
         .bind(id)
         .execute(db.inner())

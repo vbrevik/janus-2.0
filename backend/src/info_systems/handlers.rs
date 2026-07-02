@@ -7,6 +7,7 @@ use validator::Validate;
 use super::models::{CreateInfoSystemRequest, InfoSystem, UpdateInfoSystemRequest};
 use crate::auth::middleware::AuthGuard;
 use crate::shared::pagination::PaginationParams;
+use crate::shared::rbac::role_has_permission;
 use crate::shared::response::{ApiResponse, PaginatedResponse};
 
 #[get("/api/info-systems?<page>&<per_page>")]
@@ -86,8 +87,14 @@ pub async fn get_info_system(
 pub async fn create_info_system(
     request: Json<CreateInfoSystemRequest>,
     db: &State<PgPool>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<InfoSystem>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "info_systems.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     request.validate().map_err(|_| Status::BadRequest)?;
 
     // Parse last_audit_date if provided
@@ -129,8 +136,14 @@ pub async fn update_info_system(
     id: i32,
     request: Json<UpdateInfoSystemRequest>,
     db: &State<PgPool>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<InfoSystem>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "info_systems.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     request.validate().map_err(|_| Status::BadRequest)?;
 
     // Check if system exists
@@ -198,8 +211,14 @@ pub async fn update_info_system(
 pub async fn delete_info_system(
     id: i32,
     db: &State<PgPool>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<ApiResponse<String>>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "info_systems.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let rows_affected = sqlx::query!("DELETE FROM info_systems WHERE id = $1", id)
         .execute(db.inner())
         .await

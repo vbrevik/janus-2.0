@@ -6,6 +6,7 @@ use sqlx::PgPool;
 use super::models::{AuditLog, CreateAuditLogRequest};
 use crate::auth::middleware::AuthGuard;
 use crate::shared::pagination::PaginationParams;
+use crate::shared::rbac::role_has_permission;
 use crate::shared::response::PaginatedResponse;
 
 /// List audit logs with optional filtering and pagination
@@ -17,8 +18,14 @@ pub async fn list_audit_logs(
     action: Option<String>,
     resource_type: Option<String>,
     db: &State<PgPool>,
-    _auth: AuthGuard, // Require authentication to view audit logs
+    auth: AuthGuard, // Require authentication + audit.read to view audit logs (SEC-02)
 ) -> Result<Json<PaginatedResponse<AuditLog>>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "audit.read")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     let pagination = PaginationParams {
         page: page.unwrap_or(1).max(1),
         per_page: per_page.unwrap_or(20).clamp(1, 100),

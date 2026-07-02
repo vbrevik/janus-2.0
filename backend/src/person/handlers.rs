@@ -8,6 +8,7 @@ use validator::Validate;
 use super::models::{CreatePersonRequest, Person, UpdatePersonRequest};
 use crate::auth::middleware::AuthGuard;
 use crate::shared::pagination::PaginationParams;
+use crate::shared::rbac::role_has_permission;
 use crate::shared::response::PaginatedResponse;
 
 #[get("/?<page>&<per_page>&<search>")]
@@ -130,8 +131,14 @@ pub async fn get_person(
 pub async fn create_person(
     person_request: Json<CreatePersonRequest>,
     db: &State<PgPool>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<Person>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "person.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     // Validate input
     person_request.validate().map_err(|_| Status::BadRequest)?;
 
@@ -211,8 +218,14 @@ pub async fn update_person(
     id: i32,
     person_request: Json<UpdatePersonRequest>,
     db: &State<PgPool>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<Person>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "person.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     // Validate input
     person_request.validate().map_err(|_| Status::BadRequest)?;
 
@@ -349,11 +362,13 @@ pub async fn update_person(
 }
 
 #[delete("/<id>")]
-pub async fn delete_person(
-    id: i32,
-    db: &State<PgPool>,
-    _auth: AuthGuard,
-) -> Result<Status, Status> {
+pub async fn delete_person(id: i32, db: &State<PgPool>, auth: AuthGuard) -> Result<Status, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "person.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     // Soft delete by setting deleted_at timestamp
     let result = sqlx::query(
         r#"

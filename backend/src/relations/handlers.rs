@@ -6,6 +6,7 @@ use validator::Validate;
 
 use crate::auth::middleware::AuthGuard;
 use crate::relations::models::*;
+use crate::shared::rbac::role_has_permission;
 
 /// List all relations for a specific entity (both incoming and outgoing)
 #[get("/relations?<entity_type>&<entity_id>&<direction>")]
@@ -152,8 +153,14 @@ pub async fn list_vendor_relations(
 pub async fn create_relation(
     db: &State<PgPool>,
     data: Json<CreateRelationRequest>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<Relation>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "relations.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     data.0.validate().map_err(|_| Status::BadRequest)?;
 
     // Validate entity types
@@ -339,8 +346,14 @@ pub async fn update_relation(
     db: &State<PgPool>,
     id: i32,
     data: Json<UpdateRelationRequest>,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<Relation>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "relations.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     data.0.validate().map_err(|_| Status::BadRequest)?;
 
     // Build dynamic update query
@@ -411,8 +424,14 @@ pub async fn update_relation(
 pub async fn delete_relation(
     db: &State<PgPool>,
     id: i32,
-    _auth: AuthGuard,
+    auth: AuthGuard,
 ) -> Result<Json<&'static str>, Status> {
+    if !role_has_permission(db.inner(), &auth.claims.role, "relations.write")
+        .await
+        .unwrap_or(false)
+    {
+        return Err(Status::Forbidden);
+    }
     sqlx::query("DELETE FROM relations WHERE id = $1")
         .bind(id)
         .execute(db.inner())
