@@ -42,15 +42,6 @@ import {
   SUBJECTS,
   VISITOR_PASSES,
   ZONES,
-  RESOURCE_NODES,
-  RESOURCE_GRANTS,
-  PLATFORMS,
-  APPLICATIONS,
-  ORG_LINKS,
-  POLICIES,
-  POLICY_ASSIGNMENTS,
-  RSRC_POLICIES,
-  RSRC_DELEGATES,
 } from "../lib/seed";
 import { buildDiscoverEnvelopes, type DetailResult } from "../lib/contract";
 import type { VerifyResult } from "../lib/credential";
@@ -136,15 +127,18 @@ export function seedWorld(): WorldState {
     entryLogs: [...ENTRY_LOGS],
     visitorPasses: [...VISITOR_PASSES],
     disabledGrantIds: new Set<string>(),
+    // Backend is the source of truth (Phase 11). These start empty; Phase 12
+    // populates them via GET /api/digital-resources/world. Do NOT re-inline the
+    // seed fixtures here — the DB serves the same 6-unit dataset (RSRC-BE-05).
     digitalResources: {
-      networks: [...RESOURCE_NODES],
-      platforms: [...PLATFORMS],
-      applications: [...APPLICATIONS],
-      orgLinks: [...ORG_LINKS],
-      policies: [...RSRC_POLICIES],
-      policyAssignments: [...POLICY_ASSIGNMENTS],
-      grants: [...RESOURCE_GRANTS],
-      delegates: [...RSRC_DELEGATES],
+      networks: [],
+      platforms: [],
+      applications: [],
+      orgLinks: [],
+      policies: [],
+      policyAssignments: [],
+      grants: [],
+      delegates: [],
       disabledResourceGrantIds: new Set<string>(),
     },
   };
