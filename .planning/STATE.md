@@ -5,8 +5,8 @@ milestone_name: Platform, Network & Application Access
 current_phase: 12
 current_phase_name: Demo UI, Loader & Tab Integration
 status: completed
-stopped_at: "Phase 11 complete — 11-04 (SEC-01..04) executed, verification passed 16/16 after gap closure (4fd2ec9: uq_grant NULLS NOT DISTINCT). Next: plan Phase 12 (demo UI, loader & tab integration)."
-last_updated: "2026-07-02T19:40:36.846Z"
+stopped_at: Phase 12 UI-SPEC approved (updated 2026-07-02)
+last_updated: "2026-07-02T20:33:05.586Z"
 last_activity: 2026-07-02
 last_activity_desc: Phase 11 complete, transitioned to Phase 12
 progress:
@@ -116,6 +116,6 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-07-02T19:40:00.000Z
-Stopped at: Phase 11 closed out — tidy-up quick task (5 commits), 11-04 SEC-01..04 executed (12/12 security tests), verifier gap (null-window grant duplication) fixed via 4fd2ec9 and independently re-verified; VERIFICATION.md passed 16/16. NOTE: schema (8 resource_* tables + NULLS NOT DISTINCT constraint) is live on BOTH janus2 and janus2_fresh, but seed DATA (20260601130001) is only on janus2_fresh (18 grants/6 networks); janus2 resource tables remain EMPTY — demo /world against the dev DB still returns nothing (carried blocker below stands).
-Resume file: None (.continue-here.md consumed and removed at phase completion)
+Last session: 2026-07-02T20:33:05.579Z
+Stopped at: Phase 12 UI-SPEC approved (updated 2026-07-02)
+Resume file: .planning/phases/12-demo-ui-tab-integration/12-UI-SPEC.md
