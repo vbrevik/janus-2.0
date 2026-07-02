@@ -30,9 +30,10 @@ evidence: GET /api/person 401, GET /api/audit 401, GET /api/vendors/1/relations 
 
 ### 4. Per-role RBAC — 403 not 500 (SEC-02)
 expected: viewer writes → 403; manager nda.write 200 but access writes 403; admin passes gates.
-result: issue
-reported: "Convention holds everywhere tested (viewer POST /api/nda 403, manager POST /api/nda 200, manager+viewer POST /api/access/computer 403, viewer GET /api/audit 403, admin 200) EXCEPT the roles module: POST /api/roles as viewer returns 401, not 403 — roles/handlers.rs uses AppError::Unauthorized at all 5 permission-gate sites instead of AppError::Forbidden."
+result: pass (issue found and fixed in-session)
+reported: "Convention held everywhere tested EXCEPT the roles module: POST /api/roles as viewer returned 401, not 403 — roles/handlers.rs used AppError::Unauthorized at all 7 permission-gate sites."
 severity: minor
+fixed_by: ac6b57b — all 7 sites → AppError::Forbidden; regression test added (suite 13/13); live re-probe viewer POST /api/roles → 403
 
 ### 5. Digital-resources aggregate read (RSRC-BE-03)
 expected: GET /api/digital-resources/world with valid JWT returns 200 with world payload; arrays empty on janus2 until seed data applied there (known carried blocker).
@@ -57,17 +58,18 @@ evidence: parity `ok. 1 passed; 0 failed`; security `ok. 12 passed; 0 failed` (-
 ## Summary
 
 total: 8
-passed: 7
-issues: 1
+passed: 8
+issues: 0 (1 found, fixed in-session)
 pending: 0
 skipped: 0
 
 ## Gaps
 
 - truth: "Permission-gate refusal returns 403 Forbidden (never 401/500) on every module (SEC-02)"
-  status: failed
-  reason: "User-delegated test found: POST /api/roles as viewer returns 401. roles/handlers.rs pre-dates the 11-04 AppError::Forbidden variant and uses AppError::Unauthorized at its 5 permission-gate sites (lines ~18,39,64,103,120). Response is still a denial (no privilege escalation) — wrong status semantics only."
+  status: fixed
+  reason: "POST /api/roles as viewer returned 401 — roles/handlers.rs pre-dated the 11-04 AppError::Forbidden variant and used AppError::Unauthorized at its 7 permission-gate sites."
   severity: minor
   test: 4
-  artifacts: [backend/src/roles/handlers.rs]
-  missing: ["swap 5x AppError::Unauthorized → AppError::Forbidden at the role_has_permission gate sites in roles/handlers.rs", "extend security_hardening_test with a viewer→roles.write 403 assertion"]
+  artifacts: [backend/src/roles/handlers.rs, backend/tests/security_hardening_test.rs]
+  fixed_by: ac6b57b
+  verification: "security_hardening_test 13 passed 0 failed (incl. new test_roles_write_viewer_403_not_401); live probe: viewer POST /api/roles → 403"
