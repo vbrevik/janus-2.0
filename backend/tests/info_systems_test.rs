@@ -19,15 +19,18 @@ async fn get_auth_token(client: &Client) -> String {
     let response = client
         .post("/api/auth/login")
         .header(ContentType::JSON)
-        .body(json!({
-            "username": "admin",
-            "password": "password123"
-        }).to_string())
+        .body(
+            json!({
+                "username": "admin",
+                "password": "password123"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    
+
     let body: Value = response.into_json().await.expect("valid json");
     body["token"].as_str().unwrap().to_string()
 }
@@ -49,7 +52,7 @@ async fn test_list_info_systems() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    
+
     let body: Value = response.into_json().await.expect("valid json");
     assert!(body["items"].is_array());
     assert!(body["total"].is_number());
@@ -96,12 +99,15 @@ async fn test_get_info_system_by_id() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Test System Get",
-            "description": "Test system for GET test",
-            "environment": "DEV",
-            "status": "ACTIVE"
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Test System Get",
+                "description": "Test system for GET test",
+                "environment": "DEV",
+                "status": "ACTIVE"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -117,7 +123,7 @@ async fn test_get_info_system_by_id() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    
+
     let body: Value = response.into_json().await.expect("valid json");
     assert_eq!(body["id"].as_i64().unwrap(), system_id);
     assert_eq!(body["system_name"].as_str().unwrap(), "Test System Get");
@@ -148,21 +154,24 @@ async fn test_create_info_system() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Test System Create",
-            "description": "Test system for CREATE test",
-            "environment": "PROD",
-            "status": "ACTIVE",
-            "ip_address": "192.168.1.100",
-            "domain": "test.example.com",
-            "managed_by": "IT Operations",
-            "last_audit_date": "2024-01-15"
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Test System Create",
+                "description": "Test system for CREATE test",
+                "environment": "PROD",
+                "status": "ACTIVE",
+                "ip_address": "192.168.1.100",
+                "domain": "test.example.com",
+                "managed_by": "IT Operations",
+                "last_audit_date": "2024-01-15"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    
+
     let body: Value = response.into_json().await.expect("valid json");
     assert!(body["id"].is_number());
     assert_eq!(body["system_name"].as_str().unwrap(), "Test System Create");
@@ -185,11 +194,14 @@ async fn test_create_info_system_validation_error_empty_name() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "",  // Invalid: empty name
-            "environment": "PROD",
-            "status": "ACTIVE"
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "",  // Invalid: empty name
+                "environment": "PROD",
+                "status": "ACTIVE"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -205,11 +217,14 @@ async fn test_create_info_system_validation_error_invalid_environment() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Test System",
-            "environment": "INVALID",  // Invalid environment
-            "status": "ACTIVE"
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Test System",
+                "environment": "INVALID",  // Invalid environment
+                "status": "ACTIVE"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -225,11 +240,14 @@ async fn test_create_info_system_validation_error_invalid_status() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Test System",
-            "environment": "PROD",
-            "status": "INVALID"  // Invalid status
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Test System",
+                "environment": "PROD",
+                "status": "INVALID"  // Invalid status
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -245,12 +263,15 @@ async fn test_create_info_system_invalid_date_format() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Test System",
-            "environment": "PROD",
-            "status": "ACTIVE",
-            "last_audit_date": "2024-13-45"  // Invalid date format
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Test System",
+                "environment": "PROD",
+                "status": "ACTIVE",
+                "last_audit_date": "2024-13-45"  // Invalid date format
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -267,11 +288,14 @@ async fn test_update_info_system() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Test System Update",
-            "environment": "DEV",
-            "status": "ACTIVE"
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Test System Update",
+                "environment": "DEV",
+                "status": "ACTIVE"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -284,16 +308,19 @@ async fn test_update_info_system() {
         .put(format!("/api/info-systems/{}", system_id))
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Updated System Name",
-            "status": "MAINTENANCE",
-            "managed_by": "Security Team"
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Updated System Name",
+                "status": "MAINTENANCE",
+                "managed_by": "Security Team"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    
+
     let body: Value = response.into_json().await.expect("valid json");
     assert_eq!(body["id"].as_i64().unwrap(), system_id);
     assert_eq!(body["system_name"].as_str().unwrap(), "Updated System Name");
@@ -313,12 +340,15 @@ async fn test_update_info_system_partial() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Test System Partial",
-            "environment": "PROD",
-            "status": "ACTIVE",
-            "ip_address": "10.0.0.1"
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Test System Partial",
+                "environment": "PROD",
+                "status": "ACTIVE",
+                "ip_address": "10.0.0.1"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -331,14 +361,17 @@ async fn test_update_info_system_partial() {
         .put(format!("/api/info-systems/{}", system_id))
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "status": "INACTIVE"
-        }).to_string())
+        .body(
+            json!({
+                "status": "INACTIVE"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
     assert_eq!(response.status(), Status::Ok);
-    
+
     let body: Value = response.into_json().await.expect("valid json");
     assert_eq!(body["status"].as_str().unwrap(), "INACTIVE");
     // Other fields should remain unchanged
@@ -356,9 +389,12 @@ async fn test_update_info_system_not_found() {
         .put("/api/info-systems/99999")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "status": "ACTIVE"
-        }).to_string())
+        .body(
+            json!({
+                "status": "ACTIVE"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -375,11 +411,14 @@ async fn test_update_info_system_validation_error() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Test System",
-            "environment": "PROD",
-            "status": "ACTIVE"
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Test System",
+                "environment": "PROD",
+                "status": "ACTIVE"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -392,9 +431,12 @@ async fn test_update_info_system_validation_error() {
         .put(format!("/api/info-systems/{}", system_id))
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "status": "INVALID_STATUS"
-        }).to_string())
+        .body(
+            json!({
+                "status": "INVALID_STATUS"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
@@ -411,11 +453,14 @@ async fn test_delete_info_system() {
         .post("/api/info-systems")
         .header(ContentType::JSON)
         .header(auth_header(&token))
-        .body(json!({
-            "system_name": "Test System Delete",
-            "environment": "TEST",
-            "status": "ACTIVE"
-        }).to_string())
+        .body(
+            json!({
+                "system_name": "Test System Delete",
+                "environment": "TEST",
+                "status": "ACTIVE"
+            })
+            .to_string(),
+        )
         .dispatch()
         .await;
 
