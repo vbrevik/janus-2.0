@@ -18,9 +18,15 @@ import {
   buildResourceTree,
   type ResourceTreeNode,
 } from "../lib/digital-resource-selectors";
+import { ApiError } from "@/lib/api";
+import {
+  getStoredUserRole,
+  useIssueDelegate,
+  type IssueDelegateVariables,
+} from "../hooks/use-digital-resources";
 import { useWorld } from "../store/world-state";
 import { CLEARANCE_TONE } from "./access-resolution-explorer";
-import { Card, Field, Pill } from "./ui";
+import { Card, Field, Pill, Select } from "./ui";
 
 // Module-local tone map, mirroring the per-file pattern (ZONE_TYPE_TONE etc.).
 const TIER_TONE: Record<
@@ -94,6 +100,146 @@ function ResourceTreeNodeRow({
             onToggle={onToggle}
           />
         ))}
+    </div>
+  );
+}
+
+// --- Issue Delegate form (admin-gated, RSRC-UI-06 / D-01) ---
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function IssueDelegateSection({ selectedId }: { selectedId: string | null }) {
+  const world = useWorld();
+  const mutation = useIssueDelegate();
+  // D-01: issuing is gated on the single role string "admin" — never widened.
+  const isAdmin = getStoredUserRole() === "admin";
+
+  const flatResources = [
+    ...world.digitalResources.networks,
+    ...world.digitalResources.platforms,
+    ...world.digitalResources.applications,
+  ];
+  const defaultPersonId = world.subjects[0]?.id ?? "";
+  const defaultResourceId = selectedId ?? flatResources[0]?.id ?? "";
+
+  const [expanded, setExpanded] = useState(false);
+  const [delegatePersonId, setDelegatePersonId] = useState(defaultPersonId);
+  const [resourceId, setResourceId] = useState(defaultResourceId);
+  const [validFrom, setValidFrom] = useState(todayStr);
+  const [validUntil, setValidUntil] = useState("");
+
+  if (!isAdmin) {
+    return (
+      <p className="text-xs text-slate-400">
+        Issuing controls require an admin login.
+      </p>
+    );
+  }
+
+  const resetFields = () => {
+    setDelegatePersonId(defaultPersonId);
+    setResourceId(defaultResourceId);
+    setValidFrom(todayStr());
+    setValidUntil("");
+  };
+
+  const handleIssueDelegate = async () => {
+    // granted_by_org_id is vestigial server-side (handlers.rs:151-152) but
+    // required by deserialization — reuse the delegate person's own unit.
+    const vars: IssueDelegateVariables = {
+      resource_id: resourceId,
+      delegate_type: "PERSON",
+      delegate_person_id: delegatePersonId,
+      delegate_org_id: null,
+      granted_by_org_id:
+        world.subjects.find((s) => s.id === delegatePersonId)?.unit ?? "",
+      valid_from: new Date(validFrom).toISOString(),
+      valid_until: validUntil ? new Date(validUntil).toISOString() : null,
+    };
+    try {
+      await mutation.mutateAsync(vars);
+      // New delegate reaches the Delegates card via WorldState (useIssueDelegate
+      // dispatches UPSERT_RESOURCE_DELEGATE onSuccess) — no local append here.
+      setExpanded(false);
+      resetFields();
+    } catch {
+      // Surfaced inline via mutation.isError below.
+    }
+  };
+
+  return (
+    <div>
+      <button
+        className="text-sm text-slate-600 underline hover:text-slate-800"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? "Cancel" : "+ Issue new delegate"}
+      </button>
+      {expanded && (
+        <div className="mt-2 space-y-3">
+          <Field label="Delegate person">
+            <Select
+              value={delegatePersonId}
+              onChange={setDelegatePersonId}
+              options={world.subjects.map((s) => ({
+                value: s.id,
+                label: s.name,
+              }))}
+            />
+          </Field>
+          <Field label="Resource">
+            <Select
+              value={resourceId}
+              onChange={setResourceId}
+              options={flatResources.map((r) => ({
+                value: r.id,
+                label: `[${r.tier}] ${r.name}`,
+              }))}
+            />
+          </Field>
+          <Field label="Valid from">
+            <input
+              type="date"
+              className="mt-1 w-full rounded border border-slate-300 p-2 text-sm"
+              value={validFrom}
+              onChange={(e) => setValidFrom(e.target.value)}
+            />
+          </Field>
+          <Field label="Valid until (optional)">
+            <input
+              type="date"
+              className="mt-1 w-full rounded border border-slate-300 p-2 text-sm"
+              value={validUntil}
+              onChange={(e) => setValidUntil(e.target.value)}
+            />
+            <p className="text-xs text-slate-400">
+              Leave blank for open delegation.
+            </p>
+          </Field>
+          <button
+            className="rounded px-3 py-1.5 text-sm bg-slate-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={mutation.isPending}
+            onClick={handleIssueDelegate}
+          >
+            {mutation.isPending ? "Issuing…" : "Issue delegate"}
+          </button>
+          {mutation.isError &&
+            (mutation.error instanceof ApiError &&
+            mutation.error.status === 403 ? (
+              <div className="rounded bg-destructive/10 p-3 text-sm text-destructive mt-2">
+                <span className="font-semibold">Not authorized.</span> Your
+                current identity does not have issuing authority for this
+                resource.
+              </div>
+            ) : (
+              <div className="rounded bg-destructive/10 p-3 text-sm text-destructive mt-2">
+                Issue failed. Check that the backend is running and retry.
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -276,6 +422,7 @@ export function ResourceBrowser() {
                   <p className="text-sm text-slate-400">No delegates.</p>
                 )}
               </Card>
+              <IssueDelegateSection key={selected.id} selectedId={selectedId} />
               {selected.tier === "PLATFORM" && (
                 <Card title="NSM annotations">
                   <div className="space-y-2">
