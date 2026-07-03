@@ -21,7 +21,7 @@ const ZONE_TYPE_TONE: Record<ZoneType, "slate" | "amber" | "red"> = {
   SECURED: "red",
 };
 
-const CLEARANCE_TONE: Record<
+export const CLEARANCE_TONE: Record<
   Clearance,
   "slate" | "green" | "red" | "blue" | "amber"
 > = {
