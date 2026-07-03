@@ -132,7 +132,7 @@ Plans:
 **UI hint**: yes
 **UI Spec**: `12-UI-SPEC.md` (approved 2026-06-19)
 **Spec**: `12-SPEC.md` (6 requirements, ambiguity 0.18)
-**Plans**: 6 plans
+**Plans**: 7 plans
 Plans:
 **Wave 1**
 
@@ -151,6 +151,10 @@ Plans:
 **Wave 4** *(blocked on 12-04, 12-05)*
 
 - [x] 12-06-PLAN.md — DigitalResourcesPanel (6-state loader gate + sub-nav) + DemoRoot 7th tab + final phase verification (RSRC-UI-01, RSRC-UI-04) [wave 4]
+
+**Gap closure** *(2026-07-03 UAT test 10 — zone-advisory row was dead code; see 12-UAT.md)*
+
+- [ ] 12-07-PLAN.md — Thread real allZones/allPhysicalGrants into resolveResourceAt (was hardcoded `[]`, permanently disabling RSRC-UI-05's advisory row) + regression test + live checkpoint (RSRC-UI-05) [wave 1]
 
 > **Phase 13 (Security hardening) folded into Phase 11 and removed — 2026-06-23.** Its scope
 > (server-side RBAC across all domains, JWT-secret fail-loud, CORS restriction) is now Phase 11
