@@ -96,6 +96,52 @@
 
 ---
 
+## Milestone: v2.2 — Platform, Network & Application Access (demo)
+
+**Shipped:** 2026-07-03
+**Phases:** 4 (9–12) | **Plans:** 17 (16 planned + 12-07 gap closure) | **Timeline:** 2026-06-02 → 2026-07-03 (~1 month wall-clock with a mid-June pause; ~5 active build days)
+
+### What Was Built
+
+- Data-driven, time-versioned per-resource policy engine with explainable gate-chain traces — Network → Platform → Application hierarchy, no cross-tier inheritance, advisory zone prerequisite, point-in-time resolution
+- 6-unit mock dataset covering every required data shape (policy shift, non-baseline policy, zone-prereq, active/expired/future grants)
+- **First real backend slice:** 8 Postgres tables, gate-chain resolver ported to Rust with byte-exact TS↔Rust golden-fixture parity, AuthGuard read + issue endpoints, repaired migration chain, Postgres as fixture source of truth, SEC-01..04 hardening (JWT fail-loud, per-role RBAC, CORS pinning)
+- Digital Resources demo tab: Resource Browser, Access Resolution Explorer, six-state fail-loud loader, interactive grant toggle, admin-gated issuing forms
+
+### What Worked
+
+- **Golden-fixture parity as the cross-engine contract.** TS exports fixed-clock fixtures to JSON; Rust asserts byte-equal output. Caught drift deterministically and survived a mid-plan `NaiveDateTime→DateTime<Utc>` migration without loosening.
+- **Live browser UAT caught what build/grep verification could not.** The zone-advisory row passed every automated check (JSX present, tests green) while being permanently dead code — a selector hardcoded empty zone arrays. Only driving the real app found it (12-07 fixed it same-day with a regression test on the exact wrapper that was broken).
+- **Safe-resume discipline.** Two session interruptions (mid-11-03, mid-12-02) both recovered cleanly via HANDOFF.json / commit-vs-SUMMARY reconciliation — no duplicated or lost work across context resets.
+- **Fixing the migration chain first (RSRC-BE-06) unblocked everything.** Making a fresh DB migrate end-to-end was prerequisite work that had been dodged for two milestones; doing it as Phase 11 wave 1 removed a standing source of drift.
+
+### What Was Inefficient
+
+- **`npm run build` was silently broken for two phases.** 27 tsc errors accumulated from Phase 10 onward because vitest transpiles without type-checking and no phase gate ran `tsc -b`. Discovered only when 12-02's acceptance criteria demanded a clean build. Same class of failure on the backend: full-crate `cargo test` broke (missing struct field in a test fixture) and stayed broken until milestone close.
+- **Verification-artifact drift.** Phase 10 was executed, UAT'd, and marked complete in ROADMAP — but its canonical VERIFICATION.md was never written, so tooling reported it as unverified three weeks later. Same-day artifacts (checkboxes, retro sections, audit files) kept needing retroactive backfill.
+- **The IDOR arrived via a requirement written against a data model that didn't exist.** RSRC-BE-04 assumed org-based issue authority, but no person→org linkage exists in the schema — the gap surfaced as a live vulnerability mid-phase and forced an unplanned authz-model decision (Option B role gate; org model → SEED-012).
+
+### Patterns Established
+
+- **Coverage blocks in SUMMARY frontmatter** (deliverable → requirement → verification refs) — made UAT generation partially deterministic; the `kind:` vocabulary needs tightening (non-standard values like `build+unit` fell back to human checkpoints).
+- **Six-state fail-loud loader** (missing-token / loading / unauthorized / error / empty / success, no silent fallback) — the template for every future API-backed demo panel.
+- **Seed-apply script over broken `sqlx migrate run`** — checked-in idempotent psql wrapper, all idempotency in the SQL itself (`ON CONFLICT DO NOTHING`).
+
+### Key Lessons
+
+1. **A verification gate that never runs is indistinguishable from passing.** Both build breaks lived exactly where no phase gate looked. Every phase's verify step should include the full typecheck/compile commands, not only the test runner.
+2. **Grep-verification proves presence, not life.** The zone-advisory bug is the canonical case: every static check passed while the data path was dead. Requirements that exist to *exercise* something (RSRC-SEED-04) need a behavioral assertion at the integration point, not just at the unit under it.
+3. **Requirements must be validated against the data model before they become security assumptions.** RSRC-BE-04's org-based authority was unimplementable as written; the mismatch surfaced as an IDOR instead of a planning-time finding.
+4. **Milestone-close artifacts decay fast.** The v2.1 retro was never written; Phase 10's VERIFICATION.md never created; REQUIREMENTS checkboxes drifted twice (also a v2.0 lesson — still recurring). Close-time checklists only work when actually executed at close time.
+
+### Cost Observations
+
+- Model mix: opus/sonnet primary through phases 9–11; fable-5 for phase 12 execution, UAT, audit, and close
+- Sessions: ~10–12 across 4 phases (two recovered interruptions)
+- Notable: wave-based executor fan-out (12-03→12-06 in one session) and adversarial live UAT both paid for themselves — the UAT found the only real post-verification bug of the milestone
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -104,6 +150,7 @@
 |-----------|--------|-------|------------|
 | v2.0 | 4 | 16 | Spike-first validation before any composition work |
 | v2.1 | 4 | 9 | NSM concepts encoded as typed model values with named tests; TDD RED/GREEN held at 1-day pace |
+| v2.2 | 4 | 17 | First real backend slice; golden-fixture TS↔Rust parity; live-browser UAT as a verification tier |
 
 ### Cumulative Quality
 
@@ -111,8 +158,11 @@
 |-----------|-------|-----------|-------|
 | v2.0 | 80/80 Vitest | 0 | Clean |
 | v2.1 | 116/116 Vitest (at Phase 7 close) | 0 | Clean |
+| v2.2 | 228/228 Vitest + 22/22 cargo unit + parity/integration suites | 0 | Clean (repaired at close — was silently broken 2 phases) |
 
 ### Top Lessons (To Verify Across Milestones)
 
-1. Spike-first validation compresses planning cycles — verify this holds for backend integration phases
-2. Demo island isolation (separate Vite entry) eliminates router complexity — may not apply when integrating into the main app
+1. Spike-first validation compresses planning cycles — HELD for v2.2's backend phase (golden fixtures acted as the spike)
+2. Demo island isolation (separate Vite entry) eliminates router complexity — HELD through v2.2 (routeTree.gen.ts byte-identical)
+3. Verification gates that never execute are indistinguishable from passing — add full typecheck/compile to every phase verify step (v2.2)
+4. Defer features, not enforcement — unenforced access-control gaps resurface as vulnerabilities next milestone (v2.1 → v2.2 IDOR)
