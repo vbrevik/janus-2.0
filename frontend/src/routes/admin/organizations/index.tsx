@@ -440,7 +440,7 @@ function ClearanceBadge({ level }: { level: ClearanceLevel }) {
     ClearanceLevel,
     "default" | "secondary" | "warning" | "destructive"
   > = {
-    NONE: "secondary",
+    UNCLASSIFIED: "secondary",
     CONFIDENTIAL: "default",
     SECRET: "warning",
     TOP_SECRET: "destructive",

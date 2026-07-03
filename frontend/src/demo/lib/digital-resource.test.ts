@@ -982,7 +982,6 @@ describe("seed-validation: 6-unit digital resource dataset", () => {
   // Combine all nodes for per-tier grant checks.
   const allNodes = [...RESOURCE_NODES, ...PLATFORMS, ...APPLICATIONS];
   const nodeIds = new Set(allNodes.map((n) => n.id));
-  const platformIds = new Set(PLATFORMS.map((p) => p.id));
 
   // RSRC-SEED-01: >= 3 Networks with distinct classification tiers, org_links on 6 canonical units.
   it("RSRC-SEED-01: >= 3 Networks with >= 2 distinct classification tiers", () => {

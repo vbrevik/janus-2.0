@@ -6,13 +6,8 @@ import {
   resolveResourceAccess,
   isWindowActive,
   effectiveClassification,
-  type NetworkNode,
-  type PlatformNode,
-  type ApplicationNode,
   type ResourceAccessGrant,
   type ResourceAccessResult,
-  type ZoneNode,
-  type PhysicalAccessGrant,
   type Clearance,
 } from "./model";
 import type { DigitalResourceWorld } from "./model";

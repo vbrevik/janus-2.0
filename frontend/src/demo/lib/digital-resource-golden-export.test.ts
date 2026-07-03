@@ -1,3 +1,4 @@
+/// <reference types="node" />
 // @vitest-environment node
 //
 // Golden-fixture EXPORTER (Phase 11, Plan 02 — RSRC-BE-02, D-06).

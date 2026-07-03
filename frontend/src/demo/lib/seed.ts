@@ -19,7 +19,12 @@ import type {
   GateDescriptor,
   ResourcePolicy,
   NetworkNode,
+  PlatformNode,
+  ApplicationNode,
+  OrgLink,
+  PolicyAssignment,
   ResourceAccessGrant,
+  ResourceAccessDelegate,
 } from "./model";
 export { ROLES, TIERS, UNITS } from "./model";
 export type { Subject, Resource, HubPointer, UnitId } from "./model";

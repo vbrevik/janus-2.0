@@ -320,7 +320,7 @@ function SubOrganizationRow({ organizationId, level }: { organizationId: number;
 
 function ClearanceBadge({ level }: { level: ClearanceLevel }) {
   const variants: Record<ClearanceLevel, 'default' | 'secondary' | 'warning' | 'destructive'> = {
-    NONE: 'secondary',
+    UNCLASSIFIED: 'secondary',
     CONFIDENTIAL: 'default',
     SECRET: 'warning',
     TOP_SECRET: 'destructive',

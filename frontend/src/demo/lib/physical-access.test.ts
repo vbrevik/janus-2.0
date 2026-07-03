@@ -25,6 +25,7 @@ import {
   type ZoneAccessDelegate,
   type ZoneEntryLog,
   type ZoneVisitorPass,
+  type UnitId,
 } from "./model";
 
 // Inline fixtures — no seed.ts imports (D3-13 pattern).
@@ -137,8 +138,8 @@ const Z_SITE: ZoneNode = {
   level: "SITE",
   zone_type: "CONTROLLED",
   parent_id: null,
-  admin_org_id: "org-a",
-  asset_owner_org_id: "org-a",
+  admin_org_id: "org-a" as UnitId,
+  asset_owner_org_id: "org-a" as UnitId,
   requires_explicit_auth: false,
 };
 
@@ -148,8 +149,8 @@ const Z_BUILDING1: ZoneNode = {
   level: "BUILDING",
   zone_type: "SECURED",
   parent_id: "z-site",
-  admin_org_id: "org-intel",
-  asset_owner_org_id: "org-intel",
+  admin_org_id: "org-intel" as UnitId,
+  asset_owner_org_id: "org-intel" as UnitId,
   requires_explicit_auth: true,
 };
 
@@ -159,8 +160,8 @@ const Z_ROOM1: ZoneNode = {
   level: "ROOM",
   zone_type: "SECURED",
   parent_id: "z-bldg1",
-  admin_org_id: "org-intel",
-  asset_owner_org_id: "org-intel",
+  admin_org_id: "org-intel" as UnitId,
+  asset_owner_org_id: "org-intel" as UnitId,
   requires_explicit_auth: true,
 };
 
@@ -170,8 +171,8 @@ const Z_BUILDING2: ZoneNode = {
   level: "BUILDING",
   zone_type: "RESTRICTED",
   parent_id: "z-site",
-  admin_org_id: "org-a",
-  asset_owner_org_id: "org-b",
+  admin_org_id: "org-a" as UnitId,
+  asset_owner_org_id: "org-b" as UnitId,
   requires_explicit_auth: false,
 };
 
@@ -438,8 +439,8 @@ describe("resolveGrant", () => {
       level: "ROOM",
       zone_type: "SECURED",
       parent_id: "z-bldg1",
-      admin_org_id: "org-intel",
-      asset_owner_org_id: "org-intel",
+      admin_org_id: "org-intel" as UnitId,
+      asset_owner_org_id: "org-intel" as UnitId,
       requires_explicit_auth: false, // no explicit auth requirement
     };
     const allZonesExt = [...ALL_ZONES, Z_SECURED_ROOM];
@@ -499,8 +500,8 @@ describe("resolveGrant", () => {
       level: "ROOM",
       zone_type: "SECURED",
       parent_id: "z-bldg1",
-      admin_org_id: "org-intel",
-      asset_owner_org_id: "org-intel",
+      admin_org_id: "org-intel" as UnitId,
+      asset_owner_org_id: "org-intel" as UnitId,
       requires_explicit_auth: false,
     };
     const G_DIRECT_SECURED: PhysicalAccessGrant = {
@@ -552,8 +553,8 @@ describe("resolveGrant", () => {
       level: "ROOM",
       zone_type: "SECURED",
       parent_id: "z-bldg1",
-      admin_org_id: "org-intel",
-      asset_owner_org_id: "org-intel",
+      admin_org_id: "org-intel" as UnitId,
+      asset_owner_org_id: "org-intel" as UnitId,
       requires_explicit_auth: false,
     };
     const G_BLDG1_ALT: PhysicalAccessGrant = {
@@ -592,8 +593,8 @@ describe("resolveGrant", () => {
       level: "BUILDING",
       zone_type: "CONTROLLED",
       parent_id: "z-site",
-      admin_org_id: "org-a",
-      asset_owner_org_id: "org-a",
+      admin_org_id: "org-a" as UnitId,
+      asset_owner_org_id: "org-a" as UnitId,
       requires_explicit_auth: false,
     };
     const allZonesExt = [...ALL_ZONES, Z_CONTROLLED_CHILD];
@@ -622,8 +623,8 @@ describe("resolveGrant", () => {
       level: "BUILDING",
       zone_type: "CONTROLLED",
       parent_id: "z-site",
-      admin_org_id: "org-a",
-      asset_owner_org_id: "org-a",
+      admin_org_id: "org-a" as UnitId,
+      asset_owner_org_id: "org-a" as UnitId,
       requires_explicit_auth: true,
     };
     const allZonesExt = [...ALL_ZONES, Z_CONTROLLED_EXPLICIT];
