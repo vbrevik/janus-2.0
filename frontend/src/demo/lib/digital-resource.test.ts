@@ -55,6 +55,8 @@ import {
   RSRC_DELEGATES,
   PLATFORMS,
   APPLICATIONS,
+  ZONES,
+  GRANTS,
 } from "./seed";
 import {
   buildResourceTree,
@@ -1185,6 +1187,8 @@ describe("selectors: buildResourceTree, activeGrantsForResource, resolveResource
       "SECRET",
       "MILITARY_1",
       net.id,
+      ZONES,
+      GRANTS,
       NOW,
     );
     // Same allow decision.
@@ -1208,6 +1212,8 @@ describe("selectors: buildResourceTree, activeGrantsForResource, resolveResource
       "SECRET",
       "MILITARY_1",
       net.id,
+      ZONES,
+      GRANTS,
       NOW,
     );
     expect(result.allow).toBe(false);
@@ -1221,6 +1227,8 @@ describe("selectors: buildResourceTree, activeGrantsForResource, resolveResource
       "SECRET",
       "MILITARY_1",
       "nonexistent-resource",
+      ZONES,
+      GRANTS,
       NOW,
     );
     expect(result.allow).toBe(false);

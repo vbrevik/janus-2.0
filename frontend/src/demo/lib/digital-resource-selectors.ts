@@ -9,6 +9,8 @@ import {
   type ResourceAccessGrant,
   type ResourceAccessResult,
   type Clearance,
+  type ZoneNode,
+  type PhysicalAccessGrant,
 } from "./model";
 import type { DigitalResourceWorld } from "./model";
 
@@ -104,6 +106,8 @@ export function resolveResourceAt(
   subjectClearance: Clearance,
   subjectOrgId: string,
   resourceId: string,
+  allZones: ZoneNode[],
+  allPhysicalGrants: PhysicalAccessGrant[],
   now: Date,
 ): ResourceAccessResult {
   // Filter disabled grants before resolution (D-06 contract).
@@ -132,8 +136,8 @@ export function resolveResourceAt(
     world.networks,
     world.platforms,
     filteredGrants,
-    [], // no v2.1 zones passed in — advisory resolves via policy.zone_prereq_id
-    [], // no physical grants
+    allZones,
+    allPhysicalGrants,
     now,
   );
 }

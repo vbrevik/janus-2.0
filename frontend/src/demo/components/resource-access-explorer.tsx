@@ -299,10 +299,14 @@ export function ResourceAccessExplorer() {
       person.clearance,
       person.unit,
       resourceId,
+      world.zones,
+      world.grants,
       evalTime,
     );
   }, [
     world.digitalResources,
+    world.zones,
+    world.grants,
     personId,
     person,
     selectedResource,
