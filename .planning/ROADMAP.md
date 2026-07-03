@@ -137,20 +137,20 @@ Plans:
 **Wave 1**
 
 - [x] 12-01-PLAN.md — Idempotent seed-apply script; seeds `janus2` with the 6-unit digital-resource dataset (RSRC-UI-04) [wave 1]
-- [ ] 12-02-PLAN.md — Mapper (denormalize backend `/world` response), 3 new WorldState reducer actions, QueryClientProvider, CLEARANCE_TONE export (RSRC-UI-04, RSRC-UI-06) [wave 1]
+- [x] 12-02-PLAN.md — Mapper (denormalize backend `/world` response), 3 new WorldState reducer actions, QueryClientProvider, CLEARANCE_TONE export (RSRC-UI-04, RSRC-UI-06) [wave 1]
 
 **Wave 2** *(blocked on 12-02)*
 
-- [ ] 12-03-PLAN.md — React Query hooks (useDigitalResourcesWorld/useIssueGrant/useIssueDelegate) + auth/loader-state helpers (RSRC-UI-04, RSRC-UI-06) [wave 2]
+- [x] 12-03-PLAN.md — React Query hooks (useDigitalResourcesWorld/useIssueGrant/useIssueDelegate) + auth/loader-state helpers (RSRC-UI-04, RSRC-UI-06) [wave 2]
 
 **Wave 3** *(blocked on 12-02, 12-03)*
 
-- [ ] 12-04-PLAN.md — Resource Browser (tree + detail panel) + admin-gated Issue Delegate form (RSRC-UI-01, RSRC-UI-02, RSRC-UI-06) [wave 3]
-- [ ] 12-05-PLAN.md — Access Resolution Explorer (gate-chain trace + grant toggle) + admin-gated Issue Grant form (RSRC-UI-03, RSRC-UI-05, RSRC-UI-06) [wave 3]
+- [x] 12-04-PLAN.md — Resource Browser (tree + detail panel) + admin-gated Issue Delegate form (RSRC-UI-01, RSRC-UI-02, RSRC-UI-06) [wave 3]
+- [x] 12-05-PLAN.md — Access Resolution Explorer (gate-chain trace + grant toggle) + admin-gated Issue Grant form (RSRC-UI-03, RSRC-UI-05, RSRC-UI-06) [wave 3]
 
 **Wave 4** *(blocked on 12-04, 12-05)*
 
-- [ ] 12-06-PLAN.md — DigitalResourcesPanel (6-state loader gate + sub-nav) + DemoRoot 7th tab + final phase verification (RSRC-UI-01, RSRC-UI-04) [wave 4]
+- [x] 12-06-PLAN.md — DigitalResourcesPanel (6-state loader gate + sub-nav) + DemoRoot 7th tab + final phase verification (RSRC-UI-01, RSRC-UI-04) [wave 4]
 
 > **Phase 13 (Security hardening) folded into Phase 11 and removed — 2026-06-23.** Its scope
 > (server-side RBAC across all domains, JWT-secret fail-loud, CORS restriction) is now Phase 11
@@ -173,4 +173,4 @@ Plans:
 | 9. Digital Resource Model & Policy Engine | v2.2 | 4/4 | Complete   | 2026-06-02 |
 | 10. Mock Dataset & WorldState | v2.2 | 2/2 | Complete | 2026-06-18 |
 | 11. Digital Resource Backend & Resolver Port | v2.2 | 4/4 | Complete    | 2026-07-02 |
-| 12. Demo UI, Loader & Tab Integration | v2.2 | 1/6 | In Progress|  |
+| 12. Demo UI, Loader & Tab Integration | v2.2 | 6/6 | Executed (UAT pending) | 2026-07-03 |
