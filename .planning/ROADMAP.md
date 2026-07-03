@@ -39,7 +39,7 @@ See `.planning/milestones/v2.1-ROADMAP.md` for full phase details. Audit: `.plan
 - [x] **Phase 9: Digital Resource Model & Policy Engine** — TypeScript types (NetworkNode, PlatformNode, ApplicationNode, org_links, ResourcePolicy, ResourceAccessGrant, ResourceAccessDelegate), time-versioned per-resource policy resolver (`resolveResourceAccess`), pitfall-blocking Vitest coverage (completed 2026-06-02)
 - [x] **Phase 10: Mock Dataset & WorldState** (2/2 plans, verified 2026-06-18) — 6-unit seed (≥3 networks/platforms/apps, active/expired/future grants, policy-shift example, non-baseline-policy example, zone-prereq link to v2.1), `DigitalResourceWorld` sub-object in WorldState, toggle action
 - [x] **Phase 11: Digital Resource Backend & Resolver Port** — 8-table digital-resource Postgres domain (+ migration, sqlx models, Rocket handlers), full gate-chain resolver ported to Rust with TS-parity test, AuthGuard read + issue API (server-side `canIssueResourceGrant`), seed→DB as single source of truth *(scope expanded from the original frontend-only Phase 11 — split 2026-06-19)* (completed 2026-07-02)
-- [ ] **Phase 12: Demo UI, Loader & Tab Integration** — hybrid loader (API→WorldState), Resource Browser (hierarchy tree + detail panel), Access Resolution Explorer with evaluation-timestamp picker, grant toggle, grant/delegate issuing forms, wired as DemoRoot tab (no route file). Depends on Phase 11
+- [x] **Phase 12: Demo UI, Loader & Tab Integration** — hybrid loader (API→WorldState), Resource Browser (hierarchy tree + detail panel), Access Resolution Explorer with evaluation-timestamp picker, grant toggle, grant/delegate issuing forms, wired as DemoRoot tab (no route file). Depends on Phase 11 (completed 2026-07-03)
 
 ---
 
@@ -154,7 +154,7 @@ Plans:
 
 **Gap closure** *(2026-07-03 UAT test 10 — zone-advisory row was dead code; see 12-UAT.md)*
 
-- [ ] 12-07-PLAN.md — Thread real allZones/allPhysicalGrants into resolveResourceAt (was hardcoded `[]`, permanently disabling RSRC-UI-05's advisory row) + regression test + live checkpoint (RSRC-UI-05) [wave 1]
+- [x] 12-07-PLAN.md — Thread real allZones/allPhysicalGrants into resolveResourceAt (was hardcoded `[]`, permanently disabling RSRC-UI-05's advisory row) + regression test + live checkpoint (RSRC-UI-05) [wave 1]
 
 > **Phase 13 (Security hardening) folded into Phase 11 and removed — 2026-06-23.** Its scope
 > (server-side RBAC across all domains, JWT-secret fail-loud, CORS restriction) is now Phase 11
@@ -177,4 +177,4 @@ Plans:
 | 9. Digital Resource Model & Policy Engine | v2.2 | 4/4 | Complete   | 2026-06-02 |
 | 10. Mock Dataset & WorldState | v2.2 | 2/2 | Complete | 2026-06-18 |
 | 11. Digital Resource Backend & Resolver Port | v2.2 | 4/4 | Complete    | 2026-07-02 |
-| 12. Demo UI, Loader & Tab Integration | v2.2 | 6/6 | Executed (UAT pending) | 2026-07-03 |
+| 12. Demo UI, Loader & Tab Integration | v2.2 | 7/7 | Complete    | 2026-07-03 |
