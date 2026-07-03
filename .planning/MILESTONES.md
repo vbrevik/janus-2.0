@@ -18,7 +18,7 @@
 
 **Requirements:** 38/38 satisfied · 0 gaps · 1 deferred (`canIssueGrant()` enforcement → UI)
 
-**Audit:** `.planning/v2.1-MILESTONE-AUDIT.md` (passed)
+**Audit:** `.planning/milestones/v2.1-MILESTONE-AUDIT.md` (passed)
 
 **Archive:**
 - `.planning/milestones/v2.1-ROADMAP.md` — full phase details

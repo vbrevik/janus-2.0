@@ -52,6 +52,50 @@
 
 ---
 
+## Milestone: v2.1 — Physical Access Zones (demo)
+
+*(Backfilled 2026-07-03 at v2.2 close — the retrospective step was skipped at v2.1's own close on 2026-05-23. Written from MILESTONES.md, phase 5–8 artifacts, and the v2.1 audit; leaner than a same-day retro would have been.)*
+
+**Shipped:** 2026-05-23
+**Phases:** 4 (5–8) | **Plans:** 9 | **Timeline:** 1 day
+
+### What Was Built
+
+- Hierarchical zone model (SITE→ROOM) with CONTROLLED/RESTRICTED/SECURED types, dual org ownership, and the SECURED-not-at-SITE/AREA ceiling rule
+- 5-tier clearance ladder + NSM-grounded access rules; escort explicitly never substitutes for SECURED clearance
+- Time-windowed PhysicalAccessGrant with zone-type-scoped inheritance, two-gate resolution, and admin-org delegation (ZoneAccessDelegate)
+- Escort-tracked entry logging (mandatory for SECURED) + visitor passes
+- 6-unit mock dataset and three demo views (Zone Browser, Access Resolution Explorer, Entry Log) in a 6th demo tab
+
+### What Worked
+
+- **TDD RED/GREEN as the default rhythm.** Phase 7's test plan was fully delivered by the RED commit of the preceding plan (07-01) — the pattern established in v2.0 held under a 1-day milestone pace (116 tests passing at Phase 7 close, tsc clean).
+- **Appending to `model.ts` as pure functions.** All zone/grant/log logic landed as pure, Vitest-covered functions in `lib/`, continuing the v2.0 `lib/`+`store/` boundary. This paid off again in v2.2, which reused `resolveZoneAccess` unchanged for the advisory zone-prerequisite.
+- **One-day milestone.** 38/38 requirements across 4 phases in a single day, audit passed — the spike-first + demo-island patterns from v2.0 kept compounding.
+
+### What Was Inefficient
+
+- **Deferred enforcement resurfaced as a security hole.** `canIssueGrant()` enforcement was deferred to "UI" at v2.1 close (the one deferred item, 38/38 otherwise). Its digital-resource sibling (`canIssueResourceGrant`) then became v2.2's confirmed IDOR in 11-03, forcing a mid-phase authz-model decision (Option B role gate; org-based model re-deferred to SEED-012). Lesson: an enforcement gap deferred at one milestone tends to be rediscovered as a vulnerability in the next.
+- **This retrospective itself.** The v2.1 close skipped the retrospective step entirely — discovered only at v2.2 close. Milestone-close checklists exist precisely to prevent this.
+
+### Patterns Established
+
+- **NSM grounding as data, not prose.** Regulatory concepts (sikkerhetsgodkjenning, escort rules, clearance ladder) encoded as typed model values with named tests — the pattern v2.2's NSM annotation badges then reused.
+- **Zone-type-scoped grant inheritance with explicit-auth short-circuit** — the two-gate resolution shape that v2.2's gate-chain resolver generalized.
+
+### Key Lessons
+
+1. **Defer features, not enforcement.** Anything access-control-shaped that ships unenforced should carry a tracking artifact with a trigger, not a one-line "deferred" note.
+2. **Reuse compounds when logic stays pure.** `resolveZoneAccess` crossing into v2.2 unchanged validated the pure-`lib/` discipline for the third milestone running.
+
+### Cost Observations
+
+- Model mix: sonnet-4-6 primary (same as v2.0)
+- Sessions: ~3–4 across 4 phases (single day)
+- Notable: fastest milestone to date; retro step skipped — process gap, not a cost win
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -59,12 +103,14 @@
 | Milestone | Phases | Plans | Key Change |
 |-----------|--------|-------|------------|
 | v2.0 | 4 | 16 | Spike-first validation before any composition work |
+| v2.1 | 4 | 9 | NSM concepts encoded as typed model values with named tests; TDD RED/GREEN held at 1-day pace |
 
 ### Cumulative Quality
 
 | Milestone | Tests | TS Errors | Build |
 |-----------|-------|-----------|-------|
 | v2.0 | 80/80 Vitest | 0 | Clean |
+| v2.1 | 116/116 Vitest (at Phase 7 close) | 0 | Clean |
 
 ### Top Lessons (To Verify Across Milestones)
 
