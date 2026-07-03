@@ -279,6 +279,7 @@ mod tests {
             contact_phone: Some("555-0100".to_string()),
             clearance_level: "SECRET".to_string(),
             contract_number: "CTR-2024-001".to_string(),
+            department: None,
         };
 
         assert!(valid_request.validate().is_ok());
@@ -293,6 +294,7 @@ mod tests {
             contact_phone: None,
             clearance_level: "SECRET".to_string(),
             contract_number: "CTR-2024-001".to_string(),
+            department: None,
         };
 
         assert!(invalid_request.validate().is_err());
