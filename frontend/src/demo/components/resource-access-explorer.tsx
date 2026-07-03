@@ -11,6 +11,12 @@ import {
   type ResourceAccessResult,
 } from "../lib/model";
 import { resolveResourceAt } from "../lib/digital-resource-selectors";
+import { ApiError } from "@/lib/api";
+import {
+  getStoredUserRole,
+  useIssueGrant,
+  type IssueGrantVariables,
+} from "../hooks/use-digital-resources";
 import { useWorld, useWorldDispatch } from "../store/world-state";
 import { CLEARANCE_TONE } from "./access-resolution-explorer";
 import { Card, Field, MockTag, Pill, Select } from "./ui";
@@ -91,6 +97,144 @@ function ResourceResolutionTrace({ result }: { result: ResourceAccessResult }) {
               ALLOW/DENY verdict.
             </span>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Issue Grant form (admin-gated, RSRC-UI-06 / D-01) ---
+
+function todayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function IssueGrantSection() {
+  const world = useWorld();
+  const mutation = useIssueGrant();
+  // D-01: issuing is gated on the single role string "admin" — never widened.
+  const isAdmin = getStoredUserRole() === "admin";
+
+  const flatResources = [
+    ...world.digitalResources.networks,
+    ...world.digitalResources.platforms,
+    ...world.digitalResources.applications,
+  ];
+  const defaultPersonId = world.subjects[0]?.id ?? "";
+  const defaultResourceId = flatResources[0]?.id ?? "";
+
+  const [expanded, setExpanded] = useState(false);
+  const [formPersonId, setFormPersonId] = useState(defaultPersonId);
+  const [formResourceId, setFormResourceId] = useState(defaultResourceId);
+  const [validFrom, setValidFrom] = useState(todayStr);
+  const [validUntil, setValidUntil] = useState("");
+
+  if (!isAdmin) {
+    return (
+      <p className="text-xs text-slate-400">
+        Issuing controls require an admin login.
+      </p>
+    );
+  }
+
+  const resetFields = () => {
+    setFormPersonId(defaultPersonId);
+    setFormResourceId(defaultResourceId);
+    setValidFrom(todayStr());
+    setValidUntil("");
+  };
+
+  const handleIssueGrant = async () => {
+    // actor_org_id is vestigial server-side (handlers.rs:151-152) but required
+    // by deserialization — reuse the grantee's own unit.
+    const vars: IssueGrantVariables = {
+      resource_id: formResourceId,
+      person_id: formPersonId,
+      actor_org_id:
+        world.subjects.find((s) => s.id === formPersonId)?.unit ?? "",
+      valid_from: new Date(validFrom).toISOString(),
+      valid_until: validUntil ? new Date(validUntil).toISOString() : null,
+    };
+    try {
+      await mutation.mutateAsync(vars);
+      // New grant reaches the toggle list via WorldState (useIssueGrant
+      // dispatches UPSERT_RESOURCE_GRANT onSuccess) — no local append here.
+      setExpanded(false);
+      resetFields();
+    } catch {
+      // Surfaced inline via mutation.isError below.
+    }
+  };
+
+  return (
+    <div>
+      <button
+        className="text-sm text-slate-600 underline hover:text-slate-800"
+        onClick={() => setExpanded(!expanded)}
+      >
+        {expanded ? "Cancel" : "+ Issue new grant"}
+      </button>
+      {expanded && (
+        <div className="mt-2 space-y-3">
+          <Field label="Person">
+            <Select
+              value={formPersonId}
+              onChange={setFormPersonId}
+              options={world.subjects.map((s) => ({
+                value: s.id,
+                label: s.name,
+              }))}
+            />
+          </Field>
+          <Field label="Resource">
+            <Select
+              value={formResourceId}
+              onChange={setFormResourceId}
+              options={flatResources.map((r) => ({
+                value: r.id,
+                label: `[${r.tier}] ${r.name}`,
+              }))}
+            />
+          </Field>
+          <Field label="Valid from">
+            <input
+              type="date"
+              className="mt-1 w-full rounded border border-slate-300 p-2 text-sm"
+              value={validFrom}
+              onChange={(e) => setValidFrom(e.target.value)}
+            />
+          </Field>
+          <Field label="Valid until (optional)">
+            <input
+              type="date"
+              className="mt-1 w-full rounded border border-slate-300 p-2 text-sm"
+              value={validUntil}
+              onChange={(e) => setValidUntil(e.target.value)}
+            />
+            <p className="text-xs text-slate-400">
+              Leave blank for permanent grant.
+            </p>
+          </Field>
+          <button
+            className="rounded px-3 py-1.5 text-sm bg-slate-800 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={mutation.isPending}
+            onClick={handleIssueGrant}
+          >
+            {mutation.isPending ? "Issuing…" : "Issue grant"}
+          </button>
+          {mutation.isError &&
+            (mutation.error instanceof ApiError &&
+            mutation.error.status === 403 ? (
+              <div className="rounded bg-destructive/10 p-3 text-sm text-destructive mt-2">
+                <span className="font-semibold">Not authorized.</span> Your
+                current identity does not have issuing authority for this
+                resource.
+              </div>
+            ) : (
+              <div className="rounded bg-destructive/10 p-3 text-sm text-destructive mt-2">
+                Issue failed. Check that the backend is running and retry.
+              </div>
+            ))}
         </div>
       )}
     </div>
@@ -257,49 +401,58 @@ export function ResourceAccessExplorer() {
       {/* Gate-chain trace — full width */}
       {result !== null && <ResourceResolutionTrace result={result} />}
 
-      {/* Bottom grid — grant toggles + explanation */}
+      {/* Bottom grid — grant toggles (+ admin-gated issuing) + explanation */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card title="Resource grants (toggle to simulate)">
-          {relevantGrants.length === 0 ? (
-            <p className="text-sm text-slate-400">
-              No grants for this person and resource.
-            </p>
-          ) : (
-            <ul>
-              {relevantGrants.map((grant) => {
-                const disabled =
-                  world.digitalResources.disabledResourceGrantIds.has(grant.id);
-                return (
-                  <li
-                    key={grant.id}
-                    className="flex items-center gap-2 py-1 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!disabled}
-                      onChange={() =>
-                        dispatch({
-                          type: "TOGGLE_RESOURCE_GRANT",
-                          resourceGrantId: grant.id,
-                        })
-                      }
-                    />
-                    <span
-                      className={disabled ? "line-through text-slate-400" : ""}
+        <div className="space-y-4">
+          <Card title="Resource grants (toggle to simulate)">
+            {relevantGrants.length === 0 ? (
+              <p className="text-sm text-slate-400">
+                No grants for this person and resource.
+              </p>
+            ) : (
+              <ul>
+                {relevantGrants.map((grant) => {
+                  const disabled =
+                    world.digitalResources.disabledResourceGrantIds.has(
+                      grant.id,
+                    );
+                  return (
+                    <li
+                      key={grant.id}
+                      className="flex items-center gap-2 py-1 text-sm"
                     >
-                      {personName(grant.person_id)} —{" "}
-                      {windowBound(grant.valid_from)} –{" "}
-                      {windowBound(grant.valid_until)}
-                    </span>
-                    {disabled && (
-                      <span className="text-xs text-slate-400">(disabled)</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Card>
+                      <input
+                        type="checkbox"
+                        checked={!disabled}
+                        onChange={() =>
+                          dispatch({
+                            type: "TOGGLE_RESOURCE_GRANT",
+                            resourceGrantId: grant.id,
+                          })
+                        }
+                      />
+                      <span
+                        className={
+                          disabled ? "line-through text-slate-400" : ""
+                        }
+                      >
+                        {personName(grant.person_id)} —{" "}
+                        {windowBound(grant.valid_from)} –{" "}
+                        {windowBound(grant.valid_until)}
+                      </span>
+                      {disabled && (
+                        <span className="text-xs text-slate-400">
+                          (disabled)
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+          <IssueGrantSection />
+        </div>
 
         {/* Static explanation card */}
         <Card title="About this decision">
