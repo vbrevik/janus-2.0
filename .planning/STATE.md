@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Platform, Network & Application Access
-current_phase: 12
-status: verifying
+current_phase: 2
+status: Awaiting next milestone
 stopped_at: Phase 12 fully executed; next = /gsd-verify-work UAT
-last_updated: "2026-07-03T19:34:29.008Z"
+last_updated: "2026-07-03T20:11:14.141Z"
 last_activity: 2026-07-03
-last_activity_desc: Phase 12 complete
+last_activity_desc: Milestone v2.2 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -27,12 +27,10 @@ See: .planning/PROJECT.md (updated 2026-06-02 for v2.2 milestone)
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
-Status: Executed — 12-VERIFICATION.md = human_needed (live UAT via /gsd-verify-work)
-Last activity: 2026-07-03 - Completed quick task 260703-u5o: Fix broken cargo test department field
-
-Progress: [██████████] 100% (pending UAT sign-off)
+Phase: Milestone v2.2 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-03 — Milestone v2.2 completed and archived
 
 ## Performance Metrics
 
@@ -123,3 +121,7 @@ Items deferred from v2.0/v2.1, carried forward:
 Last session: 2026-07-03T09:42:41.000Z
 Stopped at: Phase 12 fully executed; next = /gsd-verify-work UAT
 Resume file: .planning/phases/12-demo-ui-tab-integration/12-VERIFICATION.md
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
