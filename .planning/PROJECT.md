@@ -28,9 +28,19 @@ federated ABAC model is proven. The next milestone transitions this from demo to
 
 See `.planning/MILESTONES.md` and `.planning/milestones/v2.2-*` for the archived record. Prior milestones: v2.0 (2026-05-22), v2.1 (2026-05-23).
 
-## Next Milestone
+## Current Milestone: v2.3 Dataset Access (demo)
 
-Not yet started — run `/gsd-new-milestone`. The pre-registered candidate is **v2.3 Dataset Access** (see Planned below and `.planning/milestones/v2.3-REQUIREMENTS.md` placeholder).
+**Goal:** Establish fine-grained authorization for named datasets within applications — the innermost access layer. Application access (v2.2) does not grant access to everything inside; each dataset (mailbox, archive role, document site) requires its own authorization with its own access level vocabulary.
+
+**Target features:**
+- Dataset model: named authorizable resource within an Application (`MAILBOX` / `ARCHIVE_ROLE` / `DOCUMENT_SITE` types)
+- Access levels per type: Mailbox (READ/SEND_AS/FULL_ACCESS), Archive (READER/CASE_HANDLER/ADMIN), Document site (READ/CONTRIBUTE/FULL_CONTROL)
+- Active Application grant (v2.2) is a hard prerequisite for any dataset grant
+- Admin org + asset-owner org per dataset; delegation mirrors v2.1/v2.2 pattern
+- Time-limited `DatasetAccessGrant` with effective level = highest active grant
+- Mock dataset + demo UI showing prerequisite chain and denied-access cases
+
+**Scope constraint:** Demo/mock only — backend defers to a later milestone. No seeds included. Phase numbering continues from v2.2 (starts at Phase 13).
 
 <details>
 <summary>v2.2 goal (shipped 2026-07-03)</summary>
@@ -105,19 +115,9 @@ Not yet started — run `/gsd-new-milestone`. The pre-registered candidate is **
 
 Full archived record: `.planning/milestones/v2.2-REQUIREMENTS.md`.
 
-### Planned: v2.3 Dataset Access (demo)
+### Active (v2.3)
 
-**Goal:** Establish fine-grained authorization for named datasets within applications — the innermost access layer. Application access (v2.2) does not grant access to everything inside; each dataset (mailbox, archive role, document site) requires its own authorization with its own access level vocabulary.
-
-**Planned scope:**
-- Dataset model: named authorizable resource within an application (`MAILBOX` / `ARCHIVE_ROLE` / `DOCUMENT_SITE` types)
-- Access levels per type: Mailbox (READ/SEND_AS/FULL_ACCESS), Archive (READER/CASE_HANDLER/ADMIN), Document site (READ/CONTRIBUTE/FULL_CONTROL)
-- Active Application grant is prerequisite for any dataset grant (carries forward from v2.2)
-- Admin org + asset owner org per dataset; delegation mirrors v2.1/v2.2 pattern
-- Time-limited `DatasetAccessGrant` with effective level = highest active grant
-- Mock dataset + demo UI showing prerequisite chain and denied-access cases
-
-**Seeds:** None yet · Demo/mock only (backend defers to later milestone)
+Defined in `.planning/REQUIREMENTS.md` (refined from the `.planning/milestones/v2.3-REQUIREMENTS.md` placeholder).
 
 ### Future milestones
 
@@ -188,4 +188,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 after v2.2 milestone*
+*Last updated: 2026-07-03 — milestone v2.3 Dataset Access started*

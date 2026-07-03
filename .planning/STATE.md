@@ -1,18 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.2
-milestone_name: Platform, Network & Application Access
-current_phase: 2
-status: Awaiting next milestone
-stopped_at: Milestone v2.2 archived and tagged — next milestone not started
-last_updated: "2026-07-03T20:23:04.682Z"
+milestone: v2.3
+milestone_name: Dataset Access
+status: planning
+last_updated: "2026-07-03T20:39:26.660Z"
 last_activity: 2026-07-03
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 17
-  completed_plans: 17
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -26,10 +24,10 @@ See: .planning/PROJECT.md (updated 2026-07-03 after v2.2 milestone)
 
 ## Current Position
 
-Phase: Milestone v2.2 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-07-03
+Status: Defining requirements
+Last activity: 2026-07-03 — Milestone v2.3 started
 
 ## Performance Metrics
 
