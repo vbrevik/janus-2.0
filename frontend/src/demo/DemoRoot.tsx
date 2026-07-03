@@ -12,6 +12,7 @@ import { UnitConsolePanel } from "./components/UnitConsolePanel";
 import { AuditView } from "./components/AuditView";
 import { ContextView } from "./components/ContextView";
 import { PhysicalAccessPanel } from "./components/physical-access-panel";
+import { DigitalResourcesPanel } from "./components/digital-resources-panel";
 
 type ActiveView =
   | "decisions"
@@ -19,7 +20,8 @@ type ActiveView =
   | "entity-console"
   | "audit"
   | "context"
-  | "physical-access";
+  | "physical-access"
+  | "digital-resources";
 
 export function DemoRoot() {
   const [activeView, setActiveView] = useState<ActiveView>("decisions");
@@ -66,6 +68,12 @@ export function DemoRoot() {
           >
             Physical Access
           </button>
+          <button
+            className={`rounded px-3 py-1.5 text-sm ${activeView === "digital-resources" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => setActiveView("digital-resources")}
+          >
+            Digital Resources
+          </button>
         </div>
         <main className="mx-auto max-w-5xl px-6 py-6">
           {activeView === "decisions" && <DecisionExplorer />}
@@ -74,6 +82,7 @@ export function DemoRoot() {
           {activeView === "audit" && <AuditView />}
           {activeView === "context" && <ContextView />}
           {activeView === "physical-access" && <PhysicalAccessPanel />}
+          {activeView === "digital-resources" && <DigitalResourcesPanel />}
         </main>
       </div>
     </WorldProvider>
