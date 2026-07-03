@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Platform, Network & Application Access
 status: executing
-stopped_at: Completed 12-01-PLAN.md
-last_updated: "2026-07-02T22:26:40.262Z"
-last_activity: 2026-07-02
+stopped_at: Completed 12-02-PLAN.md
+last_updated: "2026-07-03T09:11:24.000Z"
+last_activity: 2026-07-03
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 16
-  completed_plans: 11
-  percent: 69
+  completed_plans: 12
+  percent: 75
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-06-02 for v2.2 milestone)
 ## Current Position
 
 Phase: 12 (demo-ui-tab-integration) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
-Last activity: 2026-07-02
+Last activity: 2026-07-03
 
-Progress: [███████░░░] 69%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -51,6 +51,7 @@ Progress: [███████░░░] 69%
 | Phase 09 P03 | 3 min | 2 tasks | 1 files |
 | Phase 09 P04 | 6 min | 2 tasks | 2 files |
 | Phase 12 P01 | ~5min | 2 tasks | 1 files |
+| Phase 12 P02 | 2 sessions | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -84,8 +85,8 @@ None.
 
 ### Blockers/Concerns
 
-- Seed migration `20260601130001_seed_digital_resources.sql` is committed but NOT applied to the dev DB (all `resource_*` tables empty; `sqlx migrate run` broken on the drifted DB — see [[project_migrations_fresh_db_broken]]). Seed-dependent integration tests are `#[ignore]` and the demo `/world` fetch returns nothing until this is applied/repaired.
-- 11-03 authz is role-based (Option B), diverging from the resolver's org-based rule. Correct long-term model deferred to SEED-012.
+- ~~Seed migration not applied to dev DB~~ RESOLVED by 12-01 (`backend/scripts/apply-digital-resource-seed.sh`); re-verified against live DB 2026-07-03 — all 8 `resource_*` tables populated (6/4/4/18/3/15/18/1). `sqlx migrate run` remains broken on the drifted DB (see [[project_migrations_fresh_db_broken]]); use the apply script for reseeding.
+- 11-03 authz is role-based (Option B), diverging from the resolver's org-based rule. Correct long-term model deferred to SEED-012 (dormant by decision).
 
 ### Roadmap Evolution
 
@@ -115,6 +116,6 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-07-02T22:26:40.253Z
-Stopped at: Completed 12-01-PLAN.md
-Resume file: .planning/phases/12-demo-ui-tab-integration/12-02-PLAN.md
+Last session: 2026-07-03T09:11:24.000Z
+Stopped at: Completed 12-02-PLAN.md
+Resume file: .planning/phases/12-demo-ui-tab-integration/12-03-PLAN.md
