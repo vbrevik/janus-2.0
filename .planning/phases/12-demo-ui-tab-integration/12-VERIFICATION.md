@@ -1,31 +1,37 @@
 ---
 phase: 12-demo-ui-tab-integration
 verified: 2026-07-03T09:55:00Z
-status: human_needed
+status: passed
 score: 8/12 must-haves verified
 behavior_unverified: 4
 overrides_applied: 0
 behavior_unverified_items:
+
   - truth: "On mount with backend up + token present, the loader populates WorldState.digitalResources and the Browser renders it; missing token / 401 / unreachable each show a cause-naming error state"
     test: "Log in to the main app (admin), open the demo entry, click the Digital Resources tab; then repeat with localStorage token removed, and with the backend stopped"
     expected: "Success renders the sub-nav + Browser from live data; each failure mode renders its distinct cause-naming block (missing-token has no Retry button)"
     why_human: "classifyLoaderState's 6 states are unit-tested (17 tests) and wiring is grep-verified, but the mount→dispatch→render path under real auth/network conditions is not exercised by any test"
+
   - truth: "The Resource Browser renders the tree with correct nesting, inherited Application classification, and the detail-panel sections per 12-UI-SPEC.md"
     test: "Expand the tree, select a Network, a Platform, and an Application"
     expected: "Correct 3-tier nesting; Application badge shows Platform classification + ' (inherited)'; detail shows org-links-by-role, policy summary, grants, delegates, slate NSM badges on Platforms"
     why_human: "Inheritance logic is selector-tested and copy/tones are grep-exact, but visual layout/appearance cannot be verified statically"
+
   - truth: "Disabling the sole grant behind an ALLOW flips the Explorer verdict to DENY live; re-enabling restores ALLOW; with two covering grants, disabling one keeps ALLOW"
     test: "In the Explorer, pick a subject/resource with ALLOW, toggle its grant checkbox off, then on; find a two-grant case and disable only one"
     expected: "Verdict flips DENY and back live (no submit button); two-grant case stays ALLOW until both disabled"
     why_human: "resolveResourceAt-with-disabled-grant computation is unit-tested, but the dispatch→re-render round trip (TOGGLE_RESOURCE_GRANT → useMemo recompute) has no component test; the two-grant case is not explicitly unit-tested"
+
   - truth: "Issuing a grant/delegate persists via the Phase 11 API (visible on later GET) and appears in WorldState; duplicate submit leaves exactly one copy; 403 surfaces inline; controls hidden for non-admin"
     test: "As admin, issue a grant via the Explorer form and a delegate via the Browser form; submit the same grant twice; re-GET /world; log in as viewer and re-open the tab"
     expected: "New rows persist server-side and render from WorldState; duplicate submit leaves one copy (server dedupe + UPSERT); non-admin sees 'Issuing controls require an admin login.'; a 403 renders bg-destructive/10 inline"
     why_human: "Reducer upsert-by-id and role helpers are unit-tested and form wiring is grep-verified, but the POST→persist→dispatch round trip against the live backend is not exercised by any test"
 human_verification:
+
   - test: "Live walkthrough of the four behavior-unverified items above against the running dev stack (backend :15520, frontend :15510, seeded janus2) — per 12-CONTEXT.md this is explicitly deferred to /gsd-verify-work conversational UAT"
     expected: "All four flows behave as specified in 12-SPEC.md acceptance criteria"
     why_human: "Stateful UI round-trips, real auth/network error conditions, and visual conformance to 12-UI-SPEC.md require a live browser session"
+
   - test: "Judgment-tier prohibition review (non-authoritative LLM-judge verdicts, flagged per policy): (a) loader never silently falls back to stale data; (b) no seed credentials under src/demo/"
     expected: "Human confirms: (a) every non-success loader state renders an explicit cause-naming block (retry:false, zero seedWorld references in the panel — grep-verified); (b) grep for password123/login literals under src/demo/ is empty — grep-verified"
     why_human: "Both prohibitions are judgment-tier; autonomous verification records them as satisfied (strong deterministic evidence) but flags them for human sign-off — never a silent pass"

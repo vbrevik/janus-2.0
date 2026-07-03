@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 12-demo-ui-tab-integration
 source: [12-01-SUMMARY.md, 12-02-SUMMARY.md, 12-03-SUMMARY.md, 12-04-SUMMARY.md, 12-05-SUMMARY.md, 12-06-SUMMARY.md]
 started: 2026-07-03T19:00:00.000Z
-updated: 2026-07-03T19:07:50.000Z
+updated: 2026-07-03T19:33:00.000Z
 ---
 
 ## Current Test
@@ -63,9 +63,8 @@ reason: Verified live — HomeGuardNet (baseline policy) showed 3 gates (Clearan
 
 ### 10. Zone-advisory amber row renders when the resolved policy has a zone_prereq_id (12-05 D2, RSRC-UI-05)
 expected: When resolving access against IntelNet (whose Enhanced policy carries `zone_prereq_id: "zone-room-sr1"`), an amber "Advisory (non-blocking)" row appears below the gate list, per 12-UI-SPEC.md and the RSRC-SEED-04 dataset requirement built specifically to exercise this.
-result: issue
-reported: "The amber zone-advisory row never appears for any person/resource/timestamp combination, including IntelNet which was seeded specifically to carry a zone prerequisite (zone-room-sr1, confirmed present in the ZONES export)."
-severity: major
+result: pass
+reason: Fixed by gap-closure plan 12-07 (RSRC-UI-05). Re-verified live: IntelNet now renders "Zone prerequisite GRANT_FOUND" + amber "Advisory (non-blocking)" Pill + the exact explanatory note; overall verdict stayed DENY (INSUFFICIENT_CLEARANCE), confirming the advisory never affects allow/deny. HomeGuardNet (no zone_prereq_id) correctly shows no advisory row.
 
 ### 11. Grant toggle recomputes the verdict live (12-05 D2)
 expected: Unchecking a person's grant checkbox on the currently-selected resource flips "Own-tier grant" from ✓ to ✗ and marks the grant "(disabled)" in the list; re-checking restores it.
@@ -85,8 +84,8 @@ reason: Verified live: with no token, exact copy "Not logged in. / The demo reus
 ## Summary
 
 total: 13
-passed: 12
-issues: 1
+passed: 13
+issues: 0
 pending: 0
 skipped: 0
 blocked: 0
@@ -94,7 +93,7 @@ blocked: 0
 ## Gaps
 
 - truth: "The amber, non-blocking zone-advisory row (RSRC-UI-05) renders in the Access Resolution Explorer whenever the resolved policy's zone_prereq_id points to an existing zone"
-  status: failed
+  status: resolved
   reason: "Confirmed live: selecting IntelNet (whose Enhanced access policy carries zone_prereq_id: \"zone-room-sr1\", a zone that exists in the seed's ZONES export at zone-room-sr1) across multiple persons/timestamps never renders the advisory row, even though the JSX conditional and amber Pill exist and were grep-verified by 12-05-SUMMARY.md."
   severity: major
   test: 10
@@ -102,9 +101,8 @@ blocked: 0
   artifacts:
     - path: "frontend/src/demo/lib/digital-resource-selectors.ts"
       issue: "resolveResourceAt passes [] for allZones and [] for allPhysicalGrants instead of the real v2.1 ZONES export and physical grants, permanently disabling the zone-advisory feature it's meant to expose"
-  missing:
-    - "Import ZONES (and the physical-access-grants equivalent, e.g. GRANTS or the WorldState's physical grants) from seed.ts / world-state and pass them into resolveResourceAccess in place of the two hardcoded [] arguments"
-    - "A unit test on resolveResourceAt (not just the underlying model.ts resolver, which is already tested) asserting zoneAdvisory is non-null for a resource whose policy carries a real zone_prereq_id — this is exactly the gap that let build+grep checks (which only verify the JSX exists) miss a fully dead data path"
+  missing: []
+  fixed_by: "12-07-PLAN.md / 12-07-SUMMARY.md (RSRC-UI-05) — resolveResourceAt now takes allZones/allPhysicalGrants as explicit parameters; resource-access-explorer.tsx passes world.zones/world.grants. Re-verified live 2026-07-03."
   debug_session: ""
 
 ## Notes (non-gap, informational)
