@@ -52,11 +52,11 @@
 
 ### Mock Dataset (RSRC-SEED)
 
-- [ ] **RSRC-SEED-01**: Dataset defines ≥3 Networks with realistic classification tiers from the 6-unit scenario.
-- [ ] **RSRC-SEED-02**: Dataset includes Platforms (terminals, servers, workstations) hosted on those networks.
-- [ ] **RSRC-SEED-03**: Dataset includes Applications hosted on those platforms.
-- [ ] **RSRC-SEED-04**: At least one Platform carries a zone prerequisite pointing to an existing v2.1 zone, so the advisory zone row is exercised (not dormant).
-- [ ] **RSRC-SEED-05**: Grants include active, expired, and future-dated examples across all three resource tiers.
+- [x] **RSRC-SEED-01**: Dataset defines ≥3 Networks with realistic classification tiers from the 6-unit scenario.
+- [x] **RSRC-SEED-02**: Dataset includes Platforms (terminals, servers, workstations) hosted on those networks.
+- [x] **RSRC-SEED-03**: Dataset includes Applications hosted on those platforms.
+- [x] **RSRC-SEED-04**: At least one Platform carries a zone prerequisite pointing to an existing v2.1 zone, so the advisory zone row is exercised (not dormant).
+- [x] **RSRC-SEED-05**: Grants include active, expired, and future-dated examples across all three resource tiers.
 - [x] **RSRC-SEED-06**: At least one resource demonstrates a **policy shift over time** — two policy assignments with adjacent validity windows — so point-in-time resolution at different timestamps yields different rules.
 - [x] **RSRC-SEED-07**: At least one resource carries a **non-baseline policy** (e.g. an extra required org-role authorization or a different gate set) to exercise per-resource variation.
 
@@ -136,11 +136,11 @@
 | RSRC-GRANT-02 | Phase 9 | Complete |
 | RSRC-GRANT-03 | Phase 9 | Complete |
 | RSRC-DELEG-01 | Phase 9 | Complete |
-| RSRC-SEED-01 | Phase 10 | Pending |
-| RSRC-SEED-02 | Phase 10 | Pending |
-| RSRC-SEED-03 | Phase 10 | Pending |
-| RSRC-SEED-04 | Phase 10 | Pending |
-| RSRC-SEED-05 | Phase 10 | Pending |
+| RSRC-SEED-01 | Phase 10 | Complete |
+| RSRC-SEED-02 | Phase 10 | Complete |
+| RSRC-SEED-03 | Phase 10 | Complete |
+| RSRC-SEED-04 | Phase 10 | Complete |
+| RSRC-SEED-05 | Phase 10 | Complete |
 | RSRC-SEED-06 | Phase 9 | Complete |
 | RSRC-SEED-07 | Phase 9 | Complete |
 | RSRC-BE-01 | Phase 11 | Complete |
