@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.2
 milestone_name: Platform, Network & Application Access
-current_phase: 2
+current_phase: null
 status: Awaiting next milestone
-stopped_at: Phase 12 fully executed; next = /gsd-verify-work UAT
+stopped_at: Milestone v2.2 archived and tagged — next milestone not started
 last_updated: "2026-07-03T20:11:14.141Z"
 last_activity: 2026-07-03
 last_activity_desc: Milestone v2.2 completed and archived
@@ -20,10 +20,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-06-02 for v2.2 milestone)
+See: .planning/PROJECT.md (updated 2026-07-03 after v2.2 milestone)
 
-**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — federated ABAC model proven through v2.1.
-**Current focus:** Phase 12 — demo-ui-tab-integration
+**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — federated ABAC model proven through v2.2; fullstack transition begun (Phase 11 backend slice).
+**Current focus:** Planning next milestone (/gsd-new-milestone) — pre-registered candidate: v2.3 Dataset Access
 
 ## Current Position
 
@@ -119,8 +119,8 @@ Items deferred from v2.0/v2.1, carried forward:
 ## Session Continuity
 
 Last session: 2026-07-03T09:42:41.000Z
-Stopped at: Phase 12 fully executed; next = /gsd-verify-work UAT
-Resume file: .planning/phases/12-demo-ui-tab-integration/12-VERIFICATION.md
+Stopped at: Milestone v2.2 archived and tagged
+Resume file: none — start next milestone with /gsd-new-milestone
 
 ## Operator Next Steps
 
