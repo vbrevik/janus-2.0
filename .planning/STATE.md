@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-06-02 for v2.2 milestone)
 Phase: 12
 Plan: Not started
 Status: Executed — 12-VERIFICATION.md = human_needed (live UAT via /gsd-verify-work)
-Last activity: 2026-07-03 — Phase 12 complete
+Last activity: 2026-07-03 - Completed quick task 260703-u5o: Fix broken cargo test department field
 
 Progress: [██████████] 100% (pending UAT sign-off)
 
@@ -85,6 +85,7 @@ None.
 | Date | Task | Outcome |
 |------|------|---------|
 | 2026-07-02 | tidy-loose-ends | rustfmt sweep committed; .planning/codebase retired → TECH-DEBT-SCAN.md; 10-02-SUMMARY backfilled (tests 37/37); stray artifacts committed; .omo/ ignored |
+| 2026-07-03 | 260703-u5o-fix-broken-cargo-test-backend-src-organi | Fixed E0063 missing-field compile error blocking full-crate `cargo test` (organizations/handlers.rs test fixtures missing `department: None`); full crate now 22/22 unit tests pass, zero regressions on phase 9-12 integration binaries |
 
 ### Blockers/Concerns
 
