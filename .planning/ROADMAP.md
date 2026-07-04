@@ -50,7 +50,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 **Milestone Goal:** Establish fine-grained authorization for named datasets within Applications — the innermost access layer. Application access (v2.2) does not grant access to everything inside; each dataset (mailbox, archive role, document site) requires its own authorization with its own access-level vocabulary.
 
 - [x] **Phase 13: Dataset Model & Access Resolver** - Dataset types (MAILBOX/ARCHIVE_ROLE/DOCUMENT_SITE, multi-Application-capable) with per-type level mechanisms (rank for MAILBOX/DOCUMENT_SITE, containment for ARCHIVE_ROLE), DatasetAccessGrant/Delegate, the standalone 3-gate `resolveDatasetAccess` resolver with an independent existence-`visible` gate, classification-override validation, and delegate-capped `canIssueDatasetGrant` (completed 2026-07-04)
-- [ ] **Phase 14: Mock Dataset & WorldState** - Seed fixtures (mailboxes, archive-role grants, document sites, prerequisite-chain and denied-access scenarios, full deny-matrix), `WorldState` datasets sub-object, dataset-selectors joining to backend Application data
+- [x] **Phase 14: Mock Dataset & WorldState** - Seed fixtures (mailboxes, archive-role grants, document sites, prerequisite-chain and denied-access scenarios, full deny-matrix), `WorldState` datasets sub-object, dataset-selectors joining to backend Application data (completed 2026-07-04)
 - [ ] **Phase 15: Demo UI & Access Explorer** - Datasets section in the Resource Browser, dataset-level Access Resolution Explorer with full gate-chain trace, reverse-lookup view, admin-gated issuing form
 
 ---
@@ -88,7 +88,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
   3. A deny-matrix fixture exercises each of the 3 resolution gates as the sole deciding gate at least once — clearance-fails, Application-grant-expired-with-live-dataset-grant, and dataset-grant-missing — each case resolved by a passing test that asserts which specific gate failed (DATA-SEED-06)
   4. `WorldState` carries a `datasets` sub-object (nodes, grants, delegates) populated by the new fixtures, and `dataset-selectors.ts` joins dataset fixtures to backend-fetched Application data by `application_id`, verified by a passing selector test — while v2.2's existing digital-resource seed, selectors, and tests remain unmodified and green
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans complete
 **Wave 1**
 
 - [x] 14-01-PLAN.md — Cast prep + dataset fixtures (mailboxes, archive roles, document sites, deny-matrix/prerequisite-chain scenario data) in seed.ts (DATA-SEED-01..06)
@@ -100,7 +100,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 14-04-PLAN.md — Full regression sweep + phase-level SPEC.md acceptance/edge/prohibition audit (DATA-SEED-01..06)
+- [x] 14-04-PLAN.md — Full regression sweep + phase-level SPEC.md acceptance/edge/prohibition audit (DATA-SEED-01..06)
 
 ### Phase 15: Demo UI & Access Explorer
 
@@ -136,5 +136,5 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 | 11. Digital Resource Backend & Resolver Port | v2.2 | 4/4 | Complete | 2026-07-02 |
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 7/7 | Complete | 2026-07-03 |
 | 13. Dataset Model & Access Resolver | v2.3 | 2/2 | Complete    | 2026-07-04 |
-| 14. Mock Dataset & WorldState | v2.3 | 3/4 | In Progress|  |
+| 14. Mock Dataset & WorldState | v2.3 | 4/4 | Complete   | 2026-07-04 |
 | 15. Demo UI & Access Explorer | v2.3 | 0/TBD | Not started | - |
