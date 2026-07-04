@@ -330,4 +330,52 @@ describe("world-state reducer", () => {
       );
     });
   });
+
+  describe("ISSUE_DATASET_GRANT action", () => {
+    const NOW = new Date("2026-07-01T12:00:00Z");
+
+    it("creates a grant and an audit entry when the actor is the dataset's admin_org", () => {
+      const state = seedWorld();
+      const before = state.datasets.grants.length;
+
+      const next = reducer(state, {
+        type: "ISSUE_DATASET_GRANT",
+        actorOrgId: "MILITARY_1",
+        actorPersonId: "subj-1",
+        datasetId: "ds-archive-caserecords",
+        personId: "subj-2",
+        level: "READER",
+        now: NOW,
+      });
+
+      expect(next.datasets.grants.length).toBe(before + 1);
+      expect(next.datasets.auditLog.length).toBe(1);
+      expect(next.datasets.auditLog[0]).toMatchObject({
+        actor_person_id: "subj-1",
+        actor_org_id: "MILITARY_1",
+        dataset_id: "ds-archive-caserecords",
+        person_id: "subj-2",
+        level: "READER",
+        timestamp: NOW,
+      });
+    });
+
+    it("creates neither a grant nor an audit entry when canIssueDatasetGrant returns false", () => {
+      const state = seedWorld();
+
+      const next = reducer(state, {
+        type: "ISSUE_DATASET_GRANT",
+        actorOrgId: "INTEL",
+        actorPersonId: "subj-3",
+        datasetId: "ds-archive-caserecords",
+        personId: "subj-2",
+        level: "READER",
+        now: NOW,
+      });
+
+      expect(next.datasets.grants.length).toBe(state.datasets.grants.length);
+      expect(next.datasets.auditLog.length).toBe(0);
+      expect(next).toBe(state);
+    });
+  });
 });
