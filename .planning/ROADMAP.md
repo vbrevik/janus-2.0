@@ -49,7 +49,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 
 **Milestone Goal:** Establish fine-grained authorization for named datasets within Applications — the innermost access layer. Application access (v2.2) does not grant access to everything inside; each dataset (mailbox, archive role, document site) requires its own authorization with its own access-level vocabulary.
 
-- [ ] **Phase 13: Dataset Model & Access Resolver** - Dataset types (MAILBOX/ARCHIVE_ROLE/DOCUMENT_SITE, multi-Application-capable) with per-type level mechanisms (rank for MAILBOX/DOCUMENT_SITE, containment for ARCHIVE_ROLE), DatasetAccessGrant/Delegate, the standalone 3-gate `resolveDatasetAccess` resolver with an independent existence-`visible` gate, classification-override validation, and delegate-capped `canIssueDatasetGrant`
+- [x] **Phase 13: Dataset Model & Access Resolver** - Dataset types (MAILBOX/ARCHIVE_ROLE/DOCUMENT_SITE, multi-Application-capable) with per-type level mechanisms (rank for MAILBOX/DOCUMENT_SITE, containment for ARCHIVE_ROLE), DatasetAccessGrant/Delegate, the standalone 3-gate `resolveDatasetAccess` resolver with an independent existence-`visible` gate, classification-override validation, and delegate-capped `canIssueDatasetGrant` (completed 2026-07-04)
 - [ ] **Phase 14: Mock Dataset & WorldState** - Seed fixtures (mailboxes, archive-role grants, document sites, prerequisite-chain and denied-access scenarios, full deny-matrix), `WorldState` datasets sub-object, dataset-selectors joining to backend Application data
 - [ ] **Phase 15: Demo UI & Access Explorer** - Datasets section in the Resource Browser, dataset-level Access Resolution Explorer with full gate-chain trace, reverse-lookup view, admin-gated issuing form
 
@@ -71,9 +71,10 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
   5. `effectiveDatasetClassification` derives classification from the parent Application unless `classification_override` is set; a constructor-time validator rejects any override lower than the parent's effective classification (DATA-05)
   6. `canIssueDatasetGrant(actor, dataset, now)` returns `true` for an active `admin_org` actor (unrestricted), and for an active delegate ONLY when the delegate holds their own active `DatasetAccessGrant` on that exact dataset AND is issuing at/below what their own grant covers (rank ≤ for ranked types, containment-covers for `ARCHIVE_ROLE`) — `false` for a delegate with no personal grant, a non-admin/no-delegate actor, or an expired-delegate actor (DATA-DELEG-01); `npm run test` passes with zero failures and zero TypeScript errors after these additions, and the existing v2.2 golden-fixture and digital-resource suites remain green and untouched
 
-**Plans**: 2 plans
-- [ ] 13-01-PLAN.md — Dataset entity types, per-type level/containment vocabulary, classification derive-with-override validation, effective-access aggregation (DATA-01..05, DATA-GRANT-01..03)
-- [ ] 13-02-PLAN.md — `resolveDatasetAccess` 3-gate resolver + independent visibility gate, `canIssueDatasetGrant` delegate-capped issuing authority, full phase-level acceptance sweep (DATA-ACCESS-01..04, DATA-DELEG-01)
+**Plans**: 2/2 plans complete
+
+- [x] 13-01-PLAN.md — Dataset entity types, per-type level/containment vocabulary, classification derive-with-override validation, effective-access aggregation (DATA-01..05, DATA-GRANT-01..03)
+- [x] 13-02-PLAN.md — `resolveDatasetAccess` 3-gate resolver + independent visibility gate, `canIssueDatasetGrant` delegate-capped issuing authority, full phase-level acceptance sweep (DATA-ACCESS-01..04, DATA-DELEG-01)
 
 ### Phase 14: Mock Dataset & WorldState
 
@@ -122,6 +123,6 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 | 10. Mock Dataset & WorldState | v2.2 | 2/2 | Complete | 2026-06-18 |
 | 11. Digital Resource Backend & Resolver Port | v2.2 | 4/4 | Complete | 2026-07-02 |
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 7/7 | Complete | 2026-07-03 |
-| 13. Dataset Model & Access Resolver | v2.3 | 0/TBD | Not started | - |
+| 13. Dataset Model & Access Resolver | v2.3 | 2/2 | Complete   | 2026-07-04 |
 | 14. Mock Dataset & WorldState | v2.3 | 0/TBD | Not started | - |
 | 15. Demo UI & Access Explorer | v2.3 | 0/TBD | Not started | - |
