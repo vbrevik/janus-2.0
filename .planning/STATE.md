@@ -2,13 +2,10 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Dataset Access
-current_phase: 14
-current_phase_name: Mock Dataset & WorldState
 status: executing
-stopped_at: context exhaustion at 100% (2026-07-04)
-last_updated: "2026-07-04T14:05:17.640Z"
-last_activity: 2026-07-04
-last_activity_desc: Phase 13 complete, transitioned to Phase 14
+stopped_at: Phase 14 context gathered
+last_updated: "2026-07-04T14:47:58.124Z"
+last_activity: 2026-07-04 — Phase 13 complete, transitioned to Phase 14
 progress:
   total_phases: 3
   completed_phases: 1
@@ -134,9 +131,9 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-07-04T13:46:19.780Z
-Stopped at: context exhaustion at 100% (2026-07-04)
-Resume file: .planning/phases/13-dataset-model-access-resolver/13-01-PLAN.md
+Last session: 2026-07-04T14:47:58.120Z
+Stopped at: Phase 14 context gathered
+Resume file: .planning/phases/14-mock-dataset-worldstate/14-CONTEXT.md
 
 ## Operator Next Steps
 
