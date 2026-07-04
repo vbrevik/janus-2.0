@@ -89,10 +89,17 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
   4. `WorldState` carries a `datasets` sub-object (nodes, grants, delegates) populated by the new fixtures, and `dataset-selectors.ts` joins dataset fixtures to backend-fetched Application data by `application_id`, verified by a passing selector test — while v2.2's existing digital-resource seed, selectors, and tests remain unmodified and green
 
 **Plans**: 0/4 plans complete
+**Wave 1**
 
 - [ ] 14-01-PLAN.md — Cast prep + dataset fixtures (mailboxes, archive roles, document sites, deny-matrix/prerequisite-chain scenario data) in seed.ts (DATA-SEED-01..06)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 14-02-PLAN.md — dataset-selectors.ts (application_id join + resolveDatasetAt) and dataset-selectors.test.ts proving DATA-SEED-01..06 against real seed fixtures (DATA-SEED-01..06)
 - [ ] 14-03-PLAN.md — WorldState.datasets wiring (eager-seeded sub-object) + ISSUE_DATASET_GRANT gated action/reducer + DatasetAuditEntry, with reducer tests (DATA-SEED-04..06)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 14-04-PLAN.md — Full regression sweep + phase-level SPEC.md acceptance/edge/prohibition audit (DATA-SEED-01..06)
 
 ### Phase 15: Demo UI & Access Explorer
