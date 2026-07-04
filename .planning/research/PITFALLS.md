@@ -1,276 +1,221 @@
 # Pitfalls Research
 
-**Domain:** Adding Network→Platform→Application digital-resource access to an existing demo with a parallel Physical Access Zone model (v2.1)
-**Researched:** 2026-06-02
-**Confidence:** HIGH — grounded in the actual v2.1 source files (`model.ts`, `physical-access.test.ts`, `world-state.tsx`, `seed.ts`, `access-resolution-explorer.tsx`), requirements (`v2.2-REQUIREMENTS.md`), and project decisions (`PROJECT.md`).
+**Domain:** Adding dataset-level (entitlement) authorization — the innermost access layer — to an existing tiered Network→Platform→Application ABAC demo (v2.3)
+**Researched:** 2026-07-03
+**Confidence:** HIGH for codebase-grounded pitfalls (verified against `frontend/src/demo/lib/model.ts`, v2.2 gate-chain resolver, `RETROSPECTIVE.md` lessons); MEDIUM/LOW for web-sourced industry patterns (tagged inline).
 
-> **Scope note:** This file covers pitfalls specific to v2.2 (Phases 9–11). The v2.0/v2.1 pitfall record
-> (over-engineering toward production, hollow mock, audit replay, mock HMAC conflation, etc.) was
-> written 2026-05-21 and remains valid for the full demo. This file focuses on the incremental risks
-> introduced by adding a parallel digital-resource model to an already-shipped zone model.
+> **Scope note:** Covers pitfalls specific to v2.3 (Phases 13+): Dataset model inside Applications,
+> per-type access-level vocabularies (MAILBOX / ARCHIVE_ROLE / DOCUMENT_SITE), hard Application-grant
+> prerequisite, delegation, time-limited grants with effective level = highest active. Demo/mock only,
+> TypeScript world-state in `frontend/src/demo/`. The v2.2 pitfall record lives in the git history of
+> this file (commit before this one).
+
+## Ground Truth: What v2.2 Actually Gives You (verified in `model.ts`)
+
+These facts constrain every pitfall below — verify against them before planning:
+
+1. **Prereqs are resolution-time, not issue-time.** `evaluateParentTierGrantGate` checks the parent-tier grant's activity *at resolution time t*, inside the gate chain. Nothing is "locked in" at issue.
+2. **Time windows have one shared helper.** `isWindowActive` — inclusive boundaries, `null` = unbounded — is used by org_links, policy_assignments, and grants. Any new window check that doesn't reuse it will drift.
+3. **Roles are unordered open-vocab strings.** `OrgLink.role` is `BaselineOrgRole | (string & {})`; checks are exact string matches. **There is no precedent anywhere in the model for ranked/ordered levels except `CLEARANCE_RANK`.** v2.3's highest-wins levels are the first ordered vocabulary since clearance.
+4. **Delegation is issue-time only.** `canIssueResourceGrant` (active ADMIN org_link OR active ORG delegate) gates issuing; the resolver never re-checks who issued a grant. A grant outlives its issuer's delegation — deliberately.
+5. **Application deliberately carries NO classification field.** `effectiveClassification` derives it from the parent Platform; a missing platform throws. v2.3's "inherit unless overridden" is a *different* semantic — see Pitfall 5.
+6. **The gate switch fails closed on unknown kinds.** `GateDescriptor` is an open union, but the evaluator switch is exhaustive over known kinds and denies unknowns. New dataset gates must be added to the descriptor union, the evaluator, AND the trace renderer, or they silently deny.
+7. **Advisory zone-prereq never changes `allow`** — and it shipped as dead code (hardcoded empty zone array) caught only by live UAT (v2.2 lesson, fixed 12-07).
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Cross-Tier Inheritance Confusion — Grant on Network Silently Satisfies Platform Check
+### Pitfall 1: One global level ordering across three incompatible vocabularies
 
 **What goes wrong:**
-The v2.1 zone resolver (`resolveGrant` in `model.ts`) walks up the ancestor tree and inherits grants
-from matching-zone-type ancestors. If the v2.2 `resolveResourceGrant` copies this pattern naively, a
-Network grant propagates down to Platform and Application. RSRC-GRANT-02 forbids this explicitly:
-"each tier always requires explicit authorization — no automatic inheritance across tiers." The
-demo would pass a Platform access check whenever a Network grant exists, without the person holding
-a Platform-specific grant.
+`MAILBOX.READ`, `DOCUMENT_SITE.READ` share a string; `ARCHIVE_ROLE` has none of them. A single rank table (`READ=1, SEND_AS=2, ...`) or a shared `AccessLevel` string union lets a MAILBOX grant compare against a DOCUMENT_SITE level, lets `SEND_AS` accidentally rank against `CONTRIBUTE`, and makes "highest active" silently well-typed but semantically meaningless. Worse: a grant carrying `level: 'READ'` with the wrong `dataset_type` validates fine.
 
 **Why it happens:**
-`resolveGrant` is the most prominent resolver in `model.ts` with a clear, readable loop. It looks like
-the natural template. The v2.1 zone-type-matching guard (`ancestor.zone_type === zone.zone_type`) is
-what blocks cross-type inheritance there; but for digital resource tiers there is no analogous "same
-tier type" check that can be applied — Network and Platform are different tiers, not the same type
-at different levels.
+TypeScript unions of string literals across types collapse into one big union unless deliberately discriminated. The v2.2 codebase's only precedent (`OrgLink.role`) is an *unordered open vocabulary* — copying that pattern gives you strings with no ordering; inventing a global rank gives you ordering with no type scoping. Both are one refactor away.
 
 **How to avoid:**
-Write `resolveResourceGrant` without any ancestor-walk. It simply finds an active grant for the
-exact resource ID. The tier prerequisite chain (Network grant required before Platform resolution
-proceeds) is evaluated as an independent gate inside `resolveResourceAccess`, not by walking the
-hierarchy in the grant-lookup step. Enforce with a unit test: person holds only a Network grant →
-`resolveResourceAccess(person, platform, ...)` returns `allow: false`, reason
-`PREREQUISITE_NOT_MET` — this test must exist and pass before any UI is built.
+- Define per-type ordered rank arrays in ONE place in `model.ts`: `const DATASET_LEVEL_RANK: Record<DatasetType, readonly string[]>` (index = rank). Derive the level unions from these arrays, not the other way round.
+- Make `DatasetAccessGrant` validation reject a level not in its dataset's type vocabulary — a `validateDatasetGrant` pure function, called by seed validators AND the issuing form.
+- `effectiveDatasetLevel(grants, datasetType, at)` compares ranks only within one type; make cross-type comparison unrepresentable (function takes a single dataset, never a grant list spanning datasets).
+- Write a test that asserts each vocabulary is closed and each grant level is a member of its dataset's vocabulary across the whole seed.
 
 **Warning signs:**
-- `resolveResourceGrant` contains a loop that iterates over `parent_id` chain.
-- No Vitest test named something like `cross-tier-inheritance-blocked` or `network-grant-does-not-satisfy-platform`.
-- The resolution trace says "Grant resolved" for a Platform when only a Network grant exists in the seed.
+A single `AccessLevel` type or single `LEVEL_RANK` map; a grant type where `level: string` with no link to `dataset_type`; any function comparing levels that doesn't take the dataset type as input.
 
-**Phase to address:** Phase 9 (model + engine). Define the function and the blocking test before any
-resolver logic is written.
+**Phase to address:**
+Model/resolver phase (Phase 13) — this is a type-design decision that cannot be retrofitted cheaply after the seed and UI consume it.
 
 ---
 
-### Pitfall 2: Advisory Zone-Prerequisite Rendered as a Hard Gate in the UI Trace
+### Pitfall 2: "Highest wins" assumed to be a total superset order — ARCHIVE_ROLE probably isn't
 
 **What goes wrong:**
-PROJECT.md records the decision: "zone-prerequisite link is advisory — non-blocking warning in trace."
-If the digital resource resolution trace renders the zone-prerequisite check as a standard gate row
-(red X = failure that contributes to DENY), the demo will show DENY when a person lacks zone access,
-contradicting the model decision. A demo audience cannot distinguish "advisory warning rendered amber"
-from "hard gate rendered red" unless the UI makes the distinction explicit.
+Highest-wins is only well-defined when each level strictly supersets the levels below it (permission-set dominance — MEDIUM confidence, standard hierarchical-access theory). `MAILBOX: READ < SEND_AS < FULL_ACCESS` and `DOCUMENT_SITE: READ < CONTRIBUTE < FULL_CONTROL` plausibly are supersets. `ARCHIVE_ROLE: READER < CASE_HANDLER < ADMIN` is *role-shaped*, not level-shaped — in real archive systems a CASE_HANDLER may see only their own cases while a READER sees everything read-only. If highest-wins picks CASE_HANDLER over READER, the demo asserts a superset relation the requirements never established. The requirements file itself flags this open question ("Is archive role a dataset within an application, or a role assignment? Roles vs. access levels distinction").
 
 **Why it happens:**
-The existing `ZoneResolutionTrace` component in `access-resolution-explorer.tsx` uses a two-symbol
-pass/fail pattern: green check or red X. It is typed to `ZoneAccessResult`. When building the digital
-resource trace, a developer copies this pattern and adds the zone-prerequisite as a third row using
-the same styling. The `allow` flag then gets set to `false` when the zone check fails, because that
-is how every other gate row works.
+DATA-GRANT-03 says "effective level = highest active grant" as if it's a property of all types; nobody re-derives it per vocabulary. The name `ARCHIVE_ROLE` (vs `MAILBOX`, `DOCUMENT_SITE` — resource names) is a smell that it's a different kind of thing.
 
 **How to avoid:**
-The `resolveResourceAccess` return type must separate the advisory from the gates. Use a shape like:
-
-```typescript
-interface ResourceAccessResult {
-  allow: boolean;
-  gates: ResourceGateResult[];       // clearance + tier grants — these determine allow
-  zoneAdvisory?: {                   // zone-prereq: present only when applicable
-    satisfied: boolean;
-    detail: string;
-  };
-}
-```
-
-The `allow` flag must never be influenced by `zoneAdvisory.satisfied`. Build a distinct
-`ZonePrerequisiteAdvisory` sub-component with amber/yellow styling that explicitly labels itself
-"Advisory (non-blocking)." Write the test before the UI: `resolveResourceAccess` where zone prereq is
-unsatisfied must return `allow: true`.
+- Resolve the open question **in discuss-phase, before planning**: either (a) decide ARCHIVE_ROLE levels ARE a total superset order in this demo (record the decision + rationale in PROJECT.md Key Decisions), or (b) exempt ARCHIVE_ROLE from highest-wins and show all active roles.
+- If (a): the resolution trace should say "effective level FULL_ACCESS (supersedes READ)" so the superset assumption is *visible and demoable*, not buried.
+- Since DATA-GRANT-02 allows multiple simultaneous grants, seed a person with two active grants at different levels on the same dataset and make a test pin the effective level.
 
 **Warning signs:**
-- `resolveResourceAccess` return type has zone check inside the same `gates` array as clearance and grant gates.
-- Resolution trace renders the zone row in red (same tone as a hard gate failure) when zone access is missing.
-- No Vitest test covering "zone prerequisite unsatisfied → still ALLOW."
-- The `allow` flag is `false` in any case where only the zone advisory is unsatisfied.
+The word "role" used interchangeably with "level" in plans; a demo reviewer asking "so CASE_HANDLER can do everything READER can?" and nobody being sure.
 
-**Phase to address:** Phase 9 (define return type and write test) and Phase 11 (render advisory
-distinctly from hard gates). Both phases must hold the same contract.
+**Phase to address:**
+Discuss/spec of Phase 13 (decision); Phase 13 tests (pinning).
 
 ---
 
-### Pitfall 3: Application Classification Override — App's minClearance Diverges from Its Platform
+### Pitfall 3: Application prerequisite validated at issue time only — orphaned-but-live dataset grants
 
 **What goes wrong:**
-PROJECT.md records the decision: "Application inherits its Platform's classification." The `Resource`
-interface in `model.ts` carries `minClearance` as a field set per-resource. If the v2.2 seed or type
-definition allows an Application to carry an independently-authored `minClearance` that differs from
-its Platform, the resolution engine silently evaluates clearance against the wrong threshold. A seed
-author writing `minClearance: "CONFIDENTIAL"` on an Application whose Platform is `SECRET` creates a
-scenario the model explicitly forbids — and the demo will show someone with CONFIDENTIAL clearance
-accessing a resource that should require SECRET.
+The canonical temporal edge case: Application grant valid until 2026-08-01, DatasetAccessGrant valid until 2026-12-31. If the prereq was checked only when the dataset grant was issued, from August the person has *dataset access with no application access* — the entitlement is orphaned but live. Industry pattern confirms: issue-time-only prerequisite checks are the classic source of orphaned entitlements when parent access expires or is revoked (MEDIUM confidence — IGA/JIT-access literature).
 
 **Why it happens:**
-TypeScript cannot enforce cross-record constraints at the type level. Seed records are written by
-hand. Without an explicit validator (like v2.1's `isValidZoneTypeCombination`), nothing prevents
-the inconsistency from being seeded.
+Issue-time validation *feels* like enforcement ("we checked the prerequisite"). It also happens accidentally: the resolver checks the app grant, but a *selector* (e.g. the reverse-lookup for DATA-UI-03, or an effective-level badge) reads only dataset grants and forgets the prereq — so the UI shows access the resolver would deny.
 
 **How to avoid:**
-Add a `validateResourceClassification(resource: DigitalResource, allResources: DigitalResource[])` 
-function to `model.ts` that returns an error string when an Application's `minClearance` differs from
-its parent Platform. Call it from the seed test file for every Application in the seed.
-Consider a builder function `makeApplication(platform: Platform, name: string, ...)` that sets
-`minClearance` by reference from the Platform record, making manual override require deliberate
-circumvention. Document the constraint in a seed comment: "Application minClearance MUST equal
-parent Platform minClearance — do not set independently."
+- Follow the v2.2 pattern exactly: the Application-grant prerequisite is a **gate in the dataset resolution chain, evaluated at resolution time t** (DATA-ACCESS-03 already orders it: clearance → app grant → dataset grant). Reuse/compose `evaluateParentTierGrantGate` semantics or call `resolveResourceAccess` for the parent Application.
+- Every surface that answers "does/can this person access this dataset" must go through the one resolver — including the reverse lookup (DATA-UI-03). Reverse lookup = "for each person with any dataset grant, run the resolver at t," not "list dataset grants."
+- Seed the exact edge case: app grant expiring *before* a still-active dataset grant, and a demo date range where the flip is observable in the explorer (DATA-SEED-05 covers no-dataset-grant deny; add an expired-app-grant deny).
+- Issue-time prereq checking is fine as a *courtesy warning* in the issuing form ("this person has no active Application grant") — but label it advisory, never treat it as the enforcement point.
 
 **Warning signs:**
-- Application seed records have `minClearance` literals typed by hand rather than derived from parent.
-- No test asserting `app.minClearance === platform.minClearance` for every Application.
-- Resolution trace shows different clearance requirements for Platform vs Application in the same hierarchy.
+Any function returning access/level from dataset grants alone; issuing-form validation described as "ensures the prerequisite"; no seed row where the app grant expires first.
 
-**Phase to address:** Phase 9 (define validation function in model.ts) and Phase 10 (seed authoring —
-use builder functions, run validators against every Application record).
+**Phase to address:**
+Phase 13 (resolver gate + test with the expiry crossover); seed phase (the crossover fixture); UI phase (reverse lookup goes through resolver).
 
 ---
 
-### Pitfall 4: WorldState Explosion — Six New Top-Level Arrays Added Without Grouping
+### Pitfall 4: Trace/advisory rows shipped as dead code — the zone-prereq bug, again
 
 **What goes wrong:**
-`WorldState` in `world-state.tsx` currently has `zones`, `grants`, `delegates`, `entryLogs`,
-`visitorPasses`, and `disabledGrantIds` for the physical access model. If v2.2 adds `networks`,
-`platforms`, `applications`, `resourceGrants`, `resourceDelegates`, and `disabledResourceGrantIds`
-as six more top-level fields, the reducer grows proportionally: `seedWorld()` becomes ~80+ lines, the
-`Action` union accumulates 4–6 more cases, and the reducer switch is harder to read. `Set<string>`
-fields (the `disabledGrantIds` pattern) are not serializable; doubling them doubles the fragility.
-v2.3 (datasets) will apply the same pressure again.
+v2.2's advisory zone-prereq row rendered in the trace UI but was wired to a hardcoded empty zone array — grep-verified as "present," dead in reality, caught only by live UAT. v2.3 adds a *fourth* gate row (dataset grant) plus per-type level displays plus an effective-level computation. Any of these can render plausibly while being wired to nothing: an effective-level badge that always shows the first grant, a clearance gate that reads the app's classification instead of the dataset's effective classification, a deny row that never fires because the seed has no case exercising it.
 
 **Why it happens:**
-v2.1 was added incrementally and each type was appended to `WorldState` across phases. The same
-incremental pattern applied to v2.2 has more entity types and produces proportionally more sprawl.
+"Grep-verification proves presence, not life" (v2.2 retro, verbatim). UI rows are visually complete before they're semantically wired, and build/type checks pass either way.
 
 **How to avoid:**
-Group v2.2 additions into a `DigitalResourceWorld` sub-object:
-```typescript
-interface DigitalResourceWorld {
-  networks: Network[];
-  platforms: Platform[];
-  applications: Application[];
-  resourceGrants: ResourceAccessGrant[];
-  resourceDelegates: ResourceAccessDelegate[];
-  disabledResourceGrantIds: Set<string>;
-}
-```
-The reducer handles `SET_DIGITAL_RESOURCE_WORLD` and `TOGGLE_RESOURCE_GRANT` as targeted actions on
-this sub-object. `seedWorld()` initializes it from a single `SEED_DIGITAL_RESOURCES` import.
-v2.3 can add a `DatasetWorld` sub-object without touching `zones` or resource fields.
+- **Every gate must be the deciding gate in at least one seed case.** Minimum deny matrix: (a) clearance too low for dataset, (b) app grant missing, (c) app grant expired while dataset grant active, (d) dataset grant missing (DATA-SEED-05), (e) dataset grant at insufficient level, (f) full ALLOW chain (DATA-SEED-04).
+- Live UAT criteria written per gate row: "select person X + dataset Y at date Z → row N shows DENY with reason R." Not "trace renders."
+- A world-state test that runs the resolver over the full seed and asserts the deny-reason distribution is non-degenerate (every gate kind appears as a failure reason at least once).
 
 **Warning signs:**
-- `WorldState` interface has more than 20 top-level fields.
-- `Action` union has more than 25 cases.
-- `seedWorld()` function body exceeds ~50 lines.
-- A `TOGGLE_RESOURCE_GRANT` action reuses the `grantId` field name also used by `TOGGLE_GRANT`
-  (name collision risk across two different grant collections).
+UAT checklist items phrased as "trace displays correctly"; seed data where everyone who has an app grant also has every dataset grant; a gate evaluator whose failure branch has no test.
 
-**Phase to address:** Phase 9 (WorldState structure design, before writing any reducer cases).
+**Phase to address:**
+Seed phase (deny matrix); UI phase live UAT (per-gate criteria). This maps directly to the project's "defer features, not enforcement" and live-UAT lessons.
 
 ---
 
-### Pitfall 5: Prerequisite Chain Uses Unstable `now` — Interactive Explorer Shows Inconsistent Decisions
+### Pitfall 5: Classification inheritance-with-override implemented as a copied field
 
 **What goes wrong:**
-The v2.2 gate chain (RSRC-ACCESS-05) evaluates: (1) clearance, (2) explicit grant per tier,
-(3) prerequisite tier grants active. Step 3 means calling `isGrantActive(networkGrant, now)` when
-resolving Platform access. If `now` is computed as `new Date()` at call time inside the resolver —
-rather than from a stable `useMemo(() => new Date(), [])` at the component level — a grant expiring
-at midnight causes inconsistent ALLOW/DENY flickers during interactive exploration. Worse, test
-fixtures that do not use a fixed constant will become non-deterministic on grant-boundary dates.
+DATA-05: dataset classification inherits from the Application *unless explicitly overridden* (same or higher, never lower). v2.2's pattern is **derive-only** — Application deliberately has NO classification field; `effectiveClassification` walks to the Platform. If v2.3 instead stores a `classification` field on every dataset (copied at seed time), it drifts silently when the platform classification differs from what was copied, and "never lower" is only true at the moment of copying. Conversely, if the developer copies the v2.2 pattern verbatim (no field at all), overrides are unrepresentable and DATA-05 fails.
 
 **Why it happens:**
-The existing `AccessResolutionExplorer` has a comment `// Stable now — once per mount, no
-re-evaluation drift (Pitfall 4 guard)`. This is easy to miss when writing a new
-`DigitalResourceExplorer` component from scratch. The resolver function itself is stateless and
-correct; the problem is always in the caller.
+"Inherits unless overridden" reads like "has a field with a default." The v2.2 precedent (derive-only) and the v2.3 requirement (override allowed) genuinely differ, and the difference is easy to blur.
 
 **How to avoid:**
-Keep the pattern already established in v2.1: all resolver and grant-check functions take `now: Date`
-as an explicit parameter (this is already true for `isGrantActive`, `resolveGrant`,
-`resolveZoneAccess`, `isDelegateActive` in `model.ts`). In the new explorer component, use
-`const now = useMemo(() => new Date(), [])`. Unit tests use a fixed constant (as
-`physical-access.test.ts` uses `const NOW = new Date("2026-01-15T12:00:00Z")`).
+- Model as `classification_override: Classification | null` on the dataset; extend `effectiveClassification` (or add `effectiveDatasetClassification`) so `null` → derive from the Application → Platform chain; non-null → use override.
+- Add a pure validator: `override !== null && CLEARANCE_RANK[override] < CLEARANCE_RANK[effectiveClassification(parentApp)]` → error. Run it over the entire seed in a test (the v2.2 seed-validator pattern).
+- The clearance gate in the dataset chain must read the *effective dataset* classification, not the application's — otherwise an overridden-higher dataset is reachable with app-level clearance.
+- UI: reuse the v2.2 "(inherited)" badge convention; show "(override)" when non-null.
 
 **Warning signs:**
-- Any resolver or grant-check function calls `new Date()` internally instead of receiving `now`.
-- The digital resource explorer component does not have a `useMemo(() => new Date(), [])` call.
-- Test fixtures use `new Date()` without a fixed date string.
+A required `classification` field on the dataset type; seed rows setting classification on every dataset; no test with an override both equal-to and higher-than the parent, and none asserting lower-than is rejected.
 
-**Phase to address:** Phase 9 (resolver function signatures and test fixture pattern) and Phase 11
-(explorer component).
+**Phase to address:**
+Phase 13 (model + validator); seed phase (override fixtures).
 
 ---
 
-### Pitfall 6: Pattern Drift — Parallel Abstractions for the Same Concept
+### Pitfall 6: Cross-tier inheritance leaking back in via "default access"
 
 **What goes wrong:**
-v2.1 established precise names for its patterns: `PhysicalAccessGrant`, `ZoneAccessDelegate`,
-`isGrantActive`, `isDelegateActive`, `resolveGrant`. If v2.2 introduces parallel types and functions
-with slightly different names or semantics for the same concept — for example, `ResourceGrant` vs
-`ResourceAccessGrant`, or `isActive` vs `isGrantActive` — the codebase accumulates conceptual
-synonyms. A future developer reading `model.ts` cannot tell which functions are the canonical
-implementation and which are the variant. This is especially acute for the time-window logic: if
-`isGrantActive` is duplicated as a slightly different `isResourceGrantActive` with different boundary
-semantics (e.g., exclusive `<` instead of inclusive `<=`), the two models will disagree on boundary
-cases.
+Someone adds a convenience: "app grant holders get READ on the app's datasets by default," or "FULL_ACCESS on the application implies mailbox access," or the reverse lookup lists app-grant holders as dataset-accessors. This re-introduces exactly the cross-tier inheritance v2.2 explicitly rejected (no cross-tier inheritance; explicit per-tier grants) and breaks the milestone's core demo point: *application access does not grant access to anything inside it* (DATA-ACCESS-02).
 
 **Why it happens:**
-Developers naturally rename concepts when they feel the domain is "different enough." The physical
-and digital resource models are structurally parallel but vocabulary-distinct, encouraging fresh
-naming. Boundary semantics are particularly easy to accidentally diverge — the `<=` boundary
-comparison in `isGrantActive` is a deliberate, tested choice that is invisible in a copy-paste.
+Dataset grants make seed data voluminous (every person needs explicit grants for every dataset they touch); defaults are the tempting shortcut. Also v2.1 zones DID have parent→child grant inheritance — a developer pattern-matching on the wrong prior milestone imports the wrong rule.
 
 **How to avoid:**
-Before Phase 9 begins, write a one-page naming convention that explicitly maps v2.1 concepts to v2.2
-equivalents: `PhysicalAccessGrant → ResourceAccessGrant`, `ZoneNode → DigitalResource (with tier
-discriminator)`, `isGrantActive` (reuse, do not copy). Prefer reusing `isGrantActive` directly for
-`ResourceAccessGrant` if the interface is compatible, rather than writing a separate function.
-If a new function is necessary, name it explicitly to distinguish it (e.g.,
-`isResourceGrantActive`) and document which v2.1 function it parallels.
+- State it in the phase spec: **no default levels, no implied dataset access, ever** — v2.1 zone inheritance is explicitly the wrong precedent; v2.2 tier grants are the right one.
+- Keep seed volume manageable with builder functions (v2.2 seed pattern) rather than defaults in the resolver.
+- Test: person with an active app grant and zero dataset grants → DENY on every dataset in that app (this is DATA-SEED-05 as a *property test over the seed*, not one fixture).
 
 **Warning signs:**
-- `model.ts` has two functions with similar signatures but different names for the same time-window check.
-- The `<=` boundary in `isGrantActive` is changed to `<` in a v2.2-specific copy.
-- TypeScript interfaces for `ResourceAccessGrant` and `PhysicalAccessGrant` have the same fields with
-  different field names (`resource_id` vs `zone_id` is intentional; `grantedUntil` instead of
-  `valid_until` is drift).
+Words "default", "implied", "baseline level" in plans; resolver code that returns a level when the dataset-grant list is empty.
 
-**Phase to address:** Phase 9 (define naming convention and type shapes before writing implementations).
+**Phase to address:**
+Phase 13 spec + resolver tests.
 
 ---
 
-### Pitfall 7: Demo Isolation Breach — Adding a New Route Instead of a New DemoRoot Tab
+### Pitfall 7: Delegation scope creep — level-unbounded delegates and unrecorded semantics
 
 **What goes wrong:**
-A developer, wanting to surface the new digital resource panel quickly, adds a new file to
-`frontend/src/routes/` (or creates a new `_component.tsx` under an existing route). TanStack file-based
-routing regenerates `routeTree.gen.ts` the moment any route file changes, which is a generated file
-that must never be hand-edited. This breaks the demo isolation constraint established from v2.0 and
-held through v2.1: "Demo stays isolated — demo in `frontend/src/demo/`; no `routeTree.gen.ts`
-changes until fullstack integration."
+Two failure modes. (a) **Scope**: v2.3 delegation "mirrors v2.1/v2.2" but datasets add a new dimension — *level*. If a delegate can issue FULL_CONTROL/ADMIN grants, delegation is effectively admin-transfer; industry guidance is least-privilege delegation, and delegates exceeding source authority is the classic delegation failure (MEDIUM confidence — IDPro/AD-delegation literature; the requirements file itself asks "does a delegate grant up to their own level or up to the max?"). (b) **Enforcement**: v2.2's lesson — `canIssueGrant` existed but the enforcement was deferred, resurfacing as a live IDOR ("defer features, not enforcement"). If v2.3's issuing form renders for non-authorized personas, or `canIssueDatasetGrant` exists but the form doesn't call it, the same hole ships.
 
 **Why it happens:**
-The demo's `DemoRoot.tsx` tab-based navigation is not obvious to a developer who joins mid-milestone.
-The TanStack routes directory pattern is the canonical app navigation pattern and the first thing
-developers reach for. The existing Physical Access tab in `DemoRoot.tsx` is the only prior example
-of the correct approach, and it may not be seen before a new route file is created.
+"Mirrors v2.1/v2.2" reads like zero design work, but neither prior milestone had ordered levels, so the level-bound question has no precedent to mirror. And demo issuing forms feel like UI, not enforcement surfaces.
 
 **How to avoid:**
-The correct pattern is: add a `"digital-access"` entry to the `ActiveView` type in `DemoRoot.tsx`,
-add a button to the tab bar, add a branch in the conditional render. Do not create any file under
-`frontend/src/routes/`. Document this in the Phase 11 UI spec task description. Add a pre-flight
-check in the phase review: `git diff frontend/src/routeTree.gen.ts` must be empty.
+- Decide the level-bound question explicitly in discuss-phase (recommend for demo scope: delegation grants full issuing authority for that dataset, unbounded by level — matches v2.2's simplicity — but **record it as a Key Decision** with the alternative noted, as done for v2.2's Option B).
+- Also decide grant-outlives-delegation explicitly: v2.2 grants survive their issuer's delegation expiring (issue-time check only). Mirroring that is fine; leaving it implicit is not — it will look like a bug in UAT.
+- `canIssueDatasetGrant(actorOrg, dataset, at)` as a pure function in `model.ts` (ADMIN org_link OR active delegate — mirror `canIssueResourceGrant`), called by the issuing form to gate rendering AND on submit. Tests for: delegate can issue, expired delegate cannot, non-admin non-delegate cannot.
+- No sub-delegation (delegate cannot create delegates) — make it a stated non-feature, matching v2.1/v2.2.
 
 **Warning signs:**
-- Any new file appears under `frontend/src/routes/` during Phases 9–11.
-- `routeTree.gen.ts` has a diff after Phase 11 completes.
-- A developer runs `npm run dev` and sees a new route in the TanStack router tree for the digital resource panel.
+"Delegation: same as v2.2" as the entire plan line; an issuing form with no persona gating; no test where a delegation window has expired.
 
-**Phase to address:** Phase 11 (UI). The spec for the new tab must explicitly call out the `DemoRoot.tsx`
-pattern and prohibit route files.
+**Phase to address:**
+Discuss-phase (two decisions); Phase 13 (`canIssueDatasetGrant` + tests); UI phase (form gating, UAT with a non-admin persona).
+
+---
+
+### Pitfall 8: Effective level computed at `Date.now()` while the resolver runs at explorer-time t
+
+**What goes wrong:**
+"Effective level = highest **active** grant" — active is a function of time. The v2.2 explorer resolves point-in-time (user picks the date; policy versions and grants are evaluated at t). If `effectiveDatasetLevel` defaults to `Date.now()` (or the UI badge computes it outside the resolver) while the trace resolves at explorer-selected t, the badge and the trace disagree exactly in the interesting demo cases — time-limited grants and the app-expiry crossover.
+
+**Why it happens:**
+Selectors written for browsing UI (resource browser, reverse lookup) naturally use "now"; the resolver takes t. Two call paths, one forgets the parameter. TypeScript won't catch a defaulted `at: Date = new Date()`.
+
+**How to avoid:**
+- `at: Date` is a **required** parameter (no default) on every new dataset function: `effectiveDatasetLevel`, `resolveDatasetAccess`, `activeDatasetGrants`, reverse lookup. Reuse `isWindowActive` for all windows.
+- The effective level shown anywhere in the explorer must come out of the same resolution result object as the trace (put `effectiveLevel` on `DatasetAccessResult`), never computed separately by the component.
+- Test: grant windows straddling t; assert effective level differs at t1 vs t2.
+
+**Warning signs:**
+`new Date()` inside `model.ts` or selectors; a UI badge component importing a grants array directly instead of a resolution result.
+
+**Phase to address:**
+Phase 13 (API shape); UI phase (single-source badge).
+
+---
+
+### Pitfall 9: Bolting Dataset into the ResourceNode tier union and breaking v2.2 invariants
+
+**What goes wrong:**
+The tempting move is `tier: 'NETWORK' | 'PLATFORM' | 'APPLICATION' | 'DATASET'`. But `resolveResourceAccess` is hard-coded to the 3-tier node union; datasets carry things no tier node has (dataset_type, per-type levels, admin/asset-owner orgs directly rather than org_links, classification override) and lack things tier nodes have (time-versioned policies — v2.3 defines no per-dataset policy engine). Widening the union forces every existing gate evaluator, selector, and test through a new case — and Phase 11 shipped **byte-exact TS↔Rust golden-fixture parity tests** (`digital-resource-golden-export.test.ts`) over the shared v2.2 types. Mutating those types or the resolver's input space can break golden exports and the Rust parity contract even though v2.3's backend is deferred.
+
+**Why it happens:**
+"It's the 4th layer of the same stack" — true conceptually, false structurally: datasets use fixed per-type gate chains (DATA-ACCESS-03), not data-driven policies.
+
+**How to avoid:**
+- New types (`Dataset`, `DatasetAccessGrant`, `DatasetAccessDelegate`, `DatasetAccessResult`) and a new `resolveDatasetAccess(person, dataset, at, world)` that *composes* the v2.2 resolver (calls `resolveResourceAccess` for the parent Application to evaluate the prereq gate, embedding that result in the dataset trace). Do not widen `ResourceNode` or touch v2.2 gate evaluators.
+- Run the golden-export and digital-resource test suites unchanged as a regression gate for every v2.3 phase ("v2.2 suite untouched and green" as an explicit success criterion).
+- Reuse by composition, not modification: `isWindowActive`, `CLEARANCE_RANK`, `effectiveClassification` are imports, not edit targets.
+
+**Warning signs:**
+Diffs inside `resolveResourceAccess` or the `GateDescriptor` evaluators; golden-fixture test failures; a `DATASET` string appearing in the tier union.
+
+**Phase to address:**
+Phase 13 architecture decision — first plan of the milestone.
 
 ---
 
@@ -278,118 +223,116 @@ pattern and prohibit route files.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Copy `resolveGrant` and rename to `resolveResourceGrant` without removing ancestor-walk | Faster scaffolding | Silently enables cross-tier inheritance (Pitfall 1) — broken model | Never |
-| Put Networks/Platforms/Applications in the flat `Resource[]` array with a `tier` discriminator | Reuses existing `Resource` type | Loses strict tree; parent/child queries become O(n) scans; tree browser UI cannot be built cleanly | Never — strict tree requires typed nodes with typed parent refs |
-| `new Date()` inside resolver for `now` | One fewer function parameter | Non-deterministic tests; explorer flickers on grant-boundary dates (Pitfall 5) | Never in test code; never in resolver internals |
-| Inline zone-advisory as a boolean flag inside the main gate chain | One return type instead of two | Flag gets lost across refactors; UI renders advisory as hard gate (Pitfall 2) | Never — the advisory/hard distinction is a model decision |
-| Share `ZoneResolutionTrace` for digital resources by adding a prop | Reuse existing component | Component is typed to `ZoneAccessResult`; the `zoneAdvisory` field gets dropped; trace is structurally different | Acceptable to extract a shared `GateRow` primitive; never to reuse the whole trace component |
-| Seed Application `minClearance` as hand-typed literals | Simple seed authoring | App can diverge from Platform classification silently (Pitfall 3) | Never — derive from Platform or validate at seed load |
-| Add resource data as 6 new top-level `WorldState` fields | Straightforward to write | Reducer sprawl; `seedWorld()` bloat; v2.3 worsens it (Pitfall 4) | Never — use sub-object grouping |
-
----
+| Single global level rank map | One table, less code | Cross-type level comparison bugs; wrong "highest" | Never — per-type ranks are ~10 extra lines |
+| Prereq checked only in issuing form | Simpler resolver | Orphaned-live grants after app expiry; demo's core claim false | Never (this IS the milestone's point) |
+| `at` defaulting to `new Date()` | Convenient call sites | Badge/trace divergence on time-limited grants | Never in `model.ts`; OK in a top-level demo-page default that passes t down |
+| Skipping the app-expiry-crossover seed case | Smaller seed | Temporal edge case undemoable and untested | Never — it's the headline temporal case |
+| Delegation semantics "same as v2.2" without recording level-bound + outlives-delegation decisions | No discussion needed | UAT confusion, re-litigated later (SEED-012 pattern) | Only if both decisions are explicitly recorded |
+| Storing copied classification per dataset | No derivation logic | Drift from platform reclassification; "never lower" unenforced | Never — `override \| null` is the same effort |
+| Deferring reverse-lookup (DATA-UI-03) through-resolver correctness | Faster UI | UI shows access the resolver denies | MVP-only, if flagged as known-wrong in the plan |
 
 ## Integration Gotchas
 
+v2.3 integrates with internal v2.2/v2.1 surfaces, not external services.
+
 | Integration | Common Mistake | Correct Approach |
 |-------------|----------------|------------------|
-| v2.1 zone model → zone-prerequisite link | Importing `resolveZoneAccess` directly inside `resolveResourceAccess` | Pass the zone grant result in as a computed parameter; keep zone and resource resolvers independent; zone result becomes `zoneAdvisory` on the resource result |
-| `WorldState` `TOGGLE_GRANT` vs `TOGGLE_RESOURCE_GRANT` | Reusing the `grantId` field name in the new action type | Use distinct field names: `grantId` for physical, `resourceGrantId` for digital — same `Set<string>` pattern but named separately |
-| `seed.ts` → adding digital resource exports | Appending more named exports to `seed.ts` forces all current `seed.ts` importers to re-evaluate | Group digital resource seed into `SEED_DIGITAL_RESOURCES` or a dedicated `seed-digital.ts` imported separately by `world-state.tsx` |
-| `DemoRoot.tsx` → surfacing the new panel | Adding a route file under `src/routes/` | Add `"digital-access"` to `ActiveView`, add tab button, add conditional render branch — no route file (Pitfall 7) |
-| `isGrantActive` reuse for `ResourceAccessGrant` | Writing a separate `isResourceGrantActive` with subtly different boundary logic | If `ResourceAccessGrant` has the same `valid_from`/`valid_until: Date \| null` shape, pass it directly to the existing `isGrantActive` — do not copy |
-
----
+| v2.2 resolver (`resolveResourceAccess`) | Editing it to know about datasets | Compose it from `resolveDatasetAccess`; embed its result as the prereq gate row |
+| `isWindowActive` | Re-implementing window logic for dataset grants ("active until end of day", exclusive bounds) | Import and reuse; inclusive bounds, `null` = unbounded, everywhere |
+| `effectiveClassification` | Reading the Application's classification field (it has none — throws pattern) | Call the derivation; extend for dataset override |
+| World-state store (`world-state.tsx`) | Datasets/grants added outside the store, invisible to the audit log & toggles | Extend the store the way v2.2 grants were added; grant-toggle parity |
+| Resource Browser (DATA-UI-01) | New parallel browser tree instead of extending Application nodes | Datasets render *inside* the Application node — the nesting IS the message |
+| Golden-export / Rust parity tests | Touching shared v2.2 types "harmlessly" | Treat v2.2 type files as frozen; new types in new declarations; keep suite green |
+| Seed (`seed.ts`, already 1,842 lines) | Hand-writing every dataset grant inline | Builder functions + whole-seed validators (v2.2 pattern); validators enforce vocab membership, override ≥ parent, prereq-crossover presence |
 
 ## Performance Traps
 
+Demo scale (6 units, tens of datasets, hundreds of grants) makes real performance moot; these are correctness-adjacent traps.
+
 | Trap | Symptoms | Prevention | When It Breaks |
 |------|----------|------------|----------------|
-| Recomputing full 3-gate prerequisite chain on every keystroke | Perceptible lag in the explorer | All resolution is O(n) over in-memory arrays; at demo scale (~30 resources, ~50 grants) this is negligible — no optimization needed | Not applicable at demo scale |
-| Building the resource tree from flat arrays on every render | Minor flicker during tree expansion | `useMemo` over `getChildren` analog keyed on the typed resource arrays | Not applicable at demo scale |
-| Resolving zone prerequisites by importing `resolveZoneAccess` into render code (not a `useMemo`) | Re-runs zone resolution on every parent render, not just when selections change | Keep zone advisory in the same `useMemo` block as the resource resolution result | Minimal impact at demo scale, but architectural correctness matters |
-
----
+| Reverse lookup running the full resolver per person × per dataset on every render | Sluggish dataset view | Memoize per (dataset, t); recompute on world-state change | ~100s of persons — unlikely in demo, cheap to avoid |
+| Resolving the parent Application chain redundantly for every dataset in a list view | N× repeated gate chains | Resolve app access once per (person, app, t), share across its datasets | Cosmetic at demo scale |
+| Six-state loader (v2.2 UI pattern) re-fetch storms | Console noise, flicker | Reuse v2.2's loader/hook pattern (`use-digital-resources.ts`) as-is | N/A — mock data, but pattern drift costs review time |
 
 ## Security Mistakes
 
-This is a demo-only milestone — "security mistakes" means model correctness and non-misrepresentation.
+Demo/mock, but v2.2 proved demo enforcement gaps become real holes when the backend arrives ("defer features, not enforcement").
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Advisory rendered as denial in the UI (Pitfall 2) | Demo audience concludes the model is wrong; zone access appears to block network access when it should not | Test first: `resolveResourceAccess` returns `allow: true` with unsatisfied zone advisory before UI is built |
-| Seeding Application `minClearance` below its parent Network's classification | Demonstrates an impossible scenario — a SECRET network accessible from a CONFIDENTIAL platform | Validation function in `model.ts` (Pitfall 3); seed test asserts the invariant |
-| Omitting expired/future grant examples from the mock seed | RSRC-GRANT-03 (time-limited grants) is invisible in the demo; the time-window mechanism appears unvalidated | RSRC-SEED-05 requires active + expired + future grants across all three resource tiers; at least 2 seed grants per tier must fail `isGrantActive(g, NOW)` |
-| Presenting the zone-advisory as "zone access required" in the trace label | Viewer concludes zone access is mandatory for all digital resources | Label the advisory row: "Zone access (advisory)" with a clear non-blocking annotation |
-
----
+| Issuing form rendered/functional for non-authorized personas | Repeat of the v2.2 IDOR-shaped gap; wrong model demoed to stakeholders | Gate form on `canIssueDatasetGrant`; UAT with viewer/non-admin persona |
+| Delegate can self-issue ADMIN/FULL_CONTROL with no recorded decision | Silent privilege escalation baked into the model that the future backend will faithfully implement | Explicit Key Decision on level-bounding (Pitfall 7) |
+| Clearance gate checks app classification, not effective dataset classification | Overridden-higher datasets reachable below their classification | Gate reads `effectiveDatasetClassification`; test with an overridden dataset |
+| Grants not written to the append-only audit log | Breaks the project's core invariant (audit log = system of record, reconstructable decisions) | Dataset grant issue/expiry events follow the v2.2 audit-event pattern |
+| Effective level leaking across datasets of the same type | Person's FULL_ACCESS on mailbox A displayed/used for mailbox B | `effectiveDatasetLevel` keyed by dataset id, not (person, type) |
 
 ## UX Pitfalls
 
 | Pitfall | User Impact | Better Approach |
 |---------|-------------|-----------------|
-| Advisory zone row styled identically to hard gate failure (Pitfall 2) | Viewer is confused: "why DENY when no zone requirement applies to this scenario?" | Amber/yellow "warning" row with explicit "Advisory (non-blocking)" label vs. red for hard gates |
-| Flat dropdown listing all Networks/Platforms/Applications | Viewer cannot tell which Platform belongs to which Network | Tree-indented select or cascaded selectors: selecting Network first filters Platform dropdown (mirrors zone browser depth-indented pattern) |
-| Resolution trace gate rows unlabelled per tier | 3-tier chain produces 3×3 gates; which clearance check is for which tier? | Group trace rows by tier: "Network gate", "Platform gate", "Application gate" as labeled sections |
-| Grant toggle panel listing all resource grants across all tiers | Overwhelming; ~50 grants makes the panel unreadable | Filter to grants relevant to selected resource and its prerequisite chain (mirrors `relevantZoneIds` pattern from `access-resolution-explorer.tsx`) |
-| No visual distinction between expired/future grants and active grants in the detail panel | Viewer cannot tell which grants are currently active | Show expired grants with strikethrough or gray; future grants with a clock icon and "Starts: [date]" |
-
----
+| Four-gate trace becomes an unreadable wall | The explainability demo value dies at its deepest layer | Reuse v2.2 trace row idiom; collapse the embedded Application sub-chain to one summarizable row, expandable |
+| Same label "READ" meaning different things per type | Stakeholders assume one vocabulary; archive levels misread | Always render level WITH type context ("Mailbox: READ"); distinct badge styling per type |
+| Highest-wins invisible when multiple grants overlap | "Why does it say FULL_ACCESS when I granted READ?" confusion in UAT | Show all active grants + which one is effective ("effective: FULL_ACCESS — supersedes READ") |
+| App-expiry crossover not surfaced in the date picker flow | The best temporal demo case exists in seed but nobody finds it | Seed notes/guided-scenario hint (v2.2 had canonical demo walkthrough cases); UAT script includes the crossover date |
+| Reverse lookup showing raw grants (incl. inactive/superseded) | "Who has access" list is wrong — the one view auditors care about | Reverse lookup = resolver output at t: person, effective level, via-which-grant |
 
 ## "Looks Done But Isn't" Checklist
 
-- [ ] **Cross-tier inheritance blocked:** Vitest test exists: person has only a Network grant → Platform resolution = DENY with reason `PREREQUISITE_NOT_MET`. Test passes.
-- [ ] **Advisory rendered as advisory:** `resolveResourceAccess` test asserts `allow: true` when zone prerequisite is unsatisfied. UI renders it amber/yellow with "advisory" label. Overall verdict is ALLOW.
-- [ ] **Application classification validated:** Seed test calls `validateResourceClassification` for every Application record. Every Application's `minClearance` equals its parent Platform's.
-- [ ] **Time-window coverage in seed:** At least one expired grant and one future grant exist per resource tier (RSRC-SEED-05). `isGrantActive(g, NOW)` returns `false` for at least 2 seed grants per tier.
-- [ ] **Stable `now`:** Digital resource explorer uses `const now = useMemo(() => new Date(), [])`. No resolver function calls `new Date()` internally.
-- [ ] **No `routeTree.gen.ts` changes:** `git diff frontend/src/routeTree.gen.ts` is empty after Phase 11.
-- [ ] **Full prerequisite chain in trace:** Resolution trace for an Application shows clearance gate, Network grant gate, Platform grant gate, Application grant gate — not only the final tier.
-- [ ] **Zone advisory never causes DENY:** Manually check the explorer: select a person with no zone grants, select a Network terminal resource with a zone prerequisite → verdict must be ALLOW with amber advisory row.
-- [ ] **WorldState sub-object clean:** `WorldState` interface has a `digitalResources: DigitalResourceWorld` field, not 6 new top-level fields.
-- [ ] **Demo builds clean:** `npm run build` produces zero TypeScript errors after Phase 11.
-
----
+- [ ] **Dataset gate chain:** every one of the 4+ gates is the *deciding* gate in ≥1 seed case — verify by running the resolver over the seed and counting deny reasons per gate kind (the zone-prereq dead-code test).
+- [ ] **App-expiry crossover:** a seed person whose Application grant expires *before* their dataset grant, and the explorer flips ALLOW→DENY across that date — verified live, not by grep.
+- [ ] **Per-type vocabularies:** a grant with a level from the wrong type's vocabulary is *unrepresentable or rejected* — verify the seed validator throws on a deliberately bad fixture.
+- [ ] **Classification override:** seed contains same-level override, higher override, and a test proving lower-than-parent is rejected.
+- [ ] **Highest-wins:** a person with ≥2 simultaneous active grants on one dataset (DATA-GRANT-02), effective level pinned by test AND visible in UI.
+- [ ] **Delegation:** expired-delegation fixture exists; issuing form denies for that persona at that date; both delegation decisions (level-bound, grant-outlives-delegation) recorded in PROJECT.md Key Decisions.
+- [ ] **Reverse lookup (DATA-UI-03):** goes through the resolver — verify a person with a dataset grant but expired app grant does NOT appear.
+- [ ] **v2.2 regression:** digital-resource + golden-export test suites pass unmodified; no diff inside `resolveResourceAccess` or v2.2 type declarations.
+- [ ] **Audit events:** issuing a dataset grant in the demo UI produces an audit-log entry (project invariant).
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Cross-tier inheritance (discovered late in Phase 11) | HIGH | Rewrite `resolveResourceGrant` (trivial — remove loop); rewrite affected tests; manually verify all seed grant scenarios produce the correct tier verdicts |
-| Advisory rendered as hard gate (discovered in demo review) | MEDIUM | Extract `ZonePrerequisiteAdvisory` component; change `resolveResourceAccess` return type to separate `zoneAdvisory`; update all callers |
-| Application classification diverged in seed | LOW | Fix seed literals or introduce builder functions; run validator; no model change needed |
-| WorldState sprawl already in reducer | MEDIUM | Introduce `DigitalResourceWorld` sub-object; refactor `seedWorld()` and reducer `digitalResources.*` access; update all `useWorld()` callsites |
-| Unstable `now` causing test flicker | LOW | Remove `new Date()` from resolver internals; add `useMemo` to explorer component |
-| Route isolation breach | MEDIUM | Delete the route file; move component to `DemoRoot.tsx` tab pattern; regenerate `routeTree.gen.ts`; verify clean diff |
-
----
+| Global level ordering shipped | MEDIUM | Introduce per-type rank arrays; add dataset_type discrimination to grant validation; sweep call sites of the comparator (contained if effectiveDatasetLevel is the only comparator) |
+| Issue-time-only prereq shipped | LOW–MEDIUM | Add the app-grant gate to the resolver chain + crossover test; audit selectors (reverse lookup) for direct grant reads |
+| Dead trace rows shipped | LOW (if caught in UAT) | v2.2's 12-07 fix pattern: wire the real data source, add the deny-matrix seed cases, re-run live UAT |
+| Dataset bolted into tier union | HIGH | Effectively a Phase-13 redo: extract dataset types, restore v2.2 resolver, rebuild composition — this is why it's an architecture gate up front |
+| Copied classification field shipped | MEDIUM | Migrate seed to `override \| null`; add derivation + validator; re-check clearance gate reads |
+| Delegation decisions never recorded | LOW | Record retroactively in Key Decisions before milestone close (v2.2 SEED-012 pattern) — but expect one UAT round of confusion first |
 
 ## Pitfall-to-Phase Mapping
 
+Phase numbering continues from v2.2 (v2.3 starts at Phase 13). Assumed shape: model/resolver → seed → UI (roadmap may merge/split; the mapping is by concern).
+
 | Pitfall | Prevention Phase | Verification |
 |---------|------------------|--------------|
-| Cross-tier inheritance | Phase 9: `resolveResourceGrant` defined without ancestor-walk; failing test before passing impl | Test named `cross-tier-inheritance-blocked` is green |
-| Advisory vs hard gate | Phase 9: `ResourceAccessResult` type has `zoneAdvisory` separate field; test `allow: true` with unsatisfied zone; Phase 11: amber rendering, no DENY when only zone unsatisfied | Both test and visual check pass |
-| Application classification override | Phase 9: `validateResourceClassification` in `model.ts`; Phase 10: seed test calls it for all Applications | Seed test green; no Application with mismatched `minClearance` |
-| WorldState explosion | Phase 9: `DigitalResourceWorld` sub-object defined before any reducer cases | `WorldState` interface review at Phase 9 review gate; field count check |
-| Unstable `now` | Phase 9: resolver signatures take explicit `now: Date`; test fixtures use fixed constant; Phase 11: explorer component has `useMemo` | All resolver tests use fixed `NOW`; explorer component reviewed |
-| Pattern drift (naming/boundary) | Phase 9: naming convention documented before types are written | No duplicate time-window function exists in `model.ts`; no `valid_until` renamed to something else |
-| Route isolation breach | Phase 11: UI spec explicitly prohibits route files; review gate includes `git diff routeTree.gen.ts` check | `routeTree.gen.ts` diff is empty |
-| Seed missing expired/future grants | Phase 10: RSRC-SEED-05 checklist item with explicit count | At least 2 grants per tier where `isGrantActive(g, NOW)` is `false` |
-
----
+| 1. Global level ordering | Phase 13 (model design) | Type-level: cross-type comparison unrepresentable; seed validator rejects wrong-vocab level |
+| 2. ARCHIVE_ROLE superset assumption | Pre-Phase-13 discuss/spec (decision) | Decision recorded; multi-grant effective-level test pinned |
+| 3. Issue-time-only prereq | Phase 13 (resolver) + seed phase (crossover fixture) | Resolver test: DENY after app expiry with active dataset grant |
+| 4. Dead trace rows | Seed phase (deny matrix) + UI phase (live UAT) | Every gate kind appears as a deciding deny in seed; per-gate UAT criteria pass live |
+| 5. Classification override drift | Phase 13 (model + validator) | Lower-than-parent rejected in test; "(override)" badge live |
+| 6. Cross-tier inheritance leak | Phase 13 (spec + resolver tests) | Property test: app grant + zero dataset grants ⇒ DENY on all datasets |
+| 7. Delegation scope creep | Discuss-phase (decisions) + Phase 13 (`canIssueDatasetGrant`) + UI phase (form gating) | Expired-delegate deny test; non-admin persona UAT; decisions in PROJECT.md |
+| 8. `Date.now()` vs explorer-t | Phase 13 (required `at` param) + UI phase | Effective level comes from resolution result; t1≠t2 test |
+| 9. Tier-union widening | Phase 13 first plan (architecture gate) | v2.2 suites green and untouched; no `DATASET` in tier union |
 
 ## Sources
 
-- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/lib/model.ts` — v2.1 model: `resolveGrant` ancestor-walk pattern, `isValidZoneTypeCombination`, `isGrantActive` boundary semantics (`<=`), `ZoneAccessResult` type, `PhysicalAccessGrant`/`ZoneAccessDelegate` interface shapes
-- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/lib/physical-access.test.ts` — v2.1 test suite: `const NOW` fixed constant pattern, D3-13 inline-fixture pattern, cross-type-inheritance-blocked tests, boundary-inclusive tests
-- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/store/world-state.tsx` — `WorldState` interface current shape, `seedWorld()` function, `Action` union, stable `now` pattern comment in `AccessResolutionExplorer`
-- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/components/access-resolution-explorer.tsx` — "Stable now — once per mount" comment, `ZoneResolutionTrace` gate rendering pattern, `relevantZoneIds` filter pattern
-- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/components/physical-access-panel.tsx` — sub-tab navigation pattern inside a parent panel
-- `/Users/vidarbrevik/projects/janus-2.0/frontend/src/demo/DemoRoot.tsx` — `ActiveView` type, tab-button navigation, `WorldProvider` wrapping — the correct pattern for adding a new demo panel
-- `/Users/vidarbrevik/projects/janus-2.0/.planning/milestones/v2.2-REQUIREMENTS.md` — RSRC-ACCESS-05 (gate chain), RSRC-GRANT-02 (no cross-tier inheritance), RSRC-ACCESS-04 (zone-prerequisite), RSRC-SEED-05 (time-window coverage)
-- `/Users/vidarbrevik/projects/janus-2.0/.planning/PROJECT.md` — Key Decisions: "Application inherits Platform classification" and "zone-prerequisite is advisory non-blocking"; demo isolation constraint
-- `/Users/vidarbrevik/projects/janus-2.0/CLAUDE.md` — Demo stays isolated (`frontend/src/demo/`); no `routeTree.gen.ts` changes until fullstack integration
+**HIGH confidence (primary — codebase & project record):**
+- `frontend/src/demo/lib/model.ts` — gate-chain resolver, `evaluateParentTierGrantGate`, `isWindowActive`, `canIssueResourceGrant`, `effectiveClassification`, open-vocab roles, fail-closed gate switch (analyzed via local delegation, line-referenced)
+- `.planning/RETROSPECTIVE.md` — "defer features, not enforcement"; "grep-verification proves presence, not life"; zone-advisory dead-code post-mortem; deferred-enforcement→IDOR lesson
+- `.planning/PROJECT.md` Key Decisions — no cross-tier inheritance; advisory-not-gate; Application classification inheritance; Option B / SEED-012
+- `.planning/milestones/v2.3-REQUIREMENTS.md` — DATA-* requirements and its own Open Questions (roles-vs-levels, delegation level-bound)
+- `frontend/src/demo/lib/digital-resource-golden-export.test.ts` — TS↔Rust parity constraint
+
+**MEDIUM confidence (web, cross-consistent with primary):**
+- Permission-set dominance / hierarchical level ordering: [Privilege Level — ScienceDirect](https://www.sciencedirect.com/topics/computer-science/privilege-level), [BOLA empirical taxonomy (arXiv)](https://arxiv.org/pdf/2605.25865)
+- Issue-time vs runtime validation, orphaned entitlements: [Palo Alto — IGA](https://www.paloaltonetworks.com/cyberpedia/what-is-identity-governance-and-administration-iga), [Palo Alto — JIT access](https://www.paloaltonetworks.com/cyberpedia/what-is-just-in-time-access-jit), [Pre-commit consent validation (arXiv)](https://arxiv.org/pdf/2603.07004)
+- Delegation pitfalls: [IDPro — The Art of Delegation](https://idpro.org/the-art-of-delegation-in-identity-access-management-empowering-efficiency-and-security/), [Semperis — AD delegation gotchas](https://www.semperis.com/blog/ad-security-delegation-user-management-and-windows-password-options/), [Microsoft Entra — entitlement-management delegation](https://learn.microsoft.com/en-us/entra/id-governance/entitlement-management-delegate)
+
+**LOW confidence (web, general framing only):**
+- Coarse-vs-fine-grained layering: [Oso — fine-grained authorization](https://www.osohq.com/learn/what-is-fine-grained-authorization), [FusionAuth — FGA explained](https://fusionauth.io/blog/fine-grained-authorization)
 
 ---
-*Pitfalls research for: v2.2 Network→Platform→Application digital-resource access added to Janus 2.0 demo*
-*Researched: 2026-06-02*
+*Pitfalls research for: v2.3 Dataset Access (demo) — dataset/entitlement layer on a tiered ABAC model*
+*Researched: 2026-07-03*

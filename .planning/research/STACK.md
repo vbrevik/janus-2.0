@@ -1,197 +1,152 @@
 # Stack Research
 
-**Domain:** Demo/mock frontend — digital resource hierarchy (Network → Platform → Application) for Janus 2.0 v2.2
-**Researched:** 2026-06-02
-**Confidence:** HIGH — entire stack is present and running; analysis is of what the existing v2.1 patterns already provide, not of new choices
+**Domain:** Dataset-level authorization (innermost access layer) — TypeScript in-memory demo extension for Janus 2.0 v2.3
+**Researched:** 2026-07-03
+**Confidence:** HIGH (verdict grounded in direct codebase inspection; no external sources needed — no new library is proposed)
 
 ---
 
-## Executive Finding
+## Verdict: Zero stack additions needed
 
-**Add nothing to package.json.** Every rendering primitive, state pattern, and UI element needed for v2.2 already exists in the installed stack. The three-tier digital resource hierarchy (Network → Platform → Application) is structurally isomorphic to v2.1 physical zones (Site → Building → Room): same collapsible tree rendering, same detail panel layout, same two-gate-plus-advisory resolution trace, same grant toggle interactivity, same `WorldState` + `useReducer` store pattern. The correct v2.2 strategy is to mirror the v2.1 implementation, not to diverge or add new tools.
+v2.3 is a pure extension of the v2.1/v2.2 pattern that already exists in `frontend/src/demo/`.
+Every new capability (Dataset model, per-type access-level vocabularies, prerequisite gate chain,
+time-limited grants with highest-active resolution, admin/asset-owner orgs + delegation, mock
+seed, demo UI) maps 1:1 to a mechanism the demo already implements twice with the current
+dependencies. **Do not run `npm install` for this milestone.**
 
----
+Verified against the codebase (2026-07-03):
 
-## Recommended Stack
-
-### Core Technologies — all already installed, zero new installs
-
-| Technology | Version (installed) | Role in v2.2 |
-|------------|---------------------|--------------|
-| React 19 | ^19.1.1 | Component tree; `useState`/`useMemo` hooks for all new panels — same patterns as v2.1 |
-| TypeScript ~5.9 | ~5.9.3 | New model types: `DigitalResource`, `ResourceAccessGrant`, `ResourceDelegate`, `ResourceAccessResult`; strict types enforce gate-chain logic at compile time |
-| Tailwind CSS | ^3.4.17 | All layout and color — reuse existing tone system (`slate`/`amber`/`red`/`green`/`blue`) |
-| Vite | ^7.1.7 | No config changes; demo island is already wired as a second `rollupOptions.input` entry (`demo.html`) in `vite.config.ts` |
-| Vitest | ^4.0.3 | Unit tests for new model functions; same `jsdom` environment, same inline-fixture pattern as `physical-access.test.ts` |
-
-### Supporting Libraries — already installed, use as-is
-
-| Library | Version (installed) | How v2.2 Uses It |
-|---------|---------------------|------------------|
-| lucide-react | ^0.548.0 | Optional tier icons (network, server, app glyphs) — zero cost, already installed in the main app; use sparingly in demo if visually helpful |
-| clsx + tailwind-merge | ^2.1.1 / ^3.3.1 | Conditional class composition in new components — same usage as existing demo components |
-
-`class-variance-authority` is installed but not used in demo components; continue not using it there — it adds verbosity for one-off demo styling.
+| New v2.3 capability | Existing mechanism it reuses | Where it lives today |
+|---------------------|------------------------------|----------------------|
+| `Dataset` model + `dataset_type` | Plain TS interfaces + string-literal unions (same as `ApplicationNode`, `ZoneNode`) | `frontend/src/demo/lib/model.ts` (1,183 lines; all v2.1/v2.2 types + resolvers) |
+| Per-type access-level vocabularies (MAILBOX/ARCHIVE_ROLE/DOCUMENT_SITE) | String-literal unions / discriminated unions — exhaustiveness checking for free | `model.ts` pattern (e.g. `ZoneAccessGate`, gate-kind unions) |
+| Gate-chain resolution: clearance → app grant → dataset grant (DATA-ACCESS-03) | `resolveResourceAccess()` gate-loop dispatcher — pure function, explainable trace, fails closed on unknown gate kinds | `model.ts:1084` |
+| Time-limited `DatasetAccessGrant`; effective level = highest active (DATA-GRANT-01..03) | `isGrantActive(grant, now)` point-in-time check + `resolveGrant()`; "highest active" is a trivial pure reduction over active grants | `model.ts:232`, `model.ts:243` |
+| Admin/asset-owner orgs + delegation (DATA-04, DATA-DELEG-01) | `ZoneAccessDelegate` / `ResourceAccessDelegate` + `isDelegateActive()` — third instantiation of a twice-proven pattern | `model.ts:219`, `model.ts:315` |
+| Mock dataset (DATA-SEED-01..05) | Seed-data module | `frontend/src/demo/lib/seed.ts` (51.6K — extend, don't replace) |
+| Derived views: tree + reverse lookup "who has access at what level" (DATA-UI-03) | Pure selector functions | `frontend/src/demo/lib/digital-resource-selectors.ts` (`buildResourceTree`, `activeGrantsForResource`, `resolveResourceAt`) — add a sibling `dataset-selectors.ts` |
+| Demo UI: datasets in Resource Browser + extended Access Resolution Explorer (DATA-UI-01..02) | Existing demo panels + hand-rolled `ui.tsx` primitives (`Card`, `Pill`, `Field`, `Select`, `MockTag`) | `frontend/src/demo/components/resource-browser.tsx`, `resource-access-explorer.tsx`, `ui.tsx` |
+| Demo state | React context + reducer world-state store (`useWorldDispatch`) | `frontend/src/demo/store/world-state.tsx` |
+| Tests | Vitest unit tests; one blocking test per acceptance criterion; exactly-named pitfall tests | `digital-resource.test.ts` (40K) is the template to mirror |
 
 ---
 
-## What Each New v2.2 Module Needs From the Stack
+## Current Stack (already installed — versions from `frontend/package.json`)
 
-### `demo/lib/digital-resource.ts` (new)
+### Core Technologies
 
-Pure TypeScript; no library imports. Exports:
+| Technology | Version | Purpose | Why it suffices for v2.3 |
+|------------|---------|---------|--------------------------|
+| TypeScript | ~5.9.3 | Types + pure resolver logic | Discriminated unions model per-type access-level vocabularies natively; the entire authorization model is types + pure functions |
+| React | ^19.1.1 | Demo UI | Dataset browser/explorer extensions are new panels in the existing 7-tab shell (`DemoRoot.tsx`) |
+| Vite | ^7.1.7 | Build; demo is a separate entry (`demo/main.tsx` / `demo.html`) | Demo-island isolation constraint already satisfied; no config change |
+| Tailwind CSS | ^3.4.17 | All layout and color | Reuse the existing demo tone system; no new UI primitives needed |
+| Vitest | ^4.0.3 (dev) | Unit tests for resolver + selectors | Same jsdom environment and inline-fixture pattern as `digital-resource.test.ts` |
 
-- `ResourceTier`: `"NETWORK" | "PLATFORM" | "APPLICATION"`
-- `DigitalResource` interface: `id`, `name`, `tier: ResourceTier`, `classification: Clearance` (imported from `model.ts`), `parent_id: string | null` (null at Network tier), `admin_org_id: UnitId`, `asset_owner_org_id: UnitId`, `zone_prereq_id: string | null` (links to a `ZoneNode.id` — advisory)
-- `ResourceAccessGrant` interface: `id`, `person_id`, `resource_id`, `valid_from: Date | null`, `valid_until: Date | null` — structurally identical to `PhysicalAccessGrant` with `zone_id` renamed to `resource_id`
-- `ResourceDelegate` interface: mirrors `ZoneAccessDelegate` with `resource_id` instead of `zone_id`
-- `ResourceAccessResult` interface: `allow: boolean`, `gate: "CLEARANCE_CHECK" | "GRANT_LOOKUP" | "PARENT_TIER_CHECK"`, `reason: string`, `detail?: string`, `zonePrereqWarning?: string` (populated when `zone_prereq_id` is set; advisory, never blocks)
-- `isResourceGrantActive(grant, now)`: identical two-line implementation to `isGrantActive` in `model.ts` — do NOT import `isGrantActive` directly as it is typed to `PhysicalAccessGrant`
-- `resolveResourceAccess(personId, resource, clearance, allResources, allGrants, now, allZoneGrants?, allZones?)`: three-gate chain: (1) `CLEARANCE_RANK[clearance] >= CLEARANCE_RANK[resource.classification]`, (2) active `ResourceAccessGrant` exists for this specific resource, (3) if `tier === "PLATFORM"`, parent Network grant active; if `tier === "APPLICATION"`, parent Platform grant active; advisory zone-prereq populated if `zone_prereq_id` is set
+### Supporting Libraries (already present, use as-is)
 
-`Clearance`, `CLEARANCE_RANK`, `UnitId`, `ZoneNode`, `PhysicalAccessGrant` imported from the existing `model.ts` — do NOT duplicate.
-
-### `demo/lib/seed.ts` additions
-
-Append new export blocks after the existing `ZONES`/`GRANTS`/`DELEGATES`/`ENTRY_LOGS`/`VISITOR_PASSES` blocks. Export:
-- `NETWORKS`, `PLATFORMS`, `APPLICATIONS`: `DigitalResource[]`
-- `RESOURCE_GRANTS`: `ResourceAccessGrant[]` (active, expired, future-dated per RSRC-SEED-05)
-- `RESOURCE_DELEGATES`: `ResourceDelegate[]`
-
-Do not touch anything above the seed-head boundary comment — the six abac.test.ts fixture subjects are frozen.
-
-### `demo/store/world-state.tsx` additions
-
-Extend `WorldState` with six new fields:
-```typescript
-networks: DigitalResource[];
-platforms: DigitalResource[];
-applications: DigitalResource[];
-resourceGrants: ResourceAccessGrant[];
-resourceDelegates: ResourceDelegate[];
-disabledResourceGrantIds: Set<string>;
-```
-
-Extend `seedWorld()` to initialize from new seed exports. Extend `Action` union with `{ type: "TOGGLE_RESOURCE_GRANT"; grantId: string }`. Extend `reducer` with a `TOGGLE_RESOURCE_GRANT` case using the same immutable-`Set` pattern as `TOGGLE_GRANT`.
-
-### `demo/components/digital-access-panel.tsx` (new)
-
-Sub-nav with two views: Resource Browser | Access Resolution. (No entry-log view — digital resources have no entry-log analog.) Same `useState<DigitalView>` + conditional render pattern as `physical-access-panel.tsx`.
-
-### `demo/components/resource-browser.tsx` (new)
-
-Left column (1/3): collapsible three-level tree (Network → Platform → Application). Recursive component following the `ZoneTreeNode` pattern in `zone-browser.tsx` — `div` with `marginLeft: depth * 16` indent, expand/collapse via `Set<string>` state. Classification badge via existing `Pill` from `ui.tsx`.
-
-Right column (2/3): resource detail panel — `admin_org`, `asset_owner_org`, classification, tier, active grants, active delegates, advisory zone-prereq link if set. Uses `Card`, `Field`, `Pill` from `ui.tsx`.
-
-### `demo/components/resource-access-resolution-explorer.tsx` (new)
-
-Two selector cards (person, resource) plus one optional card (zone, only shown when selected resource has a `zone_prereq_id`). Full-width `ResourceResolutionTrace` component (local, analogous to `ZoneResolutionTrace` in `access-resolution-explorer.tsx`). The trace has four rows:
-
-1. Clearance gate — `✓`/`✗`
-2. Explicit grant gate — `✓`/`✗`
-3. Parent tier gate — `✓`/`✗` (N/A row for Network-tier resources)
-4. Zone prerequisite — `⚠` amber advisory row (never `✓`/`✗`; non-blocking)
-
-Grant toggle panel below — same checkbox pattern as `AccessResolutionExplorer`. Reuses `Card`, `Field`, `Select`, `Pill`, `MockTag` from `ui.tsx`.
-
-### `demo/components/ui.tsx` — no changes
-
-Existing `Pill`, `MockTag`, `Card`, `Field`, `Select`, `DecisionTrace` cover all visual needs. `DecisionTrace` is typed to the ABAC `Decision` type and must not be repurposed for `ResourceAccessResult`.
-
-### `DemoRoot.tsx` — one addition
-
-Add `"digital-access"` to the `ActiveView` union, add one tab button, add one conditional render line. Single-digit change.
+| Library | Version | Role in v2.3 |
+|---------|---------|--------------|
+| @tanstack/react-query | ^5.90.5 | ONLY as the existing source of v2.2 Application-grant data (see integration seam below); dataset data itself is in-memory, never queried |
+| clsx + tailwind-merge | ^2.1.1 / ^3.3.1 | Conditional class composition — same usage as existing demo components |
+| lucide-react | ^0.548.0 | Optional dataset-type glyphs (mailbox/archive/file icons) — zero cost, already installed |
+| zod | ^4.1.12 | Optional: seed-shape validation in tests; not required |
 
 ---
 
 ## Installation
 
-Nothing to install.
-
 ```bash
-# Confirm no new deps are needed — all capabilities are in the current package.json
-npm list react vite typescript tailwindcss vitest
+# Nothing. Zero new packages for v2.3.
 ```
+
+---
+
+## The One Real Integration Seam (flag for architecture/planning)
+
+**v2.2 digital-resource data is API-backed; v2.3 dataset data is in-memory. The DATA-ACCESS-01
+prerequisite check must join across that boundary.**
+
+Since Phase 11, `frontend/src/demo/hooks/use-digital-resources.ts` fetches the Network/Platform/
+Application world **and ResourceAccessGrants from the backend** (`/api/digital-resources/world`
+via React Query, `retry: false`, explicitly **no seedWorld() fallback** — the file's own header
+comment says so). But DATA-ACCESS-01 makes an *active Application grant* a hard prerequisite for
+any dataset grant, and v2.3 is demo-only (no backend work permitted).
+
+Consequence: the dataset gate-chain resolver must take the Application-grant list as a
+**parameter** (pure function, same style as `resolveResourceAccess`), and the caller wires in
+grants that came from the API-backed hook. Options for planning to weigh:
+
+1. **Recommended:** keep the resolver pure — `resolveDatasetAccess(person, dataset, appGrants, datasetGrants, now)` — and let the UI layer pass API-fetched Application grants + in-memory dataset grants/seed. No stack change; matches the proven pattern; a future Rust port via golden fixtures stays trivial.
+2. Alternative: seed mock Application grants alongside datasets so the dataset tab works fully offline. Simpler demo, but diverges from the v2.2 "Postgres as source of truth" decision — needs an explicit decision record if chosen.
+
+Also note: Applications live in the API payload while Datasets live in seed data, so dataset
+records reference parent Applications **by id string**; the seed must use ids that exist in the
+Postgres fixture set (or the mapper must tolerate orphans and fail closed). Either way this is an
+architecture/plan decision, **not** a stack addition.
 
 ---
 
 ## Alternatives Considered
 
-| Recommended | Alternative | Why Alternative is Wrong Here |
-|-------------|-------------|-------------------------------|
-| Hand-rolled collapsible tree (`div` + `marginLeft` indent, recursive component) | `@radix-ui/react-collapsible`, `react-arborist`, `rc-tree` | v2.1 zone browser already proves this pattern works at the required depth (3 levels, ~30 nodes). A library adds a dependency, an incompatible styling model, and a new API surface for zero benefit in a demo context. |
-| Local `ResourceResolutionTrace` component (a `ul` with per-gate rows) | `react-flow`, `cytoscape.js`, `d3` graph viz | The resolution logic is a sequential 3-gate chain plus one advisory row — it is a list, not a graph. Graph viz libraries are warranted for many-to-many, non-linear edge structures. This is not that case. |
-| `Clearance`/`CLEARANCE_RANK`/`UnitId` imported from existing `model.ts` | Duplicate in new `digital-resource.ts` | Duplication creates drift risk if the clearance ladder or UnitId set changes in v2.3+. Single source of truth. |
-| `ResourceAccessGrant` as a distinct interface | Reuse `PhysicalAccessGrant` with a renamed field via type alias | The v2.2 resource-grant type is semantically separate (different domain, different resolution rules). Keeping distinct types prevents confusion and lets each evolve independently in v2.3 dataset grants. |
-| Inline `isResourceGrantActive` (two-line function, same logic) | Import `isGrantActive` from `model.ts` | `isGrantActive` is typed to `PhysicalAccessGrant`. Importing it for `ResourceAccessGrant` requires a structural cast or interface widening. A two-line local copy is cleaner and avoids coupling the physical and digital models. |
+| Recommended | Alternative | When the alternative would make sense |
+|-------------|-------------|----------------------------------------|
+| Extend `model.ts` + sibling `dataset-selectors.ts` | New standalone `dataset/` sub-package inside demo | Only if `model.ts` (1,183 lines) is judged too large — a `dataset.ts` sibling module in `demo/lib/` is fine; a new package/aliasing setup is not |
+| Discriminated union for the 3 dataset types | Data-driven type registry (`Record<string, string[]>`) | If the open question "dataset_type: open vs closed" resolves to OPEN — mirrors v2.2's open gate/role vocab; still zero dependencies |
+| Highest-active-grant as a pure reduction | A ranking/lattice library | Never — 3 ordered levels per type is a `levelRank` map + `Math.max`, exactly like `CLEARANCE_RANK` |
+| Reuse `ui.tsx` primitives | Pull shadcn/Radix components into demo | Never for the demo island — shadcn depends on main-app CSS tokens; the demo deliberately uses its own `ui.tsx` primitives (established v2.1/v2.2 rule) |
 
 ---
 
-## What NOT to Use
+## What NOT to Add
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| Any tree/hierarchy rendering library (`react-arborist`, `react-d3-tree`, `rc-tree`, `@radix-ui/react-collapsible`) | The fixed-depth 3-level hierarchy is trivially rendered with recursive `div` indentation — proved by v2.1 zone browser. A library adds bundle weight and an incompatible API for a demo with ~30 nodes. | Recursive `ZoneTreeNode`-style component with `marginLeft: depth * 16` — already in `zone-browser.tsx`. |
-| Graph visualization libraries (`react-flow`, `cytoscape.js`, `d3`, `vis-network`) | The access resolution trace is a 3-row gate list plus one advisory row — a `ul`. These libraries are for interactive node-edge graphs with many-to-many edges. Wrong shape of problem. | Local `ResourceResolutionTrace` component with `ul` — same pattern as `ZoneResolutionTrace`. |
-| TanStack Router imports inside demo components | Demo island is router-isolated by design (no `routeTree.gen.ts` changes until fullstack integration). Importing TanStack Router in demo code breaks this constraint. | `useState` for view switching — the established pattern in `DemoRoot.tsx` and `physical-access-panel.tsx`. |
-| shadcn/ui components (`src/components/ui/*`) inside demo components | shadcn components depend on CSS variable tokens from the main app's `index.css` and Radix primitives. Mixing them into demo components creates a styling coupling that is hard to remove when the demo is extracted. | `demo/components/ui.tsx` primitives (`Card`, `Pill`, `Field`, `Select`, `MockTag`) — the established demo primitive set. |
-| New primitives added to `demo/components/ui.tsx` | The existing set covers all needed patterns. Widening a shared primitive file that every demo component depends on creates churn risk. | Inline one-off styled elements in the component that needs them. |
-| Storing computed `ResourceAccessResult` in `WorldState` | Derived data stored in state causes stale-result bugs (documented as Pitfall 4 in v2.1 spike findings). | Compute `ResourceAccessResult` in the component via `useMemo` — the same pattern as `result` in `AccessResolutionExplorer`. |
-| Immer | Demo immutable mutations are simple array-spread and `new Set()` updates; Immer draft-proxy adds indirection for no benefit at this scale. | Plain spread + filter mutations — the existing pattern throughout `world-state.tsx`. |
+| State libraries (zustand, jotai, redux) | `world-state.tsx` context+reducer store already handles demo state across 7 tabs; a second store fragments state and violates the "no new frameworks" constraint | Extend `store/world-state.tsx` (new fields + `TOGGLE_*` action, same immutable-Set pattern) |
+| Date libraries (date-fns, dayjs, luxon) | All temporal logic is `valid_from`/`valid_until` interval checks against `now: Date` — `isGrantActive` already does this with native `Date` | Native `Date` comparisons, same as v2.1/v2.2 |
+| Access-control libraries (casl, casbin, oso, permit.io) | The hand-built explainable pure-computed ABAC engine **is the artifact being demonstrated** (and has byte-exact Rust parity); a library replaces the point of the project | `model.ts` resolver pattern |
+| Backend / sqlx / migration work | Explicitly out of scope for v2.3 ("demo/mock only — backend defers"); Phase 11's scope expansion was the exception, not the rule | In-memory seed + pure resolvers |
+| shadcn/Radix inside `demo/components/` | Couples the demo island to main-app CSS variable tokens; breaks the extraction-friendly isolation held since v2.0 | `demo/components/ui.tsx` primitives |
+| Tree/table/graph libraries (react-arborist, react-flow, d3) | The dataset list nests one level under Applications in an already-working recursive tree; the trace is a gate list (`ul`), not a graph | Extend `buildResourceTree` / the existing browser + trace components |
+| Storing computed resolution results in `WorldState` | Derived data in state causes stale-result bugs (documented pitfall from v2.1 spikes) | `useMemo` in the component, same as existing explorers |
 
 ---
 
-## Stack Patterns for v2.2 Implementation
+## Stack Patterns by Variant
 
-**Tree rendering:**
-- Root nodes are `DigitalResource` records where `tier === "NETWORK"` (equivalently, `parent_id === null`)
-- Depth 0 = Network, depth 1 = Platform, depth 2 = Application
-- Expand/collapse state: `useState<Set<string>>(new Set())` — identical to `expandedIds` in `ZoneBrowser`
-- The `getChildren(resourceId, allResources)` helper replaces `allZones.filter(z => z.parent_id === zone.id)` — same structure
+**If "dataset_type: open enum vs closed set" resolves to OPEN:**
+- Model access-level vocabularies as data (a registry mapping type → ordered level list), mirroring v2.2's open gate/role vocab decision.
+- The resolver must fail closed on unknown types/levels — mirror the exactly-named `unknown-gate-kind-errors` pitfall-test pattern from `digital-resource.test.ts`.
 
-**Classification badges:**
-- Reuse `Pill` from `ui.tsx` with the clearance tone map (define as a `const` in the component file, same as `CLEARANCE_TONE` in `access-resolution-explorer.tsx`)
-- `UNCLASSIFIED` → `"slate"`, `RESTRICTED` → `"blue"`, `CONFIDENTIAL` → `"slate"`, `SECRET` → `"amber"`, `TOP_SECRET` → `"red"`
+**If it resolves to CLOSED:**
+- TS discriminated union with `never` exhaustiveness checks. Cheapest and safest for 3 types.
 
-**Advisory zone-prerequisite row in the resolution trace:**
-- Render as a `li` with `⚠` prefix in amber when `resource.zone_prereq_id` is set
-- Label: `Zone Prereq` — amber text, not green/red (it is advisory, not a gate outcome)
-- Text: "Zone access to [zone name] may be required for physical terminal access — not enforced here." (or similar plain prose)
-- If the person has an active zone grant for the linked zone, annotate "(grant held)"; if not, annotate "(no grant — advisory only)"
-- This row is always present when `zone_prereq_id` is set; it never changes the `allow` outcome
-
-**Three-gate resolution order:**
-1. `CLEARANCE_RANK[clearance] >= CLEARANCE_RANK[resource.classification]` — fail → immediate DENY
-2. Active `ResourceAccessGrant` exists for this specific resource — no inheritance across tiers — fail → DENY
-3. If `tier !== "NETWORK"`: active grant exists for the parent resource — fail → DENY
-
-**`disabledResourceGrantIds` toggle:**
-- Same `Set<string>` in `WorldState`, same `TOGGLE_RESOURCE_GRANT` action, same immutable-Set update
-- The resolution explorer filters `resourceGrants` through `disabledResourceGrantIds` before passing to `resolveResourceAccess` — same as the zone explorer's `activeGrants` computation
+**If a future milestone ports datasets to the backend (already listed under Future Requirements):**
+- Keep `resolveDatasetAccess` pure and side-effect-free now so the TS→Rust golden-fixture parity approach (proven in Phase 11 via `digital-resource-golden-export.test.ts`) applies unchanged. That test file is the template for a future `dataset-golden-export.test.ts`.
 
 ---
 
 ## Version Compatibility
 
-| Concern | Status |
-|---------|--------|
-| New types import `Clearance`/`CLEARANCE_RANK`/`UnitId` from `model.ts` | No risk — stable exported types with no external dependencies |
-| `WorldState` extension with six new fields | No risk — `seedWorld()` initializes all; consumers destructure only what they need |
-| Vitest test file for `digital-resource.ts` | Same `jsdom` environment, same inline-fixture pattern — no new test setup required |
-| `vite.config.ts` `rollupOptions.input` | The existing config already uses `rollupOptions` (not `rolldownOptions`) and already registers both `index.html` and `demo.html` — no config change needed for v2.2 |
+No dependency changes → no new compatibility surface; the existing lockfile is the compatibility
+statement. Vitest 4 + jsdom 28 + Testing Library 16 + React 19 are already proven together by the
+228-test suite; new dataset tests inherit that setup verbatim. New types import `Clearance`,
+`CLEARANCE_RANK`, org/unit ids, and the Application types from `model.ts` — stable exports with
+no external dependencies.
 
 ---
 
 ## Sources
 
-- Live codebase: `frontend/src/demo/` — direct inspection of all relevant files — HIGH confidence
-- `frontend/package.json` — installed versions verified directly — HIGH confidence
-- `frontend/vite.config.ts` — build entry setup verified directly — HIGH confidence
-- `.planning/milestones/v2.2-REQUIREMENTS.md` — requirements analysis — HIGH confidence
-- v2.1 implementation patterns (`zone-browser.tsx`, `access-resolution-explorer.tsx`, `physical-access-panel.tsx`, `model.ts`, `world-state.tsx`) — structural isomorphism confirmed by direct code reading — HIGH confidence
+- `frontend/package.json` — installed versions read directly — HIGH confidence
+- `frontend/src/demo/lib/model.ts` — resolver/grant/delegate patterns at lines 232, 243, 315, 1084 — HIGH (direct inspection)
+- `frontend/src/demo/lib/digital-resource-selectors.ts`, `digital-resource.test.ts`, `seed.ts` — selector/test/seed patterns — HIGH (direct inspection)
+- `frontend/src/demo/hooks/use-digital-resources.ts` — API-backed data source with no seed fallback — HIGH (direct inspection; this is the integration-seam evidence)
+- `.planning/PROJECT.md`, `.planning/milestones/v2.3-REQUIREMENTS.md` — scope and constraints — HIGH
+- Prior v2.2 STACK research (2026-06-02, superseded by this file) — demo-island UI rules (`ui.tsx` not shadcn; no derived data in state) carried forward — HIGH
+- No external/web/Context7 sources: no new library is proposed, so no version research applies (quality gate satisfied vacuously)
 
 ---
 
-*Stack research for: Janus 2.0 v2.2 digital resource access demo (Network → Platform → Application)*
-*Researched: 2026-06-02*
+*Stack research for: Janus 2.0 v2.3 Dataset Access (demo)*
+*Researched: 2026-07-03*

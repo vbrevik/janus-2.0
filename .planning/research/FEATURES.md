@@ -1,71 +1,46 @@
-# Feature Research — v2.2 Digital Resource Access (Network → Platform → Application)
+# Feature Research — v2.3 Dataset Access (demo)
 
-**Domain:** Classified digital-resource authorization model for a defense/government federated ABAC demo
-**Researched:** 2026-06-02
-**Confidence:** HIGH (grounded in existing codebase, v2.1 patterns, SEED-009/NSM anchors, and seeded RSRC requirements)
-
----
-
-## Context and Constraints
-
-This is a **DEMO/MOCK ONLY** milestone layering a digital-resource access model onto the existing v2.1
-physical-access demo. All code lives in `frontend/src/demo/`; no backend is involved. The v2.2 model
-must mirror v2.1 zone patterns as closely as possible to reduce novelty, maximize reuse of existing
-types/helpers, and keep the demo coherent as a single world-state.
-
-**Pre-existing features that v2.2 must NOT re-implement:**
-- Pure-computed ABAC engine (`abac.ts`)
-- 5-tier clearance ladder and `CLEARANCE_RANK` map in `model.ts`
-- `UnitId` 6-unit scenario, subjects, and world-state store
-- `PhysicalAccessGrant`, `ZoneAccessDelegate`, `isGrantActive`, `isDelegateActive`, `resolveGrant`, `resolveZoneAccess`
-- v2.1 demo UI tabs (zone browser, access resolution explorer, entry log view)
-
-**Decided before this research:**
-- Application inherits its Platform's classification (no independent per-app classification in demo scope)
-- Zone-prerequisite link is **advisory** (warning in trace, non-blocking — does not flip ALLOW to DENY)
-- No multi-homing (Platform belongs to exactly one Network; Application belongs to exactly one Platform)
+**Domain:** Dataset/entitlement-level authorization (innermost access layer) — modeled on Exchange mailbox permissions, records-management archive roles (Noark 5), and SharePoint permission levels
+**Researched:** 2026-07-03
+**Confidence:** MEDIUM (cross-checked against official Microsoft Learn docs and Arkivverket/Noark 5 material via web search; project-context claims HIGH — grounded in `.planning/PROJECT.md` and v2.3-REQUIREMENTS.md)
 
 ---
 
-## How Classified Digital-Resource Access Works (Defense/Government Context)
+## How Real Systems Do This (research findings)
 
-In NSM/NATO practice, the access model for classified systems follows a strict layered structure:
+Findings that shape the feature categories below:
 
-**Tier 1 — Network:** A logically or physically segregated communications environment approved to carry
-traffic at a given classification level. Examples from the Norwegian/NATO context:
-- NORNet RESTRICTED (National Restricted, `RESTRICTED`)
-- MilNet SECRET / FISFIS (Tactical Secure, `SECRET`)
-- NATO-R (NATO Restricted, `RESTRICTED`)
-- NATO-S (NATO Secret, `SECRET`)
-- NATO-TS (NATO Top Secret, `TOP_SECRET`)
+1. **Exchange mailbox permissions are ORTHOGONAL, not a ladder.** Full Access, Send As, and
+   Send on Behalf are three independent permissions. Full Access = open the mailbox and
+   read/manage everything, but **cannot send**; sending requires an explicit Send As or Send
+   on Behalf grant. "Full Access implies Send As" is a documented common misconception
+   (Microsoft publishes a troubleshooting article specifically for it).
+   → The v2.3 vocab `READ < SEND_AS < FULL_ACCESS` as a total order with "highest wins" is a
+   **deliberate simplification** of real Exchange semantics, not a mirror of them. Fine for a
+   demo — but it must be a recorded decision, not an accident (see Anti-Features).
 
-Connecting to a network requires personal clearance at or above the network's classification level AND
-an explicit network-access grant (controlled by the network's admin org). Clearance alone is not
-sufficient — the grant is need-to-know at the network level.
+2. **SharePoint permission levels ARE cumulative supersets.** Full Control includes all
+   permissions; Contribute includes Read's rights. A user in multiple groups gets the **union**
+   of permissions — for linearly-ordered levels this collapses to **highest wins**, exactly
+   matching DATA-GRANT-03. Inheritance (site → library → item) with per-item permission breaks
+   is SharePoint's biggest governance pain point — already out of scope for v2.3 (correct call).
 
-**Tier 2 — Platform:** A workstation, server, or terminal that is physically connected to a specific
-network and is approved (sikkerhetsgodkjent) to process information at that network's classification
-level. To use a platform, a person must hold an active network grant for that platform's host network
-AND hold an explicit platform grant. An active network grant does not automatically grant platform
-access — need-to-know is per-platform.
+3. **Archive roles (Noark 5 / Public 360) are broadly cumulative and org-administered.**
+   Reader → case handler (saksbehandler) → archivist/admin form an escalating capability
+   ladder; the archive service (an organizational function, not the asset owner) administers
+   permanent access groups plus ad-hoc ones. This maps cleanly onto `admin_org` (archive
+   service) vs `asset_owner_org` (the unit whose records they are) — validating DATA-04.
+   Note: ADMIN in real archive systems adds *administrative* capability (manage structure and
+   access groups), not just "more read/write" — a good trace-explanation detail.
 
-**Tier 3 — Application:** A software system (mission application, database client, messaging system)
-running on a specific platform. Access requires an active platform grant for the host platform AND an
-explicit application grant. Application classification is bounded by (and inherits from) its platform.
-
-**Zone-prerequisite:** In practice, physical access to the room where the terminal resides is often an
-administrative prerequisite before a digital grant is issued. In the demo model this link is advisory:
-if the person lacks an active zone grant for the platform's terminal room, the resolution trace shows a
-warning but the digital access result is not flipped to DENY. This mirrors real-world cases where
-remote access removes the physical dependency.
-
-**Time-windowing:** Temporary network access (contractor on NATO-R for 30 days, visiting exchange
-officer on MilNet SECRET for an exercise) is standard practice. Every grant carries `valid_from` /
-`valid_until` with the same null-boundary semantics as v2.1 zone grants.
-
-**Delegation:** The admin org controlling a network, platform, or application can delegate
-access-granting authority to a named person (e.g., a unit security officer) or another org (e.g., a
-subordinate unit). The delegate can then issue grants for that resource on behalf of the admin org.
+4. **Time-limited entitlements with delegation are the industry pattern** (Microsoft Entra
+   entitlement management): assignments expire on a date / after N days / never (= nullable
+   `valid_until`), and **delegation runs through resource owners** (catalog owner / access
+   package manager roles), not central admins. A delegate can grant any level defined for the
+   resource — delegation authority is **not capped at the delegate's own access level**. This
+   answers an open question in v2.3-REQUIREMENTS.md: *delegate grants up to the maximum
+   defined for the dataset*, matching both Entra and the v2.1/v2.2 precedent (delegation
+   confers granting authority, not personal-access transfer).
 
 ---
 
@@ -73,137 +48,124 @@ subordinate unit). The delegate can then issue grants for that resource on behal
 
 ### Table Stakes (A Demo of This Model Must Have These)
 
-Features whose absence makes the demo unable to tell its story. Maps directly to RSRC / RSRC-ACCESS /
-RSRC-GRANT / RSRC-DELEG / RSRC-SEED / RSRC-UI requirement groups.
+Features whose absence makes the dataset layer unable to tell its story. All map to v2.3 requirement IDs.
 
-| Feature | Why Expected | Complexity | RSRC Req | Notes |
-|---------|--------------|------------|----------|-------|
-| 3-tier resource hierarchy (Network → Platform → Application) types | Core model claim; without it there is no v2.2 | LOW | RSRC-01, RSRC-05 | Strict tree enforced in seed data; no multi-homing in demo |
-| Classification per resource from 5-tier ladder | Every resource must carry a grade for the clearance gate to fire | LOW | RSRC-02, RSRC-03 | Application inherits Platform's classification (decided); platform holds the `classification` field; application reads from parent |
-| Dual org ownership per resource (admin_org_id + asset_owner_org_id) | Mirrors v2.1 `ZoneNode` exactly; expected by any reviewer who has seen the zone model | LOW | RSRC-04 | Same field names as `ZoneNode`; reuse `UnitId` type |
-| Strict parent-child references (Platform.network_id, Application.platform_id) | Without parent refs the tier-chain access gate cannot walk the tree | LOW | RSRC-05 | Enforced in seed data; no runtime enforcement needed in mock |
-| `ResourceAccessGrant` with valid_from / valid_until | Time-windowing is a core model claim | LOW | RSRC-GRANT-01 | Null-boundary semantics identical to `PhysicalAccessGrant`; reuse `isGrantActive` verbatim |
-| Per-resource grants, no cross-tier inheritance | Each tier always requires explicit authorization; this is the key security property | LOW | RSRC-GRANT-02 | Resolution trace must state "Network grant active — Platform grant still required" explicitly |
-| Access resolution gate chain (clearance → explicit grant per tier → prerequisite tier grant active) | The three-gate chain is the demo's main claim about how digital access works | MEDIUM | RSRC-ACCESS-01 to RSRC-ACCESS-05 | Gate 1: clearance ≥ resource classification. Gate 2: active grant for this resource. Gate 3: active grant for parent resource |
-| Zone-prerequisite advisory link | Without this, v2.1 and v2.2 are completely disconnected worlds | MEDIUM | RSRC-ACCESS-04 | Advisory only; warning in trace but does not flip ALLOW to DENY; uses existing `resolveZoneAccess` infrastructure; requires Platform to carry optional `terminal_zone_id` |
-| `ResourceAccessDelegate` type and delegation display | Mirrors v2.1 `ZoneAccessDelegate` exactly; expected once zone delegation is shown | LOW | RSRC-DELEG-01 | Reuse `isDelegateActive` verbatim; add `resource_id + resource_type` instead of `zone_id` |
-| Mock dataset: 3+ Networks, 2-3 Platforms per network, 1-2 Applications per platform | A demo with one network and one platform tells no story | MEDIUM | RSRC-SEED-01 to RSRC-SEED-04 | 6-unit scenario supports: NORNet RESTRICTED (INFRA-owned), MilNet SECRET (MILITARY_1), NATO-R (INTEL-hosted); 2-3 platforms each; 1-2 apps per platform |
-| Grants spanning active / expired / future states | Without temporal variety the demo cannot show time-windowed access behavior | LOW | RSRC-SEED-05 | Same pattern as v2.1 seed: `valid_until` in the past for expired, future date for pending |
-| Resource Browser UI (Network → Platform → Application tree with classification badges) | Without a visual tree the hierarchy is invisible to a demo audience | MEDIUM | RSRC-UI-01, RSRC-UI-02 | Mirrors `zone-browser.tsx` structure; expand/collapse tree; detail panel shows admin_org, asset_owner_org, active grants, delegates |
-| Digital Access Resolution Explorer (person + resource selectors + gate trace) | The resolution trace is the demo's payoff — seeing ALLOW/DENY with gate-by-gate explanation | MEDIUM | RSRC-UI-03 | Mirrors `access-resolution-explorer.tsx`; gate trace shows each step with pass/fail; zone-prerequisite advisory appears as a warning row when relevant |
+| Feature | Why Expected | Complexity | Req | Notes |
+|---------|--------------|------------|-----|-------|
+| Dataset entity: named resource within an Application, typed (`MAILBOX` / `ARCHIVE_ROLE` / `DOCUMENT_SITE`) | Real systems (mailboxes, archive roles, doc sites) are exactly this shape | LOW | DATA-01, DATA-02 | Belongs to exactly one Application (FK); mirrors v2.2 resource shape |
+| Per-type ordered access-level vocabulary with explicit rank | "Highest active grant" (DATA-GRANT-03) is undefined without a declared total order per type | LOW | DATA-03 | Store rank alongside level name (e.g., `{level, rank}` map per type); keeps vocab extensible |
+| Level implication in resolution: level N satisfies any requirement ≤ N | SharePoint/archive semantics — Full Control covers Contribute covers Read | LOW | DATA-03 | Falls out of rank comparison; make it explicit in the trace ("FULL_CONTROL satisfies READ") |
+| Hard prerequisite gate: active Application grant required | Carries the v2.2 prerequisite-chain contract inward; matches Entra "identity before entitlement" | LOW | DATA-ACCESS-01 | Reuse the v2.2 gate-chain step; **hard DENY** — unlike the advisory zone link |
+| Time-windowed `DatasetAccessGrant` (`valid_from`, nullable `valid_until`) | Entra assignments: expire on date / never; identical to v2.1/v2.2 grant shape | LOW | DATA-GRANT-01 | Reuse `isGrantActive` verbatim (same nullable-date semantics) |
+| Multiple concurrent grants per person+dataset; effective level = highest active | SharePoint union-of-groups behavior; different time windows at different levels is the realistic case | MEDIUM | DATA-GRANT-02/03 | "Active" is point-in-time; effective level can *drop* when a high grant expires — a good demo moment |
+| Clearance gate: clearance ≥ dataset classification, inherited from Application unless overridden equal-or-higher | Consistent with v2.2 platform-classification inheritance | MEDIUM | DATA-05, DATA-ACCESS-03 | Override-only-upward needs a validation rule + "(inherited)"/"(overridden)" badge like v2.2 |
+| `admin_org` + `asset_owner_org` per dataset, with delegation | Noark: archive service administers access; asset owner owns content; mirrors v2.1/v2.2 | LOW | DATA-04, DATA-DELEG-01 | Copy the v2.1/v2.2 dual-org + delegate pattern verbatim (`isDelegateActive` reuse) |
+| Full gate-chain trace at dataset level: clearance → application grant → dataset grant + level | Explainability is the project's core value; every prior layer has it | MEDIUM | DATA-UI-02 | Extend the existing Access Resolution Explorer; trace must show WHICH grant won and why |
+| Denied-access demo cases: no dataset grant / level too low / grant expired | The milestone's whole point: application access ≠ dataset access | LOW | DATA-SEED-04/05 | Seed data + Explorer scenarios; "DENY at dataset gate" must render distinctly |
+| Reverse lookup: dataset → who has access at what effective level | Standard admin view in Exchange ("mailbox permissions") and SharePoint ("site permissions") | MEDIUM | DATA-UI-03 | Compute effective level per person at a point in time — not just a raw grant list |
+| Mock dataset: ≥2 mailboxes, ≥1 archive system with 3 roles, ≥2 doc sites | Without type variety the per-type vocab claim is invisible | MEDIUM | DATA-SEED-01..03 | Attach to existing v2.2 Applications in the 6-unit scenario |
 
 ### Differentiators (What Makes This Demo Distinctive)
 
-Features that go beyond basic correctness and make the model legible and compelling to a defense/government audience.
+Where the demo outshines the real systems it models. Aligned with Core Value: explainable, reconstructable decisions.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Inline zone-prerequisite warning in the digital resolution trace | Shows the physical/digital access intersection in one view — reviewer sees "platform access ALLOWED BUT no zone grant for the terminal room" in a single trace | MEDIUM | Requires at least one Platform in the seed to have `terminal_zone_id` pointing to a v2.1 zone; advisory check calls existing `resolveZoneAccess` |
-| Realistic classification tier names in the UI (NORNet RESTRICTED, MilNet SECRET, NATO-R) | Defense/government audience recognises the names immediately; abstract labels like "Network A" undercut credibility | LOW | Pure labelling; no model change; names go in the resource `name` / `description` fields |
-| Expired-grant DENY case with clear trace explanation | Showing a person whose temporary access has lapsed is more convincing than always-ALLOW cases | LOW | One or two expired grants in the seed; trace says "grant expired [date]" |
-| Pending-grant DENY case (future-dated access) | Shows that access is time-bounded from both sides | LOW | One future-dated grant; trace says "grant not yet active, activates [date]" |
-| Cross-unit access scenario (MILITARY_2 subject accessing INTEL-administered platform) | Demonstrates the federated aspect — authorization crosses unit boundaries | LOW | Seed data choice only; no model change |
-| ATO and security-level annotations on Platform detail panel | Grounds the demo in NSM §6-3 / §6-2 without building the full lifecycle; gives reviewers familiar landmarks | LOW | Static boolean fields `approved_to_operate` and `security_level_assessed` on Platform; displayed as badges; not wired as access gates |
+| "Why this level" explanation: trace lists ALL grants (active, expired, superseded) and shows which one determined the effective level | Real systems show *that* you have access, almost never *why*; SharePoint's "Check Permissions" is notoriously opaque | MEDIUM | Natural extension of highest-wins: render losing grants greyed with reason (expired / lower rank / not yet active) |
+| Four-layer prerequisite chain in one trace (Network → Platform → Application → Dataset) | No real product shows the whole stack in one explainable chain — this is the demo's signature | MEDIUM | The v2.2 Explorer already renders three tiers; append the dataset gate + level check |
+| Point-in-time dataset resolution ("what could X access on date D at what level?") | Reuses v2.2 time-versioned machinery; real-system auditors can't do this without log archaeology | LOW | Machinery exists (v2.0 audit reconstruction, v2.2 point-in-time policies) — wire the dataset layer in |
+| Per-type level semantics surfaced in UI (what each level permits, incl. "ADMIN adds administrative capability, not just more read") | Grounds the demo in recognizable real-world vocabulary; makes the typed-vocab design legible | LOW | Static description per (type, level); tooltip or legend in the Dataset view |
+| Expiry-aware effective level ("FULL_ACCESS until 2026-08-01, then READ") | Entra sends expiry warnings; showing the *future* effective level is one better | MEDIUM | Derivable from the grant set; nice demo beat, cuttable if time-boxed |
 
-### Anti-Features (Scope Traps for This Demo Milestone)
+### Anti-Features (Scope Traps for This Milestone)
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Approval-to-operate (sikkerhetsgodkjenning) as an access gate | SEED-009 §6-3 explicitly mentions it; seems like a natural fit | Modelling the ATO lifecycle (initial approval, re-approval on change, revocation) adds a state machine with no access-decision payoff. A third gate in the resolution chain adds noise without insight for a demo audience | Static boolean `approved_to_operate` on Platform for visual realism. Do NOT wire it as a resolution gate in v2.2. Defer lifecycle to real-build milestone |
-| Adequate security level (forsvarlig sikkerhetsnivå) as an access gate | Also in SEED-009 §6-2 | Requires modelling control baselines, risk assessment outputs, and periodic review — none are access decisions. Wiring this into the gate chain makes the trace unexplainable in a demo session | Static boolean `security_level_assessed` on Platform as an annotation badge. Not a gate |
-| Multi-homing (Platform on two networks simultaneously) | Some real workstations are dual-homed (SECRET/RESTRICTED bridged) | Breaks the strict-tree invariant; requires modelling which network the grant path uses; adds a network-selection step to the resolution explorer; model decision already made | Already decided out of scope. If a dual-homed case is essential for the story, model it as two separate Platform records on separate networks |
-| Grant inheritance across tiers (network grant cascades to platform) | Might seem like a time-saving UX convenience | Directly contradicts the core security property the demo is proving. "You need a grant at EVERY tier" is the message — inheritance makes the demo self-defeating | State the no-inheritance rule explicitly in the resolution trace: "Network grant active — Platform grant still required (no cross-tier inheritance)" |
-| Full CRUD UI for resources and grants inside the demo | It's a demo — might as well make it editable | Moves scope from proof-of-concept to prototype; balloons the phase; the existing TOGGLE_GRANT checkbox pattern is sufficient to show grant manipulation | Use the TOGGLE_GRANT checkbox pattern already established in `access-resolution-explorer.tsx` for toggling grants on/off within a demo session |
-| Application-level classification independent of its Platform | Allows finer-grained labelling | Already decided against. The model is simpler and more defensible (application is bounded by platform). Independently classifying an app creates cases where an app is classified higher than its host platform, which breaks the clearance gate logic | Application classification is always derived from its Platform record; no separate field; the resolution trace notes this derivation |
-| NSM §6-6 communications/content control | SEED-009 cites it | Out of scope for an access-management demo; requires modelling content inspection or data-loss prevention, which is a separate domain | Note as a future real-build concern in the resource detail panel tooltip if desired |
+| Faithful Exchange semantics: orthogonal capability sets (Full Access ⊉ Send As), union of capabilities | "That's how Exchange actually works" — and it is | Breaks DATA-GRANT-03 ("highest" is undefined on a partial order); forces per-capability resolution and a different trace shape for one dataset type; complexity explosion for zero model insight | Keep the total-ordered ladder per type; **record a Key Decision** that v2.3 MAILBOX levels are cumulative by definition (FULL_ACCESS ⊇ SEND_AS ⊇ READ), deviating deliberately from real Exchange |
+| Send on Behalf as a fourth mailbox level | Completes the Exchange picture | It's a *presentation* distinction (From-line rendering), not an authorization tier; wedging it into a ladder is false precision | Mention in per-type level descriptions if desired; don't model it |
+| Content-level permissions (per-document / per-folder, inheritance breaks) | SharePoint does it; "more fine-grained = better" | SharePoint's broken-inheritance sprawl is its single biggest governance pain point; unbounded scope | Already excluded — dataset stays the atomic unit; keep it that way |
+| Group/distribution-list membership as a grant path | Real systems grant mostly via groups | Adds a second resolution dimension (membership expansion + union) duplicating what direct grants already demonstrate; no person→org linkage exists in the demo model anyway | Already excluded — direct person→dataset grants only; groups are fullstack-milestone territory (SEED-012 adjacent) |
+| Grant renewal / extension / expiry-notification workflow (Entra-style lifecycle) | Industry standard for entitlement hygiene | Workflow machinery (requests, approvals, notifications) is a milestone of its own; the demo has no inbox | Show expiry in the trace and (optionally) the future-level indicator; defer lifecycle to fullstack |
+| Dataset spanning multiple Applications (shared mailbox reachable from two clients) | Open question in v2.3-REQUIREMENTS.md | Breaks the strict-tree invariant v2.2 established (no multi-homing); "reachable from two clients" is a client concern, not an authorization one — the mailbox lives in ONE system | 1 dataset : 1 application, hard rule; answer the open question "no" |
+| Archive role as a role-assignment on the Application (instead of a dataset) | Open question; arguably closer to Noark reality | Introduces a second authorization mechanism (roles vs. datasets) at the same layer: two code paths, two trace shapes | Model the archive role AS a dataset of type `ARCHIVE_ROLE` — uniform mechanism, one resolver; note the abstraction in docs |
+| Full CRUD UI for datasets and grants | "It's a demo — make it editable" | Same trap v2.2 dodged; balloons the UI phase | Reuse the established TOGGLE_GRANT pattern from the v2.2 Explorer for interactive grant toggling |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[5-tier clearance ladder + CLEARANCE_RANK]      [already in model.ts — reuse verbatim]
-    └──consumed by──> [Gate 1: clearance ≥ resource classification]
+[v2.2 Application entities + grants]                    (exist — hard substrate)
+    └──required by──> [Dataset model (FK application_id)]
+    └──required by──> [Prerequisite gate: active Application grant]
 
-[isGrantActive(grant, now)]                     [already in model.ts — reuse verbatim]
-    └──reused by──> [ResourceAccessGrant time-window check]
+[Per-type level ladder + rank]  (DATA-03)
+    └──required by──> [Highest-active-grant resolution]  (DATA-GRANT-03)
+                          └──required by──> [Reverse lookup at effective level]  (DATA-UI-03)
+                          └──required by──> ["Why this level" trace]  (differentiator)
 
-[isDelegateActive(delegate, now)]               [already in model.ts — reuse verbatim]
-    └──reused by──> [ResourceAccessDelegate time-window check]
+[v2.2 platform-classification inheritance pattern]      (exists)
+    └──pattern for──> [Dataset classification inherit/override]  (DATA-05)
 
-[resolveZoneAccess + PhysicalAccessGrant]       [already in model.ts — advisory call only]
-    └──advisory-link-from──> [Zone-prerequisite warning in digital trace]
+[v2.1/v2.2 delegation pattern + isDelegateActive]       (exists)
+    └──pattern for──> [Dataset delegation]  (DATA-DELEG-01)
 
-[DigitalNetwork / DigitalPlatform / DigitalApplication types]
-    └──required by──> [ResourceAccessGrant (grant must ref a typed resource)]
-    └──required by──> [ResourceAccessDelegate (delegate must ref a typed resource)]
-    └──required by──> [resolveDigitalAccess gate chain]
-    └──required by──> [Resource Browser UI]
-    └──required by──> [Digital Access Resolution Explorer UI]
+[Dataset model + ladder + DatasetAccessGrant]
+    └──required by──> [resolveDatasetAccess gate chain]  (DATA-ACCESS-01..03)
+                          └──required by──> [Explorer extension]  (DATA-UI-02)
 
-[ResourceAccessGrant]
-    └──required by──> [Gate 2: active own-tier grant check]
-    └──required by──> [Gate 3: active parent-tier grant check]
-    └──displayed by──> [Resource detail panel (active grants list)]
+[Mock dataset]  (DATA-SEED-01..05)
+    └──required by──> [Explorer scenarios incl. deny cases]
+    └──required by──> [Resource Browser dataset view]  (DATA-UI-01)
 
-[ResourceAccessDelegate]
-    └──required by──> [Delegation display in resource detail panel]
-
-[resolveDigitalAccess (three-gate chain + advisory)]
-    └──required by──> [Digital Access Resolution Explorer UI]
-
-[Mock dataset (networks + platforms + apps + grants + delegates)]
-    └──required by──> [Resource Browser UI]
-    └──required by──> [Digital Access Resolution Explorer UI]
-    └──required by──> [Zone-prerequisite advisory] (dataset must include Platform with terminal_zone_id)
-    └──required by──> [Expired / future-dated DENY cases]
-
-[Resource Browser UI]
-    └──enhances──> [Digital Access Resolution Explorer] (user picks resource in browser, opens resolver)
+[Point-in-time dataset resolution] ──enhances──> [Gate chain]  (reuses v2.2 machinery)
+[Expiry-aware future level] ──enhances──> [Highest-active-grant resolution]
 ```
 
 ### Dependency Notes
 
-- **Gate 3 depends on Gate 2, Gate 2 depends on Gate 1:** The resolution walks clearance → own-tier grant → parent-tier grant in sequence. All three are separate steps in the trace; a failure at any step short-circuits the remaining gates.
-- **Zone-prerequisite advisory requires a zone_id on at least one Platform in the seed:** Without the link, the advisory warning never fires and the v2.1/v2.2 cross-domain connection is invisible. At minimum one Platform should carry `terminal_zone_id` pointing to an existing v2.1 zone.
-- **Resource Browser and Digital Access Resolution Explorer share world-state:** Both read from the same in-memory demo world-state store (mirrors how `zone-browser.tsx` and `access-resolution-explorer.tsx` both use `useWorld()`). No separate state slice needed.
-- **Application classification is derived, not stored independently:** Application records reference their Platform; the resolution gate reads `classification` from the Platform. The trace must make this derivation explicit to avoid confusion.
-- **`isGrantActive` and `isDelegateActive` are reused without modification:** Both functions operate on `valid_from / valid_until: Date | null` and the `ResourceAccessGrant` / `ResourceAccessDelegate` types carry the same nullable date fields.
+- **Everything hangs off the v2.2 Application layer.** Dataset FK → Application; the
+  prerequisite gate calls the existing application-grant resolution. Model-first phase
+  ordering is forced: no dataset feature is buildable before the model + level ladder exist.
+- **Rank must exist before resolution.** "Highest active grant" and the reverse lookup both
+  compare levels; the rank field is a day-one schema decision, not a later add.
+- **Delegation and classification-override are pattern reuse,** not new design — v2.1/v2.2
+  shipped both shapes. Budget as LOW-risk copy-adapt work.
+- **The Explorer extension conflicts with nothing but depends on everything** — it can only
+  come last. v2.2's lesson applies directly: the advisory-row dead-code bug shipped and was
+  only caught in live UAT. The dataset gate must be exercised against real seed scenarios
+  (including all three deny shapes), not fixtures only.
+- **Dataset gate is HARD, zone prerequisite stays ADVISORY.** Two different gate strengths now
+  coexist in one trace — the UI must visually distinguish "advisory warning" from "hard DENY".
 
 ---
 
-## v2.2 Scope Definition
+## v2.3 Scope Definition
 
-### Must Have — Phase 9 (Model and Data)
+### Must Have (launch)
 
-Establishes typed model and seed data without which Phases 10 and 11 have nothing to render.
+- [ ] Dataset model: 3 types, per-type ranked level vocab, dual orgs, classification inherit/override — DATA-01..05
+- [ ] `DatasetAccessGrant` (time-windowed, multiple per person+dataset) + highest-active-grant resolution — DATA-GRANT-01..03
+- [ ] `resolveDatasetAccess`: clearance → active Application grant (hard) → active dataset grant at required level — DATA-ACCESS-01..03
+- [ ] Delegation mirroring v2.1/v2.2 — DATA-DELEG-01
+- [ ] Mock dataset covering DATA-SEED-01..05 incl. all three deny shapes (no grant / level too low / expired)
+- [ ] Resource Browser dataset view + Explorer extension with winning-grant trace — DATA-UI-01/02
+- [ ] Reverse lookup: dataset → persons at effective level — DATA-UI-03
+- [ ] Vitest coverage of the resolver: every gate outcome, highest-wins with mixed windows, level implication
 
-- [ ] `DigitalNetwork`, `DigitalPlatform`, `DigitalApplication` types in `model.ts` — RSRC-01 to RSRC-05
-- [ ] `ResourceAccessGrant` type (id, person_id, resource_id, resource_type, valid_from, valid_until) — RSRC-GRANT-01
-- [ ] `ResourceAccessDelegate` type mirroring `ZoneAccessDelegate` field-for-field — RSRC-DELEG-01
-- [ ] `resolveDigitalAccess(...)` — three-gate chain with zone-prerequisite advisory — RSRC-ACCESS-01 to RSRC-ACCESS-05
-- [ ] Mock dataset: 3 networks, 2-3 platforms each, 1-2 apps per platform, grants covering active/expired/future, at least 1 platform with `terminal_zone_id` — RSRC-SEED-01 to RSRC-SEED-05
-- [ ] Vitest unit tests for `resolveDigitalAccess` covering all gate outcomes (clearance fail, no own-tier grant, parent-tier grant missing, zone-advisory warning fires, full ALLOW)
+### Add After Core Works (within v2.3 if time allows)
 
-### Must Have — Phase 10 (UI)
+- [ ] "Why this level" losing-grant rendering (greyed expired/superseded grants) — once the basic trace passes UAT
+- [ ] Point-in-time dataset resolution control in the Explorer — machinery exists in v2.2
+- [ ] Expiry-aware future effective level — if seed data already contains an expiring high grant
 
-- [ ] Resource Browser component (expand/collapse tree: Network → Platform → Application, classification badges, detail panel with admin_org, asset_owner_org, active grants, delegates) — RSRC-UI-01, RSRC-UI-02
-- [ ] Digital Access Resolution Explorer (person + resource selectors, gate-by-gate trace panel, zone-prerequisite advisory warning row) — RSRC-UI-03
-- [ ] New demo tab wiring both components (mirrors Physical Access tab)
+### Future Consideration (fullstack milestones)
 
-### Add After Core is Working — Phase 11 (Polish and Integration)
-
-- [ ] TOGGLE_GRANT checkbox in resolution explorer for interactive grant toggling (matches v2.1 pattern)
-- [ ] ATO and security-level annotation badges on Platform detail panel (static; not a gate)
-- [ ] Cross-link from Platform detail panel to zone browser tab (click `terminal_zone_id` to navigate to corresponding zone)
-
-### Future Consideration (v2.3+ or Real Build)
-
-- [ ] ATO lifecycle state machine for Platforms (approval, re-approval, revocation) — SEED-009 §6-3
-- [ ] Adequate security level assessment workflow — SEED-009 §6-2
-- [ ] NSM §6-6 communications/content control
-- [ ] Multi-homing (Platform on multiple networks) — decided out of scope for demo
-- [ ] Rust/PostgreSQL backend for resource hierarchy, grants, delegation
+- [ ] Rust/PostgreSQL backend for datasets + grants — explicitly deferred by milestone scope
+- [ ] Group-based grants and membership expansion — needs person→org/group data model (SEED-012 territory)
+- [ ] Grant lifecycle (renewal, expiry notifications, approvals) — Entra-style governance, a milestone of its own
+- [ ] Real Exchange/SharePoint/archive connector integration — deferred per requirements
+- [ ] Capability-set semantics for MAILBOX (real Exchange fidelity) — only if the fullstack build needs it
 
 ---
 
@@ -211,69 +173,44 @@ Establishes typed model and seed data without which Phases 10 and 11 have nothin
 
 | Feature | Demo Value | Implementation Cost | Priority |
 |---------|-----------|---------------------|----------|
-| DigitalNetwork / Platform / Application types | HIGH | LOW | P1 |
-| ResourceAccessGrant + isGrantActive reuse | HIGH | LOW | P1 |
-| resolveDigitalAccess three-gate chain | HIGH | MEDIUM | P1 |
-| Mock dataset (3 networks, platforms, apps, grants) | HIGH | MEDIUM | P1 |
-| Resource Browser UI | HIGH | MEDIUM | P1 |
-| Digital Access Resolution Explorer | HIGH | MEDIUM | P1 |
-| Zone-prerequisite advisory in trace | MEDIUM | MEDIUM | P1 |
-| ResourceAccessDelegate + delegation display | MEDIUM | LOW | P1 |
-| Expired / future-dated DENY cases in seed | MEDIUM | LOW | P1 |
-| Realistic classification tier names in UI | MEDIUM | LOW | P2 |
-| TOGGLE_GRANT checkbox in resolution explorer | MEDIUM | LOW | P2 |
-| ATO / security-level annotation badges on Platform | LOW | LOW | P2 |
-| Cross-link Platform detail → Zone Browser tab | LOW | LOW | P3 |
-| ATO lifecycle state machine | LOW (demo) | HIGH | Deferred |
+| Dataset model + ranked level vocab | HIGH | LOW | P1 |
+| DatasetAccessGrant + highest-wins resolution | HIGH | MEDIUM | P1 |
+| Three-gate dataset chain (hard app-grant prerequisite) | HIGH | MEDIUM | P1 |
+| Deny-case seed scenarios (3 shapes) | HIGH | LOW | P1 |
+| Explorer/Browser extension with winning-grant trace | HIGH | MEDIUM | P1 |
+| Dual orgs + delegation | MEDIUM | LOW | P1 |
+| Reverse lookup (dataset → persons @ effective level) | MEDIUM | MEDIUM | P1 |
+| Classification override (equal-or-higher only) | MEDIUM | LOW | P1 |
+| Per-type level semantics in UI | MEDIUM | LOW | P2 |
+| "Why this level" losing-grant rendering | MEDIUM | LOW | P2 |
+| Point-in-time dataset resolution | MEDIUM | LOW | P2 |
+| Expiry-aware future level | LOW | MEDIUM | P3 |
 
 ---
 
-## v2.1 Pattern Reuse Map
+## Real-System Feature Comparison
 
-Exact v2.1 constructs that v2.2 mirrors, to prevent re-invention.
-
-| v2.1 Construct | v2.2 Mirror | Delta |
-|----------------|-------------|-------|
-| `ZoneNode` (id, name, zone_type, parent_id, admin_org_id, asset_owner_org_id, requires_explicit_auth) | `DigitalNetwork` / `DigitalPlatform` / `DigitalApplication` | Add `classification: Clearance`; Platform adds `network_id: string` and optional `terminal_zone_id: string \| null`; Application adds `platform_id: string`; drop `zone_type` / `requires_explicit_auth` (not applicable) |
-| `PhysicalAccessGrant` (id, person_id, zone_id, valid_from, valid_until) | `ResourceAccessGrant` | Replace `zone_id: string` with `resource_id: string` + `resource_type: "NETWORK" \| "PLATFORM" \| "APPLICATION"` |
-| `isGrantActive(grant, now)` | **Reuse verbatim** | None; function operates on compatible `valid_from / valid_until: Date \| null` fields |
-| `ZoneAccessDelegate` (id, zone_id, delegate_type, delegate_person_id, delegate_org_id, granted_by_org_id, valid_from, valid_until) | `ResourceAccessDelegate` | Replace `zone_id: string` with `resource_id: string` + `resource_type` |
-| `isDelegateActive(delegate, now)` | **Reuse verbatim** | None |
-| `resolveZoneAccess` two-gate chain | `resolveDigitalAccess` three-gate chain | Gate 1: clearance ≥ classification. Gate 2: active own-tier grant. Gate 3: active parent-tier grant. Advisory: zone-prerequisite warning (non-blocking) |
-| `ZoneAccessResult` (allow, gate, reason, detail?) | `DigitalAccessResult` | Extend to `gateChain: GateResult[]` for multi-step trace; add `zoneAdvisory: string \| null` |
-| `zone-browser.tsx` (collapsible tree + detail panel) | `resource-browser.tsx` | Same expand/collapse tree pattern; replace `zone_type` badges with `classification` badges |
-| `access-resolution-explorer.tsx` (person + zone selectors + trace) | `digital-access-resolution-explorer.tsx` | Same person selector + result trace; adds parent-tier gate steps; adds advisory warning row |
-| `useWorld()` + world-state store | **Extend existing store** | Add `networks`, `platforms`, `applications`, `resourceGrants`, `resourceDelegates` collections to the existing world-state |
-
----
-
-## NSM / SEED-009 Grounding
-
-| SEED-009 Requirement | Standard Anchor | v2.2 Demo Treatment |
-|---------------------|-----------------|---------------------|
-| System classification (max grade approved to process) | sikkerhetsloven §6-1, FIPS 199 | `classification: Clearance` on each resource. Application inherits Platform's grade. |
-| Approval to operate (sikkerhetsgodkjenning) | sikkerhetsloven §6-3, NIST RMF ATO | Static `approved_to_operate: boolean` on Platform. Displayed as badge in detail panel. NOT a resolution gate in v2.2. |
-| Adequate security level (forsvarlig sikkerhetsnivå) | sikkerhetsloven §6-2, NSM Grunnprinsipper v2.1 | Static `security_level_assessed: boolean` on Platform. Displayed as badge. NOT a resolution gate in v2.2. |
-| Access enforcement (clearance + authorized + need-to-know) | NIST AC family, ISO 8.3 | Enforced by the three-gate chain: clearance gate + per-tier grant gate + prerequisite tier grant gate. |
-| Logging / audit | NIST AU family, ISO 8.15/8.16 | Access resolution events append to existing `auditlog.ts` patterns. No new infrastructure needed. |
-| Communications/content control | sikkerhetsloven §6-6 | Out of demo scope; deferred to real-build milestone. |
+| Aspect | Exchange Online | SharePoint | Noark 5 / Public 360 | Entra Entitlement Mgmt | Our Approach (v2.3) |
+|--------|----------------|------------|----------------------|------------------------|---------------------|
+| Level semantics | Orthogonal permissions (Full Access ⊉ Send As); union of independent capabilities | Cumulative levels (Full Control ⊇ Contribute ⊇ Read); union across groups ⇒ highest wins | Escalating role ladder (leser → saksbehandler → arkivar/admin); admin adds administrative capability | N/A (packages bundle resources) | Total-ordered ladder per type; highest active grant wins — matches SharePoint/archive exactly; documented deviation from Exchange |
+| Prerequisite gating | Mailbox permission presumes Exchange account | Site access presumes tenant identity | System role presumes system account | Assignment presumes directory identity | Explicit, explainable **hard gate**: active Application grant required — stronger and more legible than any of them |
+| Expiry | No native grant expiry (manual removal) | No native expiry on permission levels | Ad-hoc access groups time-bounded in practice | First-class: on-date / N-days / never, with extension | First-class `valid_from`/`valid_until` (nullable = permanent) — Entra-grade |
+| Delegation | Admin-only permission management | Site owners manage their own site | Archive service administers access groups | Catalog owner / access-package manager; delegate NOT capped at own level | `admin_org` delegates to person/org (v2.1/v2.2 pattern); delegate grants up to dataset's max level (Entra-style answer to the open question) |
+| Explainability | None (troubleshooting KBs instead) | "Check Permissions" (opaque) | Journal/audit trail, not decision traces | Assignment history | Full gate-chain trace with winning grant — the differentiator |
 
 ---
 
 ## Sources
 
-- `.planning/milestones/v2.2-REQUIREMENTS.md` — seeded RSRC requirements (primary specification)
-- `.planning/seeds/SEED-009-info-system-security-requirements.md` — NSM §6 anchors (HIGH confidence for §6-1/§6-2/§6-3/§6-6; NIST RMF/ATO parallel flagged UNVERIFIED in seed)
-- `frontend/src/demo/lib/model.ts` — v2.1 types and resolution functions (direct pattern source, HIGH confidence)
-- `frontend/src/demo/lib/seed.ts` — 6-unit scenario subjects and grants structure (HIGH confidence)
-- `frontend/src/demo/components/zone-browser.tsx` — UI tree browser pattern (HIGH confidence)
-- `frontend/src/demo/components/access-resolution-explorer.tsx` — UI resolution explorer pattern (HIGH confidence)
-- `.planning/PROJECT.md` — key decisions: Application inherits Platform classification; zone-prerequisite advisory only; no multi-homing (HIGH confidence)
-- NSM sikkerhetsloven kap. 6 — verified in SEED-009 (HIGH confidence for Norwegian statutory requirements)
-- NSM Grunnprinsipper for IKT-sikkerhet v2.1 — verified to exist in SEED-009 (MEDIUM confidence on specific content)
-- NATO classification tier naming (NATO-R / NATO-S / NATO-TS) — standard practice (MEDIUM confidence; not independently verified against a current NATO document)
+- Microsoft Learn — [Manage permissions for recipients in Exchange Online](https://learn.microsoft.com/en-us/exchange/recipients-in-exchange-online/manage-permissions-for-recipients); [Can't send email when Full Access is granted](https://learn.microsoft.com/en-us/troubleshoot/exchange/mailflow/cannot-send-email-with-full-access); [Shared mailboxes in Exchange Online](https://learn.microsoft.com/en-us/exchange/collaboration-exo/shared-mailboxes) — MEDIUM (official docs via web search, cross-corroborated)
+- Microsoft Learn — [Understanding permission levels in SharePoint](https://learn.microsoft.com/en-us/sharepoint/understanding-permission-levels); [Determine permission levels and groups](https://learn.microsoft.com/en-us/sharepoint/sites/determine-permission-levels-and-groups-in-sharepoint-server); [Understand groups and permissions on a SharePoint site](https://support.microsoft.com/en-us/office/understand-groups-and-permissions-on-a-sharepoint-site-258e5f33-1b5a-4766-a503-d86655cf950d) — MEDIUM
+- Arkivverket — [Noark 5](https://www.arkivverket.no/forvaltning-og-utvikling/noark-standarden/noark-5); Public 360 løsningsbeskrivelse (sund.arkivplan.no PDF); [Documaster — Noark 5 overview](https://www.documaster.com/blogg/alt-du-trenger-a-vite-om-noark-5-standarden) — MEDIUM
+- Microsoft Learn — [What is entitlement management?](https://learn.microsoft.com/en-us/entra/id-governance/entitlement-management-overview); [Access package lifecycle policy](https://learn.microsoft.com/en-us/entra/id-governance/entitlement-management-access-package-lifecycle-policy); [Access package assignments](https://learn.microsoft.com/en-us/entra/id-governance/entitlement-management-access-package-assignments) — MEDIUM
+- Practical365 — [Understanding Exchange Shared Mailbox Permissions](https://practical365.com/understanding-exchange-shared-mailbox-permissions/) — MEDIUM (corroborates Microsoft docs)
+- `.planning/PROJECT.md`, `.planning/milestones/v2.3-REQUIREMENTS.md` — HIGH (primary specification)
+- v2.1/v2.2 pattern sources: `frontend/src/demo/lib/model.ts` (`isGrantActive`, `isDelegateActive`, gate-chain resolver), v2.2 Explorer/Browser components — HIGH (existing codebase)
 
 ---
 
-*Feature research for: v2.2 Digital Resource Access (Network → Platform → Application) demo*
-*Researched: 2026-06-02*
+*Feature research for: v2.3 Dataset Access (demo) — dataset-level authorization*
+*Researched: 2026-07-03*
