@@ -62,12 +62,12 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
 ## Mock Dataset (DATA-SEED)
 
-- [ ] **DATA-SEED-01**: Dataset includes ≥2 Mailboxes (own mailbox + ≥1 shared mailbox) per relevant entity.
-- [ ] **DATA-SEED-02**: Dataset includes ≥1 archiving system with multiple roles demonstrating READER / CASE_HANDLER / ADMIN grants.
-- [ ] **DATA-SEED-03**: Dataset includes ≥2 document sites (e.g., SharePoint) with varying permission levels per person.
-- [ ] **DATA-SEED-04**: Dataset demonstrates the prerequisite chain: person has Application grant → has DatasetAccessGrant → can access specific dataset.
-- [ ] **DATA-SEED-05**: Dataset demonstrates denied access: person has Application grant but no DatasetAccessGrant → denied at dataset level.
-- [ ] **DATA-SEED-06**: A deny-matrix fixture exercises every gate in DATA-ACCESS-03 as the deciding gate at least once (clearance-fails, Application-grant-expired-with-live-dataset-grant, dataset-grant-missing) — prevents shipping trace rows wired to no real data (Pitfall 3, the v2.2 dead-advisory-row lesson).
+- [x] **DATA-SEED-01**: Dataset includes ≥2 Mailboxes (own mailbox + ≥1 shared mailbox) per relevant entity.
+- [x] **DATA-SEED-02**: Dataset includes ≥1 archiving system with multiple roles demonstrating READER / CASE_HANDLER / ADMIN grants.
+- [x] **DATA-SEED-03**: Dataset includes ≥2 document sites (e.g., SharePoint) with varying permission levels per person.
+- [x] **DATA-SEED-04**: Dataset demonstrates the prerequisite chain: person has Application grant → has DatasetAccessGrant → can access specific dataset.
+- [x] **DATA-SEED-05**: Dataset demonstrates denied access: person has Application grant but no DatasetAccessGrant → denied at dataset level.
+- [x] **DATA-SEED-06**: A deny-matrix fixture exercises every gate in DATA-ACCESS-03 as the deciding gate at least once (clearance-fails, Application-grant-expired-with-live-dataset-grant, dataset-grant-missing) — prevents shipping trace rows wired to no real data (Pitfall 3, the v2.2 dead-advisory-row lesson).
 
 ---
 

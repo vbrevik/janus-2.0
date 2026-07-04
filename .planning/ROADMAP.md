@@ -91,7 +91,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 **Plans**: 0/4 plans complete
 **Wave 1**
 
-- [ ] 14-01-PLAN.md — Cast prep + dataset fixtures (mailboxes, archive roles, document sites, deny-matrix/prerequisite-chain scenario data) in seed.ts (DATA-SEED-01..06)
+- [x] 14-01-PLAN.md — Cast prep + dataset fixtures (mailboxes, archive roles, document sites, deny-matrix/prerequisite-chain scenario data) in seed.ts (DATA-SEED-01..06)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -136,5 +136,5 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 | 11. Digital Resource Backend & Resolver Port | v2.2 | 4/4 | Complete | 2026-07-02 |
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 7/7 | Complete | 2026-07-03 |
 | 13. Dataset Model & Access Resolver | v2.3 | 2/2 | Complete    | 2026-07-04 |
-| 14. Mock Dataset & WorldState | v2.3 | 0/4 | Not started | - |
+| 14. Mock Dataset & WorldState | v2.3 | 1/4 | In Progress|  |
 | 15. Demo UI & Access Explorer | v2.3 | 0/TBD | Not started | - |

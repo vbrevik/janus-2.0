@@ -4,13 +4,13 @@ milestone: v2.3
 milestone_name: Dataset Access
 status: executing
 stopped_at: Phase 14 context gathered
-last_updated: "2026-07-04T14:47:58.124Z"
-last_activity: 2026-07-04 — Phase 13 complete, transitioned to Phase 14
+last_updated: "2026-07-04T18:55:15.616Z"
+last_activity: 2026-07-04
 progress:
   total_phases: 3
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 6
+  completed_plans: 3
   percent: 33
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-03 after v2.2 milestone)
 
 **Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — federated ABAC model proven through v2.2; fullstack transition begun (Phase 11 backend slice).
-**Current focus:** Phase 13 — dataset-model-access-resolver
+**Current focus:** Phase 14 — mock-dataset-worldstate
 
 ## Current Position
 
-Phase: 14 — Mock Dataset & WorldState
-Plan: Not started
+Phase: 14 (mock-dataset-worldstate) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-04 — Phase 13 complete, transitioned to Phase 14
+Last activity: 2026-07-04
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 12 P01 | ~5min | 2 tasks | 1 files |
 | Phase 12 P02 | 2 sessions | 3 tasks | 6 files |
 | Phase 13 P02 | 15m | 3 tasks | 2 files |
+| Phase 14 P01 | 14min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,8 @@ v2.3 resolved decisions (from REQUIREMENTS.md, research-recommended — not user
 - **Flagged for revisit** at `/gsd-discuss-phase 13` since these were never live-confirmed by the user (see REQUIREMENTS.md "Resolved Decisions" note)
 - [Phase ?]: canIssueDatasetGrant reuses gate-3 aggregation (effectiveRankedLevel/effectiveArchiveCoverage) for the delegate cap — one aggregation implementation for issuing and access
 - [Phase ?]: Out-of-vocabulary requestedLevel on canIssueDatasetGrant's delegate path returns false (permission query), unlike resolveDatasetAccess's requiredLevel which throws (resolver invariant)
+- [Phase 14]: 14-01: Followed CONTEXT.md D-01..D-04 exactly -- 3-person cast plus 1 new denial-narrative subject (ds-deny-subj), additive RESOURCE_GRANTS entries only
+- [Phase 14]: 14-01: Single archive dataset (ds-archive-caserecords) isolates each deny-matrix gate as the sole failing gate -- subj-3/Lee fails CLEARANCE only, subj-2/Sam fails APP_GRANT_OR only (expired grant), ds-deny-subj fails DATASET_GRANT only (zero dataset grants anywhere)
 
 ### Pending Todos
 
@@ -131,9 +134,9 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-07-04T14:47:58.120Z
+Last session: 2026-07-04T18:55:04.374Z
 Stopped at: Phase 14 context gathered
-Resume file: .planning/phases/14-mock-dataset-worldstate/14-CONTEXT.md
+Resume file: None
 
 ## Operator Next Steps
 
