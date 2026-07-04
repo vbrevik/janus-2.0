@@ -973,6 +973,20 @@ describe("canIssueDatasetGrant — admin path and delegate cap", () => {
     ).toBe(true);
   });
 
+  it("admin_org actor cannot issue an out-of-vocabulary requestedLevel (WR-01 regression)", () => {
+    expect(
+      canIssueDatasetGrant(
+        "ORG-ADMIN",
+        "admin-p",
+        archiveDs,
+        "TOTALLY_BOGUS_LEVEL",
+        [],
+        [],
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
   it("active delegate holding own active CASE_HANDLER grant can issue READER (at/below own coverage)", () => {
     const delegate = makeDelegate("del-p", "ds-i1");
     const ownGrant = makeDatasetGrant("del-p", "ds-i1", "CASE_HANDLER");

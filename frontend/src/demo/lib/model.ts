@@ -1684,8 +1684,12 @@ export function canIssueDatasetGrant(
   delegates: DatasetAccessDelegate[],
   now: Date,
 ): boolean {
-  // admin_org path: unrestricted, regardless of personal grants.
-  if (actorOrgId === dataset.admin_org_id) return true;
+  // admin_org path: unrestricted by personal grants, but still must be a
+  // requestedLevel within this dataset's own vocabulary (symmetric with the
+  // delegate path's vocabulary check below).
+  if (actorOrgId === dataset.admin_org_id) {
+    return isLevelInVocabulary(dataset.dataset_type, requestedLevel);
+  }
 
   // Delegate path: must be an ACTIVE delegate for THIS exact dataset.
   const activeDelegate = delegates.find(
