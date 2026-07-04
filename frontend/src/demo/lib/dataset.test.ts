@@ -179,6 +179,16 @@ describe("isLevelInVocabulary", () => {
     expect(isLevelInVocabulary("DOCUMENT_SITE", "GARBAGE")).toBe(false);
     expect(isLevelInVocabulary("ARCHIVE_ROLE", "GARBAGE")).toBe(false);
   });
+
+  it("rejects Object.prototype key names from ARCHIVE_ROLE vocabulary (CR-01 regression)", () => {
+    // ARCHIVE_ROLE_CONTAINS is a plain object literal — a naive `level in
+    // ARCHIVE_ROLE_CONTAINS` check would match inherited Object.prototype
+    // properties and incorrectly return true for these.
+    expect(isLevelInVocabulary("ARCHIVE_ROLE", "constructor")).toBe(false);
+    expect(isLevelInVocabulary("ARCHIVE_ROLE", "toString")).toBe(false);
+    expect(isLevelInVocabulary("ARCHIVE_ROLE", "hasOwnProperty")).toBe(false);
+    expect(isLevelInVocabulary("ARCHIVE_ROLE", "__proto__")).toBe(false);
+  });
 });
 
 // =====================================================================
@@ -878,6 +888,44 @@ describe("resolveDatasetAccess — named pitfall blocking tests", () => {
     expect(deniedNotThrown.allow).toBe(false);
     expect(
       deniedNotThrown.gates.find((g) => g.kind === "DATASET_GRANT")?.pass,
+    ).toBe(false);
+  });
+
+  it("Object.prototype-key grant level is excluded, not thrown (CR-01 regression)", () => {
+    const ds = makeDataset({
+      id: "ds-p3",
+      dataset_type: "ARCHIVE_ROLE",
+      application_ids: ["APP-1"],
+    });
+    const poisonGrant = makeDatasetGrant("p1", "ds-p3", "constructor");
+    const appGrant = makeAppGrant("p1", "APP-1");
+    expect(() =>
+      resolveDatasetAccess(
+        "p1",
+        "SECRET",
+        ds,
+        apps,
+        platforms,
+        [appGrant],
+        [poisonGrant],
+        "READER",
+        NOW,
+      ),
+    ).not.toThrow();
+    const result = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [appGrant],
+      [poisonGrant],
+      "READER",
+      NOW,
+    );
+    expect(result.allow).toBe(false);
+    expect(
+      result.gates.find((g) => g.kind === "DATASET_GRANT")?.pass,
     ).toBe(false);
   });
 });

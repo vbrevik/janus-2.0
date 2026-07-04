@@ -1270,7 +1270,11 @@ export function isLevelInVocabulary(
     case "DOCUMENT_SITE":
       return (DOCUMENT_SITE_LEVELS as readonly string[]).includes(level);
     case "ARCHIVE_ROLE":
-      return level in ARCHIVE_ROLE_CONTAINS;
+      // Own-property check only — `in` walks the prototype chain and would
+      // match Object.prototype keys like "constructor"/"toString", crashing
+      // downstream consumers (ARCHIVE_ROLE_CONTAINS[level] is not iterable
+      // for those keys) instead of excluding the malformed level.
+      return Object.prototype.hasOwnProperty.call(ARCHIVE_ROLE_CONTAINS, level);
     default:
       return assertNeverDatasetType(datasetType);
   }
