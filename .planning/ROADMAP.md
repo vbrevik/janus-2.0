@@ -88,7 +88,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
   3. A deny-matrix fixture exercises each of the 3 resolution gates as the sole deciding gate at least once — clearance-fails, Application-grant-expired-with-live-dataset-grant, and dataset-grant-missing — each case resolved by a passing test that asserts which specific gate failed (DATA-SEED-06)
   4. `WorldState` carries a `datasets` sub-object (nodes, grants, delegates) populated by the new fixtures, and `dataset-selectors.ts` joins dataset fixtures to backend-fetched Application data by `application_id`, verified by a passing selector test — while v2.2's existing digital-resource seed, selectors, and tests remain unmodified and green
 
-**Plans**: 0/4 plans complete
+**Plans**: 3/4 plans executed
 **Wave 1**
 
 - [x] 14-01-PLAN.md — Cast prep + dataset fixtures (mailboxes, archive roles, document sites, deny-matrix/prerequisite-chain scenario data) in seed.ts (DATA-SEED-01..06)
@@ -96,7 +96,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 14-02-PLAN.md — dataset-selectors.ts (application_id join + resolveDatasetAt) and dataset-selectors.test.ts proving DATA-SEED-01..06 against real seed fixtures (DATA-SEED-01..06)
-- [ ] 14-03-PLAN.md — WorldState.datasets wiring (eager-seeded sub-object) + ISSUE_DATASET_GRANT gated action/reducer + DatasetAuditEntry, with reducer tests (DATA-SEED-04..06)
+- [x] 14-03-PLAN.md — WorldState.datasets wiring (eager-seeded sub-object) + ISSUE_DATASET_GRANT gated action/reducer + DatasetAuditEntry, with reducer tests (DATA-SEED-04..06)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -136,5 +136,5 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 | 11. Digital Resource Backend & Resolver Port | v2.2 | 4/4 | Complete | 2026-07-02 |
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 7/7 | Complete | 2026-07-03 |
 | 13. Dataset Model & Access Resolver | v2.3 | 2/2 | Complete    | 2026-07-04 |
-| 14. Mock Dataset & WorldState | v2.3 | 2/4 | In Progress|  |
+| 14. Mock Dataset & WorldState | v2.3 | 3/4 | In Progress|  |
 | 15. Demo UI & Access Explorer | v2.3 | 0/TBD | Not started | - |
