@@ -1,6 +1,6 @@
 # Phase 13: Dataset Model & Access Resolver - Context
 
-**Gathered:** 2026-07-04
+**Gathered:** 2026-07-04 (updated 2026-07-04 with discussion decisions)
 **Status:** Ready for planning
 
 <domain>
@@ -44,8 +44,21 @@ Downstream agents MUST read `13-SPEC.md` before planning or implementing. Requir
 ### Gate-trace shape for `visible`
 - **D-03:** The visibility check is added as a 4th entry in the `gates: ResourceGateResult[]` trace array (alongside clearance, Application-grant, dataset-grant), NOT as a separate top-level-only field. Chosen for UI consistency with the existing `ResourceResolutionTrace` row-rendering pattern that Phase 15 will reuse — every gate (including visibility) shows up uniformly as a trace row. **Note for the resolver's design:** `resolveDatasetAccess` must still expose `visible: boolean` as its own top-level field too (SPEC.md DATA-ACCESS-04 requires this explicitly, and Phase 15's dataset-listing filter needs a direct boolean, not a trace-array scan) — the gates[] entry is an ADDITIONAL trace representation of the same check, not a replacement for the top-level field.
 
+### Resolver output shape
+- **D-04:** Single flat shape — `{ allow, gates, visible, reason? }` — all fields on one object, mirroring `ResourceAccessResult`. Does NOT wrap `ResourceAccessResult` in a separate `DatasetAccessResult`. Clean for Phase 15's UI which renders one trace + one boolean. The v2.2 `ResourceAccessResult` shape is extended, not duplicated.
+
+### Delegate authority — admin_org exemption
+- **D-05:** `admin_org` is **fully exempt** from the delegate-level cap — it can always issue `DatasetAccessGrant` regardless of whether it holds a personal grant on the dataset. Matches "unrestricted" in DATA-DELEG-01 literally. A delegate with no personal grant can issue nothing. This is the only authority check in `canIssueDatasetGrant` — no middle ground (Option C: must hold admin_org role on the dataset).
+
+### Missing application reference handling
+- **D-06:** Soft fail — treat as a failed prerequisite, deny dataset access, and log the missing application in the trace (same treatment as any other expired/missing gate). NOT a hard error/throw — invalid reference is an access problem, not a data-integrity problem. Phase 14's seed data won't produce this case, but the resolver must handle it gracefully so tests can exercise the "Application grant expired with live dataset grant" deny-matrix scenario (DATA-SEED-06) without needing a separate error path.
+
+### Effective access aggregation for ARCHIVE_ROLE (DATA-GRANT-03)
+- **D-07:** Compute the **union of containment coverage** at resolution time — a person holding both `CASE_HANDLER` and `READER` gets the transitive union `{CASE_HANDLER, READER, ADMIN} ∪ {READER} = {CASE_HANDLER, READER, ADMIN}`, so the effective role is `CASE_HANDLER`. Do NOT pre-compute a single "highest" role — store the set of actively-held roles on `DatasetAccessGrant` and compute coverage on-the-fly in the resolver. This keeps the mechanism correct for future non-linear role additions without special-casing.
+
 ### Claude's Discretion
 - Exact function/type naming beyond what SPEC.md and the decisions above specify (e.g. internal helper names, parameter ordering within `resolveDatasetAccess`'s signature) — no strong preference expressed, follow existing v2.2 naming conventions (`resolveResourceAccess`, `ResourceGateResult`, etc.) as the closest analog.
+- Whether `visible` gate's trace entry uses the same reason string format as other gates — follow existing `ResourceGateResult.reason` pattern.
 
 </decisions>
 
@@ -64,6 +77,7 @@ Downstream agents MUST read `13-SPEC.md` before planning or implementing. Requir
 - `frontend/src/demo/lib/model.ts` lines 15, 664, 744, 822, 855 — `CLEARANCE_RANK`, `ResourceTier` (frozen union, do not extend), `ApplicationNode` (no classification field, derive-with-override precedent), `isWindowActive`, `effectiveClassification` — all directly reused by the dataset resolver
 - `frontend/src/demo/lib/digital-resource.test.ts` — sibling test file; establishes the "D3-13" inline-fixtures-only convention (D-01 above) and the exactly-named pitfall-test pattern the verifier greps for
 - `frontend/src/demo/lib/physical-access.test.ts` — second sibling confirming the same inline-fixtures convention
+- `frontend/src/demo/lib/digital-resource-golden-export.test.ts` — golden-fixture parity test pattern (v2.2's TS↔Rust contract)
 
 </canonical_refs>
 
@@ -74,11 +88,12 @@ Downstream agents MUST read `13-SPEC.md` before planning or implementing. Requir
 - `isWindowActive(valid_from, valid_until, now)` (model.ts:822) — the single shared active-window helper; reuse as-is for both Application grants and DatasetAccessGrant windows, do not introduce a divergent convention
 - `CLEARANCE_RANK` (model.ts:15) and `effectiveClassification()` (model.ts:855) — reuse directly for the clearance gate and classification derivation; `effectiveDatasetClassification` should mirror `effectiveClassification`'s fail-closed-on-missing-parent pattern
 - `ResourceAccessGrant` (model.ts:755) — the existing v2.2 Application-level grant type; `resolveDatasetAccess`'s gate 2 checks these directly, does not need a new Application-grant type
+- `ResourceAccessResult` / `ResourceGateResult` — the shape to mirror for `DatasetAccessResult` (D-04); same `{ allow, gates, reason? }` pattern extended with `visible`
 
 ### Established Patterns
 - Append-only additions to `model.ts` with a clear section-header comment (e.g. `// --- Phase 9: Digital Resource hierarchy model (v2.2) ---`) — Phase 13 should add a matching `// --- Phase 13: Dataset model & access resolver (v2.3) ---` header
 - Every time-dependent function takes an explicit `now: Date` parameter — no internal `Date.now()`/`new Date()` calls, keeps tests deterministic
-- Structured `{allow, gates, reason?}`-style resolver results, mirrored from `ResourceAccessResult` — `DatasetAccessResult` follows the same shape plus the new `visible` field (D-03)
+- Structured `{allow, gates, reason?}`-style resolver results, mirrored from `ResourceAccessResult` — `DatasetAccessResult` follows the same shape plus the new `visible` field (D-03, D-04)
 - Sibling test files use ONE fixed `NOW` plus named boundary constants (e.g. `NOW_A`/`NOW_B`) for window-shift cases, and exactly-named pitfall-test functions the verifier greps for — Phase 13's test file should follow the same naming discipline for its 3 prohibition tests (D-01)
 
 ### Integration Points
@@ -91,6 +106,7 @@ Downstream agents MUST read `13-SPEC.md` before planning or implementing. Requir
 
 - The `ARCHIVE_ROLE_CONTAINS` map should be written as a `Record<ArchiveRole, ArchiveRole[]>` literal (D-02) — the user was explicit that "one role can contain another role... if not part of, then no substitution," which this shape represents directly and extensibly.
 - The visibility gate must show up in the UI-facing trace array (D-03) even though Phase 15 owns the actual UI — the resolver's output shape should already anticipate that consumer.
+- For multi-role aggregation (D-07): the union-of-coverage approach means the resolver needs a small helper `coverageOf(role: ArchiveRole): ArchiveRole[]` that returns the transitive closure of `ARCHIVE_ROLE_CONTAINS[role]`, and `effectiveAccess()` computes `union(...heldRoles.map(coverageOf))` at resolution time.
 
 </specifics>
 
@@ -108,3 +124,4 @@ None — discussion stayed within phase scope.
 
 *Phase: 13-dataset-model-access-resolver*
 *Context gathered: 2026-07-04*
+*Last updated: 2026-07-04 (4 discussion decisions added: D-04..D-07)*
