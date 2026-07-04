@@ -6,11 +6,7 @@
 // --- Clearance ladder (lifted verbatim from data.ts:4-14) ---
 
 export type Clearance =
-  | "UNCLASSIFIED"
-  | "RESTRICTED"
-  | "CONFIDENTIAL"
-  | "SECRET"
-  | "TOP_SECRET";
+  "UNCLASSIFIED" | "RESTRICTED" | "CONFIDENTIAL" | "SECRET" | "TOP_SECRET";
 
 export const CLEARANCE_RANK: Record<Clearance, number> = {
   UNCLASSIFIED: 0,
@@ -67,9 +63,7 @@ export type ZoneAccessGate = "GRANT_LOOKUP" | "ZONE_TYPE_RULE";
 // ESCORT_REQUIRED and ENTRY_LOG_REQUIRED removed: no evaluator returns them.
 // Escort and entry-log semantics are carried in the detail string instead.
 export type ZoneAccessReason =
-  | "GRANT_FOUND"
-  | "NO_GRANT"
-  | "INSUFFICIENT_CLEARANCE";
+  "GRANT_FOUND" | "NO_GRANT" | "INSUFFICIENT_CLEARANCE";
 
 export interface ZoneAccessResult {
   allow: boolean;
@@ -391,12 +385,7 @@ export function getActiveVisitorPasses(
 // Lifted from obligations.ts:4-19.
 
 export type UnitId =
-  | "MILITARY_1"
-  | "MILITARY_2"
-  | "INTEL"
-  | "INFRA"
-  | "INDUSTRY"
-  | "HOME_GUARD";
+  "MILITARY_1" | "MILITARY_2" | "INTEL" | "INFRA" | "INDUSTRY" | "HOME_GUARD";
 
 export const UNITS: Record<UnitId, { label: string }> = {
   MILITARY_1: { label: "Military Unit 1" },
@@ -417,12 +406,7 @@ export function unitName(id: UnitId): string {
 // Added: SIGINT (intel), STOCKWATCH (industry), HOMELAND (home guard) for realistic NTK reads.
 
 export type Compartment =
-  | "AURORA"
-  | "BLACKWING"
-  | "CITADEL"
-  | "SIGINT"
-  | "STOCKWATCH"
-  | "HOMELAND";
+  "AURORA" | "BLACKWING" | "CITADEL" | "SIGINT" | "STOCKWATCH" | "HOMELAND";
 
 // --- Subject flags (lifted verbatim from data.ts:37-40) ---
 
@@ -667,10 +651,7 @@ export type ResourceTier = "NETWORK" | "PLATFORM" | "APPLICATION";
 // `(string & {})` keeps the union open at the type edge while preserving
 // autocomplete on the four baseline values.
 export type BaselineOrgRole =
-  | "ADMIN"
-  | "ASSET_OWNER"
-  | "OPERATOR"
-  | "SECURITY_APPROVAL";
+  "ADMIN" | "ASSET_OWNER" | "OPERATOR" | "SECURITY_APPROVAL";
 
 // A time-windowed role-tagged org association on a resource node (RSRC-04, req 3).
 // Generalizes v2.1's fixed admin_org_id/asset_owner_org_id into a list. `org_id`
@@ -1661,4 +1642,93 @@ export function resolveDatasetAccess(
     visible: appGrantPass,
     gates,
   };
+}
+
+// =====================================================================
+// Plan 13-02 (Wave 2): canIssueDatasetGrant (DATA-DELEG-01)
+// =====================================================================
+
+// Issuing-authority check — mirrors canIssueResourceGrant's two-path shape,
+// adapted for DATA-04's fixed admin_org_id field.
+//
+// Path 1 (admin_org): actorOrgId === dataset.admin_org_id -> true unconditionally.
+//   Bare equality — admin_org_id is a fixed field (DATA-04 / Assumption A3), NOT
+//   time-windowed; never isWindowActive here. The cap applies to delegates, not
+//   to the org that originates the authority. NOTE: unrestricted ISSUING never
+//   implies ACCESS — admin_org's own content access still goes through the full
+//   3-gate resolveDatasetAccess (SPEC.md prohibition, tested).
+//
+// Path 2 (delegate): the actor must be an ACTIVE DatasetAccessDelegate for THIS
+//   exact dataset, AND hold their OWN active, in-vocabulary DatasetAccessGrant(s)
+//   on it. requestedLevel must be at/below what those grants cover:
+//   - ARCHIVE_ROLE: requestedLevel must be in the delegate's own
+//     effectiveArchiveCoverage (containment-union) — the SAME aggregation gate 3
+//     uses for content access; issuing and access share one implementation.
+//   - MAILBOX / DOCUMENT_SITE: requestedLevel's rank must be <= the delegate's
+//     own best grant rank (rank-max via the shared level tables).
+//   An out-of-vocabulary requestedLevel on this path returns false (never
+//   throws — issuing is a permission query, not a resolver invariant).
+//
+// Everyone else (non-admin, non-delegate; expired delegate; delegate with no
+// personal grant on the dataset): false — "can issue nothing".
+export function canIssueDatasetGrant(
+  actorOrgId: string,
+  actorPersonId: string,
+  dataset: DatasetNode,
+  requestedLevel: string,
+  datasetGrants: DatasetAccessGrant[],
+  delegates: DatasetAccessDelegate[],
+  now: Date,
+): boolean {
+  // admin_org path: unrestricted, regardless of personal grants.
+  if (actorOrgId === dataset.admin_org_id) return true;
+
+  // Delegate path: must be an ACTIVE delegate for THIS exact dataset.
+  const activeDelegate = delegates.find(
+    (d) =>
+      d.dataset_id === dataset.id &&
+      d.delegate_person_id === actorPersonId &&
+      isWindowActive(d.valid_from, d.valid_until, now),
+  );
+  if (!activeDelegate) return false;
+
+  // The delegate's OWN active, in-vocabulary grants on this exact dataset —
+  // no personal grant means "can issue nothing" (DATA-DELEG-01, no exceptions).
+  const ownGrants = datasetGrants.filter(
+    (g) =>
+      g.dataset_id === dataset.id &&
+      g.person_id === actorPersonId &&
+      isWindowActive(g.valid_from, g.valid_until, now) &&
+      isLevelInVocabulary(dataset.dataset_type, g.level),
+  );
+  if (ownGrants.length === 0) return false;
+
+  // A requestedLevel outside this dataset's vocabulary can never be issued.
+  if (!isLevelInVocabulary(dataset.dataset_type, requestedLevel)) return false;
+
+  // Cap: requestedLevel must be AT OR BELOW what the delegate's own grant(s)
+  // cover — the SAME aggregation logic resolveDatasetAccess's gate 3 uses.
+  switch (dataset.dataset_type) {
+    case "ARCHIVE_ROLE": {
+      const coverage = effectiveArchiveCoverage(
+        ownGrants.map((g) => g.level as ArchiveRole),
+      );
+      return coverage.has(requestedLevel as ArchiveRole);
+    }
+    case "MAILBOX":
+    case "DOCUMENT_SITE": {
+      const levels =
+        dataset.dataset_type === "MAILBOX"
+          ? (MAILBOX_LEVELS as readonly string[])
+          : (DOCUMENT_SITE_LEVELS as readonly string[]);
+      const ownBest = effectiveRankedLevel(
+        levels,
+        ownGrants.map((g) => g.level),
+      );
+      if (ownBest === null) return false;
+      return levels.indexOf(requestedLevel) <= levels.indexOf(ownBest);
+    }
+    default:
+      return assertNeverDatasetType(dataset.dataset_type);
+  }
 }
