@@ -25,6 +25,9 @@ import type {
   PolicyAssignment,
   ResourceAccessGrant,
   ResourceAccessDelegate,
+  DatasetNode,
+  DatasetAccessGrant,
+  DatasetAccessDelegate,
 } from "./model";
 export { ROLES, TIERS, UNITS } from "./model";
 export type { Subject, Resource, HubPointer, UnitId } from "./model";
@@ -1885,3 +1888,155 @@ export const RSRC_DELEGATES: ResourceAccessDelegate[] = [
     valid_until: null,
   },
 ];
+
+// --- Phase 14: Mock dataset fixtures (v2.3) ---
+
+// 5 datasets: 2 MAILBOX (own + shared), 1 ARCHIVE_ROLE (doubles as the
+// DATA-SEED-02/04/06 fixture), 2 DOCUMENT_SITE. Every application_ids entry
+// references exactly one of rsrc-milapp-1 / rsrc-intapp-1 (D-03) — never both
+// in the same dataset (effectiveDatasetClassification's assert-all-share check
+// would throw given their different classifications, SECRET vs TOP_SECRET).
+export const DATASET_NODES: DatasetNode[] = [
+  {
+    id: "ds-mailbox-dana",
+    name: "Dana Reyes — Mailbox",
+    dataset_type: "MAILBOX",
+    application_ids: ["rsrc-milapp-1"],
+    classification_override: null,
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "MILITARY_1",
+  },
+  {
+    id: "ds-mailbox-sam",
+    name: "Sam Okafor — Mailbox",
+    dataset_type: "MAILBOX",
+    application_ids: ["rsrc-milapp-1"],
+    classification_override: null,
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "MILITARY_2",
+  },
+  {
+    id: "ds-archive-caserecords",
+    name: "Case Records Archive",
+    dataset_type: "ARCHIVE_ROLE",
+    application_ids: ["rsrc-milapp-1"],
+    classification_override: null,
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "MILITARY_1",
+  },
+  {
+    id: "ds-docsite-ops",
+    name: "Operations Document Site",
+    dataset_type: "DOCUMENT_SITE",
+    application_ids: ["rsrc-milapp-1"],
+    classification_override: null,
+    admin_org_id: "MILITARY_1",
+    asset_owner_org_id: "MILITARY_1",
+  },
+  {
+    id: "ds-docsite-intel",
+    name: "Intel Fusion Document Site",
+    dataset_type: "DOCUMENT_SITE",
+    application_ids: ["rsrc-intapp-1"],
+    classification_override: null,
+    admin_org_id: "INTEL",
+    asset_owner_org_id: "INTEL",
+  },
+];
+
+// 10 grants. ds-archive-caserecords deliberately distributes all three
+// ArchiveRole values across subj-1/2/3 and gets ZERO grants for ds-deny-subj
+// (DATA-SEED-05 / deny-matrix case-c fixture — active app grant, no dataset
+// grant anywhere).
+export const DATASET_GRANTS: DatasetAccessGrant[] = [
+  // ds-mailbox-dana: Dana's own mailbox (FULL_ACCESS) + Sam shared (READ)
+  {
+    id: "ds-grant-dana-mailbox-dana-full_access",
+    person_id: "subj-1",
+    dataset_id: "ds-mailbox-dana",
+    level: "FULL_ACCESS",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "ds-grant-sam-mailbox-dana-read",
+    person_id: "subj-2",
+    dataset_id: "ds-mailbox-dana",
+    level: "READ",
+    valid_from: null,
+    valid_until: null,
+  },
+  // ds-mailbox-sam: Sam's own mailbox (FULL_ACCESS, reused as deny-matrix
+  // case-b's live dataset grant) + Dana shared (READ)
+  {
+    id: "ds-grant-sam-mailbox-sam-full_access",
+    person_id: "subj-2",
+    dataset_id: "ds-mailbox-sam",
+    level: "FULL_ACCESS",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "ds-grant-dana-mailbox-sam-read",
+    person_id: "subj-1",
+    dataset_id: "ds-mailbox-sam",
+    level: "READ",
+    valid_from: null,
+    valid_until: null,
+  },
+  // ds-archive-caserecords: all three ArchiveRole values, one per person
+  {
+    id: "ds-grant-dana-archive-admin",
+    person_id: "subj-1",
+    dataset_id: "ds-archive-caserecords",
+    level: "ADMIN",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "ds-grant-sam-archive-case_handler",
+    person_id: "subj-2",
+    dataset_id: "ds-archive-caserecords",
+    level: "CASE_HANDLER",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "ds-grant-lee-archive-reader",
+    person_id: "subj-3",
+    dataset_id: "ds-archive-caserecords",
+    level: "READER",
+    valid_from: null,
+    valid_until: null,
+  },
+  // ds-docsite-ops
+  {
+    id: "ds-grant-dana-docsite-ops-contribute",
+    person_id: "subj-1",
+    dataset_id: "ds-docsite-ops",
+    level: "CONTRIBUTE",
+    valid_from: null,
+    valid_until: null,
+  },
+  {
+    id: "ds-grant-lee-docsite-ops-read",
+    person_id: "subj-3",
+    dataset_id: "ds-docsite-ops",
+    level: "READ",
+    valid_from: null,
+    valid_until: null,
+  },
+  // ds-docsite-intel
+  {
+    id: "ds-grant-dana-docsite-intel-full_control",
+    person_id: "subj-1",
+    dataset_id: "ds-docsite-intel",
+    level: "FULL_CONTROL",
+    valid_from: null,
+    valid_until: null,
+  },
+];
+
+// No delegation-issuing scenario is in this phase's locked scope (SPEC.md:
+// "Full CRUD reducer actions beyond issueDatasetGrant... Phase 15 adds the rest").
+export const DATASET_DELEGATES: DatasetAccessDelegate[] = [];
