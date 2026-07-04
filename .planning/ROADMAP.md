@@ -71,7 +71,9 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
   5. `effectiveDatasetClassification` derives classification from the parent Application unless `classification_override` is set; a constructor-time validator rejects any override lower than the parent's effective classification (DATA-05)
   6. `canIssueDatasetGrant(actor, dataset, now)` returns `true` for an active `admin_org` actor (unrestricted), and for an active delegate ONLY when the delegate holds their own active `DatasetAccessGrant` on that exact dataset AND is issuing at/below what their own grant covers (rank ≤ for ranked types, containment-covers for `ARCHIVE_ROLE`) — `false` for a delegate with no personal grant, a non-admin/no-delegate actor, or an expired-delegate actor (DATA-DELEG-01); `npm run test` passes with zero failures and zero TypeScript errors after these additions, and the existing v2.2 golden-fixture and digital-resource suites remain green and untouched
 
-**Plans**: TBD
+**Plans**: 2 plans
+- [ ] 13-01-PLAN.md — Dataset entity types, per-type level/containment vocabulary, classification derive-with-override validation, effective-access aggregation (DATA-01..05, DATA-GRANT-01..03)
+- [ ] 13-02-PLAN.md — `resolveDatasetAccess` 3-gate resolver + independent visibility gate, `canIssueDatasetGrant` delegate-capped issuing authority, full phase-level acceptance sweep (DATA-ACCESS-01..04, DATA-DELEG-01)
 
 ### Phase 14: Mock Dataset & WorldState
 
