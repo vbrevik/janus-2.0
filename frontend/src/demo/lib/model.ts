@@ -1181,3 +1181,484 @@ export function canIssueResourceGrant(
       isWindowActive(d.valid_from, d.valid_until, now),
   );
 }
+
+// --- Phase 13: Dataset model & access resolver (v2.3) ---
+//
+// Append-only. Establishes the dataset type system's foundation: three separate
+// dataset types (MAILBOX, DOCUMENT_SITE, ARCHIVE_ROLE), per-type level vocabularies
+// (rank-safe for MAILBOX/DOCUMENT_SITE, containment-safe for ARCHIVE_ROLE), the
+// DatasetNode/DatasetAccessGrant/DatasetAccessDelegate entity shapes, classification
+// derive-with-override validation, and the two effective-access aggregation algorithms
+// (rank-max and containment-union). Plan 13-02's resolver and delegation-cap logic
+// build on this pure-data layer.
+//
+// Pitfall A (PITFALLS.md): MailboxLevel / DocumentSiteLevel / ArchiveRole are THREE
+// SEPARATE literal unions, never merged into one shared DatasetLevel union. Sharing
+// the literal "READ" between MailboxLevel and DocumentSiteLevel is fine — what matters
+// is that no function ever holds a bare level value without also holding the
+// dataset_type it belongs to. A merged union would let a MAILBOX grant's "READ"
+// satisfy a DOCUMENT_SITE requirement.
+//
+// Pitfall B (PITFALLS.md): ARCHIVE_ROLE uses a containment map, not a rank table.
+// A person holding CASE_HANDLER plus a future unrelated role has the coverage of
+// BOTH — never collapsed to one "highest" role. This is DATA-GRANT-03's semantic.
+//
+// Pitfall C (PITFALLS.md): effectiveDatasetClassification asserts ALL linked
+// Applications share the same classification (fail-loud), never silently picking
+// the highest-wins (assert-all-share-then-fail-loud per RESEARCH.md's resolved
+// Open Question 2).
+
+// Dataset-type discriminator — three types with two genuinely different comparison
+// mechanisms (rank vs. containment). Dispatched by dataset.dataset_type before any
+// level/role comparison touches the bare value (PITFALL A, DATA-03).
+export type DatasetType = "MAILBOX" | "ARCHIVE_ROLE" | "DOCUMENT_SITE";
+
+// Three SEPARATE literal unions — never merged into one shared DatasetLevel union.
+// Sharing the literal "READ" between MailboxLevel and DocumentSiteLevel is fine;
+// what matters is that no function EVER holds a bare level value without also
+// holding the dataset_type it belongs to (PITFALL A).
+export type MailboxLevel = "READ" | "SEND_AS" | "FULL_ACCESS";
+export type DocumentSiteLevel = "READ" | "CONTRIBUTE" | "FULL_CONTROL";
+export type ArchiveRole = "READER" | "CASE_HANDLER" | "ADMIN";
+
+// Rank tables — ONE place per ranked type. Array order low -> high; index = rank,
+// same convention as the existing TIERS precedent. Used by effectiveRankedLevel
+// (rank-max aggregation for MAILBOX/DOCUMENT_SITE).
+export const MAILBOX_LEVELS: readonly MailboxLevel[] = [
+  "READ",
+  "SEND_AS",
+  "FULL_ACCESS",
+];
+export const DOCUMENT_SITE_LEVELS: readonly DocumentSiteLevel[] = [
+  "READ",
+  "CONTRIBUTE",
+  "FULL_CONTROL",
+];
+
+// Containment map for ARCHIVE_ROLE (D-02). Plain Record<K,V> annotation ALREADY
+// forces every ArchiveRole key present — TypeScript errors on a missing key.
+// ADMIN contains CASE_HANDLER+READER, CASE_HANDLER contains READER, READER contains
+// nothing (but covers itself via self-match in archiveRoleCovers).
+export const ARCHIVE_ROLE_CONTAINS: Record<ArchiveRole, ArchiveRole[]> = {
+  ADMIN: ["CASE_HANDLER", "READER"],
+  CASE_HANDLER: ["READER"],
+  READER: [],
+};
+
+// Transitive containment check — walks the descendant list so a FUTURE non-linear
+// role (where a direct-children-only map wouldn't already be flattened) still
+// resolves correctly. Self-match short-circuits true; otherwise walks with a
+// visited-set cycle guard (current 3-role chain is linear, but the walk is what
+// actually implements "directly or transitively" per DATA-03's wording).
+export function archiveRoleCovers(
+  held: ArchiveRole,
+  required: ArchiveRole,
+): boolean {
+  if (held === required) return true;
+  const stack: ArchiveRole[] = [...ARCHIVE_ROLE_CONTAINS[held]];
+  const seen = new Set<ArchiveRole>();
+  while (stack.length > 0) {
+    const role = stack.pop()!;
+    if (role === required) return true;
+    if (seen.has(role)) continue;
+    seen.add(role);
+    stack.push(...ARCHIVE_ROLE_CONTAINS[role]);
+  }
+  return false;
+}
+
+// Compile-time exhaustiveness guard — IDENTICAL shape to assertNeverGateKind
+// (model.ts:1032). If DatasetType ever grows a 4th member, every switch closed
+// with this function fails to compile until a new case is added.
+export function assertNeverDatasetType(x: never): never {
+  throw new Error(`Unhandled dataset type: ${String(x)}`);
+}
+
+// Runtime vocabulary check for an OPEN string coming from a grant or a caller
+// parameter (DatasetAccessGrant.level / requiredLevel are typed `string`, exactly
+// like the existing OrgLink.role precedent — they must stay open because a single
+// array/parameter is used across all three dataset types). Dispatches on
+// datasetType BEFORE comparing the level value (PITFALL A, DATA-03).
+export function isLevelInVocabulary(
+  datasetType: DatasetType,
+  level: string,
+): boolean {
+  switch (datasetType) {
+    case "MAILBOX":
+      return (MAILBOX_LEVELS as readonly string[]).includes(level);
+    case "DOCUMENT_SITE":
+      return (DOCUMENT_SITE_LEVELS as readonly string[]).includes(level);
+    case "ARCHIVE_ROLE":
+      return level in ARCHIVE_ROLE_CONTAINS;
+    default:
+      return assertNeverDatasetType(datasetType);
+  }
+}
+
+// Dataset entity — three fixed fields for the v2.3 shape.
+// application_ids: non-empty (enforced by validateDatasetNode, not the type system —
+//   mirroring v2.1/v2.2's approach where structural invariants are runtime-checked).
+// classification_override: Clearance | null. When set, effectiveDatasetClassification
+//   returns it directly (never clamps); validateDatasetClassification is the enforcement
+//   point that rejects strictly lower overrides.
+// admin_org_id / asset_owner_org_id: fixed string fields directly on the node (DATA-04),
+//   NOT a time-windowed org_links list — mirroring the v2.1/v2.2 dual-org pattern.
+export interface DatasetNode {
+  id: string;
+  name: string;
+  dataset_type: DatasetType;
+  application_ids: string[];
+  classification_override: Clearance | null;
+  admin_org_id: string;
+  asset_owner_org_id: string;
+}
+
+// Person-to-dataset access grant. level is OPEN (string) — a single array spans all
+// three dataset types, so per-type vocabulary validation happens at resolution time
+// via isLevelInVocabulary. Window = inclusive/null (caller pre-filters via
+// isWindowActive before passing to aggregation functions).
+export interface DatasetAccessGrant {
+  id: string;
+  person_id: string;
+  dataset_id: string;
+  level: string;
+  valid_from: Date | null;
+  valid_until: Date | null;
+}
+
+// Delegation of dataset access authority (PERSON-only per RESEARCH.md's resolved
+// Open Question 1 — no delegate_type / ORG variant, unlike ZoneAccessDelegate /
+// ResourceAccessDelegate). Feeds resolveDatasetAccess's issuer-cap check.
+export interface DatasetAccessDelegate {
+  id: string;
+  dataset_id: string;
+  delegate_person_id: string;
+  granted_by_org_id: string;
+  valid_from: Date | null;
+  valid_until: Date | null;
+}
+
+// Seed-config validator (mirrors validatePolicyWindows's `string | null` contract —
+// never throws). Returns a descriptive error string when dataset.application_ids is
+// empty (DATA-01), else null. This is a seed-data check, NOT a resolver path.
+export function validateDatasetNode(dataset: DatasetNode): string | null {
+  if (dataset.application_ids.length === 0) {
+    return `DatasetNode "${dataset.id}" has an empty application_ids array; a dataset must reference at least one Application`;
+  }
+  return null;
+}
+
+// effectiveDatasetClassification (DATA-05): the SINGLE source of dataset classification.
+// Plan 13-02's resolver MUST call this function directly, never re-derive classification
+// from an Application inline.
+//
+// Resolution steps:
+//   1. Resolve each dataset.application_ids against `applications`; throw if any id
+//      fails to resolve (seed integrity error — mirrors effectiveClassification's
+//      throw-on-missing-platform pattern).
+//   2. Call effectiveClassification() on each resolved Application.
+//   3. Assert ALL resolved classifications are identical; throw if any diverge
+//      (assert-all-share-then-fail-loud per RESEARCH.md's resolved Open Question 2 —
+//      NEVER a highest-wins silent resolution).
+//   4. If classification_override is non-null, return it directly (this function does
+//      NOT clamp — validateDatasetClassification is the enforcement point).
+//   5. Otherwise return the single derived base classification.
+export function effectiveDatasetClassification(
+  dataset: DatasetNode,
+  applications: ApplicationNode[],
+  allPlatforms: PlatformNode[],
+): Clearance {
+  const resolvedApps: ApplicationNode[] = [];
+  for (const appId of dataset.application_ids) {
+    const app = applications.find((a) => a.id === appId);
+    if (!app) {
+      throw new Error(
+        `effectiveDatasetClassification: application "${appId}" not found for dataset "${dataset.id}"`,
+      );
+    }
+    resolvedApps.push(app);
+  }
+  const classifications = resolvedApps.map((app) =>
+    effectiveClassification(app, allPlatforms),
+  );
+  // Assert all share the same classification (assert-all-share-then-fail-loud).
+  const base = classifications[0];
+  for (let i = 1; i < classifications.length; i++) {
+    if (classifications[i] !== base) {
+      throw new Error(
+        `effectiveDatasetClassification: application "${resolvedApps[0].id}" "(${resolvedApps[0].name})" and application "${resolvedApps[i].id}" ("${resolvedApps[i].name}") on dataset "${dataset.id}" have divergent classifications "${classifications[0]}" and "${classifications[i]}"`,
+      );
+    }
+  }
+  if (dataset.classification_override !== null) {
+    return dataset.classification_override;
+  }
+  return base;
+}
+
+// Seed-config validator for classification_override (mirrors validatePolicyWindows's
+// `string | null` contract — never throws). Returns null when:
+//   - classification_override is null (no override to validate)
+//   - classification_override equals the parent's effective classification
+// Returns a descriptive error string when classification_override is strictly lower
+// than the parent's effective classification (under-classification rejected).
+//
+// NOTE: effectiveDatasetClassification returns the override when one is set, so we
+// cannot use it directly here — we must derive the base classification ignoring the
+// override (see deriveBaseClassification below) and compare against that.
+export function validateDatasetClassification(
+  dataset: DatasetNode,
+  applications: ApplicationNode[],
+  allPlatforms: PlatformNode[],
+): string | null {
+  if (dataset.classification_override === null) {
+    return null;
+  }
+  const base = deriveBaseClassification(dataset, applications, allPlatforms);
+  if (CLEARANCE_RANK[dataset.classification_override] < CLEARANCE_RANK[base]) {
+    return `DatasetNode "${dataset.id}" classification_override "${dataset.classification_override}" is strictly lower than parent effective classification "${base}"`;
+  }
+  return null;
+}
+
+// Derive the base classification for a dataset WITHOUT considering the override.
+// This is the classification the override is meant to modify — the validator compares
+// against this, not against effectiveDatasetClassification (which would return the
+// override itself when set, creating a self-equal comparison).
+function deriveBaseClassification(
+  dataset: DatasetNode,
+  applications: ApplicationNode[],
+  allPlatforms: PlatformNode[],
+): Clearance {
+  const resolvedApps: ApplicationNode[] = [];
+  for (const appId of dataset.application_ids) {
+    const app = applications.find((a) => a.id === appId);
+    if (!app) {
+      throw new Error(
+        `deriveBaseClassification: application "${appId}" not found for dataset "${dataset.id}"`,
+      );
+    }
+    resolvedApps.push(app);
+  }
+  const classifications = resolvedApps.map((app) =>
+    effectiveClassification(app, allPlatforms),
+  );
+  const base = classifications[0];
+  for (let i = 1; i < classifications.length; i++) {
+    if (classifications[i] !== base) {
+      throw new Error(
+        `deriveBaseClassification: application "${resolvedApps[0].id}" and application "${resolvedApps[i].id}" on dataset "${dataset.id}" have divergent classifications "${classifications[0]}" and "${classifications[i]}"`,
+      );
+    }
+  }
+  return base;
+}
+
+// Effective-level aggregation for MAILBOX / DOCUMENT_SITE (rank-max).
+// Takes ALREADY-window-filtered grant levels as input — does NOT call isWindowActive
+// internally (caller/Plan 13-02 resolver pre-filters via isWindowActive, matching
+// the RESEARCH.md reference contract).
+//
+// Returns the highest-ranked active level, or null if the input array is empty.
+// Unknown levels in activeGrantLevels are skipped (indexOf === -1, rank < bestRank(-1)
+// never triggers).
+export function effectiveRankedLevel(
+  levels: readonly string[],
+  activeGrantLevels: string[],
+): string | null {
+  let best: string | null = null;
+  let bestRank = -1;
+  for (const level of activeGrantLevels) {
+    const rank = levels.indexOf(level);
+    if (rank > bestRank) {
+      bestRank = rank;
+      best = level;
+    }
+  }
+  return best;
+}
+
+// Effective-coverage aggregation for ARCHIVE_ROLE (containment-union).
+// Takes ALREADY-window-filtered role grants as input — does NOT call isWindowActive
+// internally (caller/Plan 13-02 resolver pre-filters via isWindowActive, matching
+// the RESEARCH.md reference contract).
+//
+// For each active role, adds the role itself plus every role in its containment
+// map to the result Set (union across ALL active role grants). A person holding
+// CASE_HANDLER plus an unrelated future role has the coverage of BOTH — never
+// collapsed to one "highest" role (DATA-GRANT-03).
+export function effectiveArchiveCoverage(
+  activeGrantRoles: ArchiveRole[],
+): Set<ArchiveRole> {
+  const covered = new Set<ArchiveRole>();
+  for (const role of activeGrantRoles) {
+    covered.add(role);
+    for (const contained of ARCHIVE_ROLE_CONTAINS[role]) {
+      covered.add(contained);
+    }
+  }
+  return covered;
+}
+
+// =====================================================================
+// Plan 13-02 (Wave 2): DatasetAccessResult + resolveDatasetAccess
+// =====================================================================
+
+// Resolver result shape. `gates` reuses ResourceGateResult (kind/pass/reason) —
+// exactly 4 entries, in order: CLEARANCE, APP_GRANT_OR, DATASET_GRANT, VISIBILITY.
+// `visible` is computed from gate 2 alone — independent of clearance (gate 1) and
+// the dataset grant (gate 3). No admin_org / delegate branch anywhere in this
+// computation.
+export interface DatasetAccessResult {
+  allow: boolean;
+  visible: boolean;
+  gates: ResourceGateResult[];
+  reason?: string;
+}
+
+// Three-gate chain resolver (DATA-ACCESS-01..04).
+//
+// Gate 1 (CLEARANCE): subjectClearance >= effectiveDatasetClassification
+// Gate 2 (APP_GRANT_OR): is there an active ResourceAccessGrant on >=1 of
+//   dataset.application_ids, matching person_id === subject, evaluated at now?
+// Gate 3 (DATASET_GRANT): is there an active DatasetAccessGrant covering the
+//   required level/role, evaluated at now?
+//
+// Gate 4 (VISIBILITY) is independent: visible = appGrantPass, with NO
+// admin_org/delegate exemption branch.
+//
+// throw semantics:
+//   - requiredLevel NOT in the dataset's vocabulary -> throw (caller/config error)
+//   - a referenced application_id not found in the applications list -> throw
+//   - stored grant with out-of-vocabulary level -> silently excluded from gate 3
+//     (denied, not thrown), sibling valid grants still resolve normally
+export function resolveDatasetAccess(
+  subject: string,
+  subjectClearance: Clearance,
+  dataset: DatasetNode,
+  applications: ApplicationNode[],
+  platforms: PlatformNode[],
+  appGrants: ResourceAccessGrant[],
+  datasetGrants: DatasetAccessGrant[],
+  requiredLevel: string,
+  now: Date,
+): DatasetAccessResult {
+  // Step 1: Throw if requiredLevel is not in the dataset's own vocabulary.
+  // This is a caller/config error — ALWAYS throws, never silently denies.
+  if (!isLevelInVocabulary(dataset.dataset_type, requiredLevel)) {
+    throw new Error(
+      `resolveDatasetAccess: requiredLevel "${requiredLevel}" is not in the vocabulary for dataset_type "${dataset.dataset_type}"`,
+    );
+  }
+
+  // Step 2: Check for an active Application grant on ANY linked Application.
+  // Throw if any application_id does not resolve (seed integrity error).
+  // Gate 2 pass/fail drives both the visible field (independent of clearance
+  // and dataset-grant) and the APP_GRANT_OR gate trace entry.
+  const appGrantPass = (() => {
+    for (const appId of dataset.application_ids) {
+      const app = applications.find((a) => a.id === appId);
+      if (!app) {
+        throw new Error(
+          `resolveDatasetAccess: application "${appId}" not found in applications list for dataset "${dataset.id}"`,
+        );
+      }
+      const hasActiveGrant = appGrants.some(
+        (g) =>
+          g.person_id === subject &&
+          g.resource_id === app.id &&
+          isWindowActive(g.valid_from, g.valid_until, now),
+      );
+      if (hasActiveGrant) return true;
+    }
+    return false;
+  })();
+
+  // Step 3: Clearance gate — subjectClearance >= effective dataset classification.
+  const effectiveClass = effectiveDatasetClassification(
+    dataset,
+    applications,
+    platforms,
+  );
+  const clearancePass =
+    CLEARANCE_RANK[subjectClearance] >= CLEARANCE_RANK[effectiveClass];
+
+  // Step 4: Dataset grant gate.
+  const datasetGrantPass = (() => {
+    // Filter to: this dataset + this person + window-active + in-vocabulary level.
+    // Out-of-vocabulary stored grants are silently excluded (never thrown), but
+    // sibling valid grants still resolve normally.
+    const filtered = datasetGrants.filter(
+      (g) =>
+        g.dataset_id === dataset.id &&
+        g.person_id === subject &&
+        isWindowActive(g.valid_from, g.valid_until, now) &&
+        isLevelInVocabulary(dataset.dataset_type, g.level),
+    );
+
+    switch (dataset.dataset_type) {
+      case "ARCHIVE_ROLE": {
+        const coverage = effectiveArchiveCoverage(
+          filtered.map((g) => g.level as ArchiveRole),
+        );
+        return coverage.has(requiredLevel as ArchiveRole);
+      }
+      case "MAILBOX": {
+        const best = effectiveRankedLevel(
+          MAILBOX_LEVELS,
+          filtered.map((g) => g.level),
+        );
+        if (!best) return false;
+        return (
+          (MAILBOX_LEVELS as readonly string[]).indexOf(best) >=
+          (MAILBOX_LEVELS as readonly string[]).indexOf(requiredLevel)
+        );
+      }
+      case "DOCUMENT_SITE": {
+        const best = effectiveRankedLevel(
+          DOCUMENT_SITE_LEVELS,
+          filtered.map((g) => g.level),
+        );
+        if (!best) return false;
+        return (
+          (DOCUMENT_SITE_LEVELS as readonly string[]).indexOf(best) >=
+          (DOCUMENT_SITE_LEVELS as readonly string[]).indexOf(requiredLevel)
+        );
+      }
+      default:
+        return assertNeverDatasetType(dataset.dataset_type);
+    }
+  })();
+
+  // Step 5: Assemble gate trace (exactly 4 entries, in order).
+  const gates: ResourceGateResult[] = [
+    {
+      kind: "CLEARANCE",
+      pass: clearancePass,
+      reason: clearancePass ? "CLEARANCE_OK" : "INSUFFICIENT_CLEARANCE",
+    },
+    {
+      kind: "APP_GRANT_OR",
+      pass: appGrantPass,
+      reason: appGrantPass ? "APP_GRANT_FOUND" : "NO_APP_GRANT",
+    },
+    {
+      kind: "DATASET_GRANT",
+      pass: datasetGrantPass,
+      reason: datasetGrantPass ? "DATASET_GRANT_FOUND" : "NO_DATASET_GRANT",
+    },
+    {
+      kind: "VISIBILITY",
+      pass: appGrantPass,
+      reason: appGrantPass ? "VISIBLE" : "NOT_VISIBLE",
+    },
+  ];
+
+  // Step 6: allow = all 3 substantive gates pass.
+  // visible = appGrantPass (gate 2), independent of clearance/dataset-grant.
+  return {
+    allow: clearancePass && appGrantPass && datasetGrantPass,
+    visible: appGrantPass,
+    gates,
+  };
+}
