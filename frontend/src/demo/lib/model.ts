@@ -1741,3 +1741,14 @@ export function canIssueDatasetGrant(
       return assertNeverDatasetType(dataset.dataset_type);
   }
 }
+
+// --- Phase 14: DatasetAuditEntry (mock audit-log entry for issueDatasetGrant) ---
+export interface DatasetAuditEntry {
+  seq: number;
+  timestamp: Date;
+  actor_person_id: string;
+  actor_org_id: string;
+  dataset_id: string;
+  person_id: string;
+  level: string;
+}

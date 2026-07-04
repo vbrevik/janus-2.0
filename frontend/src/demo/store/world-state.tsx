@@ -14,10 +14,15 @@ import {
 import {
   ROLES,
   UNITS,
+  canIssueDatasetGrant,
   type AttrEvent,
   type AttrOp,
   type Compartment,
   type Credential,
+  type DatasetAccessDelegate,
+  type DatasetAccessGrant,
+  type DatasetAuditEntry,
+  type DatasetNode,
   type Domain,
   type Envelope,
   type HubPointer,
@@ -35,6 +40,9 @@ import {
 } from "../lib/model";
 import {
   AGREEMENTS,
+  DATASET_DELEGATES,
+  DATASET_GRANTS,
+  DATASET_NODES,
   DELEGATES,
   ENTRY_LOGS,
   GRANTS,
@@ -96,6 +104,12 @@ export interface WorldState {
   visitorPasses: ZoneVisitorPass[];
   disabledGrantIds: Set<string>;
   digitalResources: DigitalResourceWorld;
+  datasets: {
+    nodes: DatasetNode[];
+    grants: DatasetAccessGrant[];
+    delegates: DatasetAccessDelegate[];
+    auditLog: DatasetAuditEntry[];
+  };
 }
 
 /** Build the initial world from the frozen seed (lazy-init for useReducer). */
@@ -142,6 +156,12 @@ export function seedWorld(): WorldState {
       grants: [],
       delegates: [],
       disabledResourceGrantIds: new Set<string>(),
+    },
+    datasets: {
+      nodes: [...DATASET_NODES],
+      grants: [...DATASET_GRANTS],
+      delegates: [...DATASET_DELEGATES],
+      auditLog: [],
     },
   };
 }
@@ -194,7 +214,16 @@ export type Action =
   | { type: "TOGGLE_RESOURCE_GRANT"; resourceGrantId: string }
   | { type: "SET_DIGITAL_RESOURCES"; world: DigitalResourceWorld }
   | { type: "UPSERT_RESOURCE_GRANT"; grant: ResourceAccessGrant }
-  | { type: "UPSERT_RESOURCE_DELEGATE"; delegate: ResourceAccessDelegate };
+  | { type: "UPSERT_RESOURCE_DELEGATE"; delegate: ResourceAccessDelegate }
+  | {
+      type: "ISSUE_DATASET_GRANT";
+      actorOrgId: string;
+      actorPersonId: string;
+      datasetId: string;
+      personId: string;
+      level: string;
+      now: Date;
+    };
 
 /** Immutable subject clone — new object, new compartments array, new flags object. */
 function cloneSubject(s: Subject): Subject {
@@ -533,6 +562,51 @@ export function reducer(state: WorldState, action: Action): WorldState {
       return {
         ...state,
         digitalResources: { ...state.digitalResources, delegates },
+      };
+    }
+
+    case "ISSUE_DATASET_GRANT": {
+      const dataset = state.datasets.nodes.find(
+        (d) => d.id === action.datasetId,
+      );
+      if (!dataset) return state;
+
+      const permitted = canIssueDatasetGrant(
+        action.actorOrgId,
+        action.actorPersonId,
+        dataset,
+        action.level,
+        state.datasets.grants,
+        state.datasets.delegates,
+        action.now,
+      );
+      if (!permitted) return state;
+
+      const grant: DatasetAccessGrant = {
+        id: `ds-grant-${action.personId}-${action.datasetId}-${state.seq + 1}`,
+        person_id: action.personId,
+        dataset_id: action.datasetId,
+        level: action.level,
+        valid_from: null,
+        valid_until: null,
+      };
+      const auditEntry: DatasetAuditEntry = {
+        seq: state.seq + 1,
+        timestamp: action.now,
+        actor_person_id: action.actorPersonId,
+        actor_org_id: action.actorOrgId,
+        dataset_id: action.datasetId,
+        person_id: action.personId,
+        level: action.level,
+      };
+      return {
+        ...state,
+        datasets: {
+          ...state.datasets,
+          grants: [...state.datasets.grants, grant],
+          auditLog: [...state.datasets.auditLog, auditEntry],
+        },
+        seq: state.seq + 1,
       };
     }
 
