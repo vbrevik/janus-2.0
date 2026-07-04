@@ -801,6 +801,24 @@ const fw5Subjects: Subject[] = [
 ];
 
 // ============================================================
+// Phase 14: dataset-denial narrative subject (v2.3 D-04)
+// ============================================================
+
+// ds-deny-subj: Priya Nair — dataset-denial narrative actor (v2.3 D-04): active
+// Application grant, zero DatasetAccessGrants
+const phase14DatasetSubjects: Subject[] = [
+  {
+    id: "ds-deny-subj",
+    name: "Priya Nair",
+    unit: "HOME_GUARD",
+    clearance: "SECRET",
+    domainAuth: { COMPUTER: "STANDARD" },
+    compartments: [],
+    flags: { revoked: false, securityHold: false },
+  },
+];
+
+// ============================================================
 // Merge all expansion records into the exported arrays
 // ============================================================
 
@@ -813,6 +831,7 @@ export const SUBJECTS: Subject[] = [
   ...industrySubjects,
   ...homeGuardSubjects,
   ...fw5Subjects,
+  ...phase14DatasetSubjects,
 ];
 
 export const RESOURCES: Resource[] = [
@@ -1820,6 +1839,32 @@ export const RESOURCE_GRANTS: ResourceAccessGrant[] = [
     id: "rsrc-grant-infraapp-active",
     person_id: "subj-1",
     resource_id: "rsrc-infraapp-1",
+    valid_from: null,
+    valid_until: null,
+  },
+  // === Phase 14: additive Application-grant entries for dataset access stories (D-01) ===
+  // Sam's ONLY grant on this Application, deliberately expired (deny-matrix case-b fixture)
+  {
+    id: "rsrc-grant-subj2-milapp-expired",
+    person_id: "subj-2",
+    resource_id: "rsrc-milapp-1",
+    valid_from: null,
+    valid_until: new Date("2026-05-01T00:00:00Z"),
+  },
+  // Lee's active grant (deny-matrix case-a fixture)
+  {
+    id: "rsrc-grant-subj3-milapp-active",
+    person_id: "subj-3",
+    resource_id: "rsrc-milapp-1",
+    valid_from: null,
+    valid_until: null,
+  },
+  // DATA-SEED-05 / deny-matrix-case-c fixture: active app grant, paired with zero
+  // DatasetAccessGrant records (see Task 2's DATASET_GRANTS)
+  {
+    id: "rsrc-grant-dsdenysubj-milapp-active",
+    person_id: "ds-deny-subj",
+    resource_id: "rsrc-milapp-1",
     valid_from: null,
     valid_until: null,
   },
