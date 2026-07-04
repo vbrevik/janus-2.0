@@ -123,6 +123,6 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 | 10. Mock Dataset & WorldState | v2.2 | 2/2 | Complete | 2026-06-18 |
 | 11. Digital Resource Backend & Resolver Port | v2.2 | 4/4 | Complete | 2026-07-02 |
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 7/7 | Complete | 2026-07-03 |
-| 13. Dataset Model & Access Resolver | v2.3 | 2/2 | Complete   | 2026-07-04 |
+| 13. Dataset Model & Access Resolver | v2.3 | 2/2 | Complete    | 2026-07-04 |
 | 14. Mock Dataset & WorldState | v2.3 | 0/TBD | Not started | - |
 | 15. Demo UI & Access Explorer | v2.3 | 0/TBD | Not started | - |

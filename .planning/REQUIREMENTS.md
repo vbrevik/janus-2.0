@@ -22,9 +22,9 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
 ## Dataset Model (DATA)
 
-- [ ] **DATA-01**: A `Dataset` is a named, authorizable resource that can be linked to one or more Applications (`application_ids: string[]`, non-empty) — a dataset MAY span multiple Applications (e.g. a shared mailbox reachable from two mail-client Applications). Examples: a mailbox, an archive role, a document site. **Revised from the original 1:1 assumption** — see Resolved Decisions.
-- [ ] **DATA-02**: Each dataset has a `dataset_type` indicating the access level vocabulary it uses. Initial types: `MAILBOX`, `ARCHIVE_ROLE`, `DOCUMENT_SITE`. Open vocabulary — additional types can be added without a schema change.
-- [ ] **DATA-03**: Access levels per dataset type use one of two mechanisms, chosen per type:
+- [x] **DATA-01**: A `Dataset` is a named, authorizable resource that can be linked to one or more Applications (`application_ids: string[]`, non-empty) — a dataset MAY span multiple Applications (e.g. a shared mailbox reachable from two mail-client Applications). Examples: a mailbox, an archive role, a document site. **Revised from the original 1:1 assumption** — see Resolved Decisions.
+- [x] **DATA-02**: Each dataset has a `dataset_type` indicating the access level vocabulary it uses. Initial types: `MAILBOX`, `ARCHIVE_ROLE`, `DOCUMENT_SITE`. Open vocabulary — additional types can be added without a schema change.
+- [x] **DATA-03**: Access levels per dataset type use one of two mechanisms, chosen per type:
   - **Ranked types** (`MAILBOX`, `DOCUMENT_SITE`): a total-ordered ladder — higher level implies all capabilities of lower levels (validated against Exchange/SharePoint patterns):
     - `MAILBOX`: `READ` < `SEND_AS` < `FULL_ACCESS`
     - `DOCUMENT_SITE`: `READ` < `CONTRIBUTE` < `FULL_CONTROL`
@@ -32,8 +32,8 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
   Per-type mechanism — cross-type level comparison is not representable either way (Pitfall 1).
 
-- [ ] **DATA-04**: Each dataset carries `admin_org_id` (controls the dataset, delegates access) and `asset_owner_org_id` (owns the content) — mirrors v2.1/v2.2 dual-org pattern.
-- [ ] **DATA-05**: Dataset classification inherits from its parent Application unless explicitly overridden via `classification_override`; an override must be equal to or higher than the parent's effective classification, never lower (validated at construction, mirrors v2.2's inheritance pattern).
+- [x] **DATA-04**: Each dataset carries `admin_org_id` (controls the dataset, delegates access) and `asset_owner_org_id` (owns the content) — mirrors v2.1/v2.2 dual-org pattern.
+- [x] **DATA-05**: Dataset classification inherits from its parent Application unless explicitly overridden via `classification_override`; an override must be equal to or higher than the parent's effective classification, never lower (validated at construction, mirrors v2.2's inheritance pattern).
 
 ---
 
@@ -48,9 +48,9 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
 ## Access Grants (DATA-GRANT)
 
-- [ ] **DATA-GRANT-01**: A `DatasetAccessGrant` links a person to a specific dataset at a specific access level, with `valid_from` and `valid_until` (nullable = permanent).
-- [ ] **DATA-GRANT-02**: A person may hold multiple grants for the same dataset at different access levels (e.g., READ and CONTRIBUTE on the same SharePoint site).
-- [ ] **DATA-GRANT-03**: Effective access = highest active grant for ranked types (`MAILBOX`, `DOCUMENT_SITE`, using the rank table from DATA-03); for `ARCHIVE_ROLE`, effective access = the union of all actively-held roles' containment coverage (a person holding both `CASE_HANDLER` and an unrelated future role has the coverage of both — there is no single "highest" role to collapse to when roles aren't fully linear).
+- [x] **DATA-GRANT-01**: A `DatasetAccessGrant` links a person to a specific dataset at a specific access level, with `valid_from` and `valid_until` (nullable = permanent).
+- [x] **DATA-GRANT-02**: A person may hold multiple grants for the same dataset at different access levels (e.g., READ and CONTRIBUTE on the same SharePoint site).
+- [x] **DATA-GRANT-03**: Effective access = highest active grant for ranked types (`MAILBOX`, `DOCUMENT_SITE`, using the rank table from DATA-03); for `ARCHIVE_ROLE`, effective access = the union of all actively-held roles' containment coverage (a person holding both `CASE_HANDLER` and an unrelated future role has the coverage of both — there is no single "highest" role to collapse to when roles aren't fully linear).
 
 ---
 
