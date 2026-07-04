@@ -13,6 +13,7 @@ import {
   type ResourceAccessGrant,
 } from "../lib/model";
 import { evaluate, principalFromSubject, type Requirement } from "../lib/abac";
+import { DATASET_NODES, DATASET_GRANTS, DATASET_DELEGATES } from "../lib/seed";
 
 const find = (state: ReturnType<typeof seedWorld>, id: string) =>
   state.subjects.find((s) => s.id === id)!;
@@ -333,6 +334,15 @@ describe("world-state reducer", () => {
 
   describe("ISSUE_DATASET_GRANT action", () => {
     const NOW = new Date("2026-07-01T12:00:00Z");
+
+    it("WorldState.datasets is populated eagerly from seed.ts's DATASET_NODES/DATASET_GRANTS/DATASET_DELEGATES", () => {
+      const state = seedWorld();
+
+      expect(state.datasets.nodes.length).toBe(DATASET_NODES.length);
+      expect(state.datasets.grants.length).toBe(DATASET_GRANTS.length);
+      expect(state.datasets.delegates.length).toBe(DATASET_DELEGATES.length);
+      expect(state.datasets.auditLog.length).toBe(0);
+    });
 
     it("creates a grant and an audit entry when the actor is the dataset's admin_org", () => {
       const state = seedWorld();
