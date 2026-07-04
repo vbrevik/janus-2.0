@@ -734,6 +734,34 @@ describe("resolveDatasetAccess — 3-gate chain", () => {
     ]);
   });
 
+  it("all dataset grants expired at now -> DATASET_GRANT gate fails (DATA-GRANT-03: no effective access)", () => {
+    const ds = makeDataset({ id: "ds-r11", application_ids: ["APP-1"] });
+    const expiredDatasetGrant = makeDatasetGrant(
+      "p1",
+      "ds-r11",
+      "FULL_ACCESS",
+      {
+        valid_until: EXPIRED_UNTIL,
+      },
+    );
+    const result = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [makeAppGrant("p1", "APP-1")],
+      [expiredDatasetGrant],
+      "READ",
+      NOW,
+    );
+    expect(result.allow).toBe(false);
+    expect(result.gates.find((g) => g.kind === "DATASET_GRANT")?.pass).toBe(
+      false,
+    );
+    expect(result.visible).toBe(true); // app grant still active
+  });
+
   it("ARCHIVE_ROLE gate 3 goes through containment: a CASE_HANDLER grant satisfies a READER requirement", () => {
     const ds = makeDataset({
       id: "ds-r10",
@@ -999,22 +1027,19 @@ describe("canIssueDatasetGrant — admin path and delegate cap", () => {
     });
     const delegate = makeDelegate("del-p", "ds-i2");
     const ownGrant = makeDatasetGrant("del-p", "ds-i2", "SEND_AS");
-    const args = [[ownGrant], [delegate], NOW] as const;
-    expect(
-      canIssueDatasetGrant("ORG-OTHER", "del-p", mailboxDs, "READ", ...args),
-    ).toBe(true);
-    expect(
-      canIssueDatasetGrant("ORG-OTHER", "del-p", mailboxDs, "SEND_AS", ...args),
-    ).toBe(true);
-    expect(
+    const issue = (level: string) =>
       canIssueDatasetGrant(
         "ORG-OTHER",
         "del-p",
         mailboxDs,
-        "FULL_ACCESS",
-        ...args,
-      ),
-    ).toBe(false);
+        level,
+        [ownGrant],
+        [delegate],
+        NOW,
+      );
+    expect(issue("READ")).toBe(true);
+    expect(issue("SEND_AS")).toBe(true);
+    expect(issue("FULL_ACCESS")).toBe(false);
   });
 
   it("out-of-vocabulary requestedLevel is denied on the delegate path (false, not thrown)", () => {
