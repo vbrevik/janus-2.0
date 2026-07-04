@@ -112,7 +112,29 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
 ## Traceability
 
-_Filled by the roadmapper when phases are assigned._
-
 | Requirement | Phase |
 |-------------|-------|
+| DATA-01 | Phase 13 |
+| DATA-02 | Phase 13 |
+| DATA-03 | Phase 13 |
+| DATA-04 | Phase 13 |
+| DATA-05 | Phase 13 |
+| DATA-ACCESS-01 | Phase 13 |
+| DATA-ACCESS-02 | Phase 13 |
+| DATA-ACCESS-03 | Phase 13 |
+| DATA-GRANT-01 | Phase 13 |
+| DATA-GRANT-02 | Phase 13 |
+| DATA-GRANT-03 | Phase 13 |
+| DATA-DELEG-01 | Phase 13 |
+| DATA-SEED-01 | Phase 14 |
+| DATA-SEED-02 | Phase 14 |
+| DATA-SEED-03 | Phase 14 |
+| DATA-SEED-04 | Phase 14 |
+| DATA-SEED-05 | Phase 14 |
+| DATA-SEED-06 | Phase 14 |
+| DATA-UI-01 | Phase 15 |
+| DATA-UI-02 | Phase 15 |
+| DATA-UI-03 | Phase 15 |
+| DATA-UI-04 | Phase 15 |
+
+**Coverage:** 22/22 v2.3 requirements mapped — 0 orphans, 0 duplicates.
