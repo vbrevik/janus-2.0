@@ -1500,7 +1500,6 @@ export interface DatasetAccessResult {
   allow: boolean;
   visible: boolean;
   gates: ResourceGateResult[];
-  reason?: string;
 }
 
 // Three-gate chain resolver (DATA-ACCESS-01..04).
