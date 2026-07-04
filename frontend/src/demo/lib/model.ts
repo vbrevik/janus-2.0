@@ -1353,28 +1353,11 @@ export function effectiveDatasetClassification(
   applications: ApplicationNode[],
   allPlatforms: PlatformNode[],
 ): Clearance {
-  const resolvedApps: ApplicationNode[] = [];
-  for (const appId of dataset.application_ids) {
-    const app = applications.find((a) => a.id === appId);
-    if (!app) {
-      throw new Error(
-        `effectiveDatasetClassification: application "${appId}" not found for dataset "${dataset.id}"`,
-      );
-    }
-    resolvedApps.push(app);
-  }
-  const classifications = resolvedApps.map((app) =>
-    effectiveClassification(app, allPlatforms),
+  const base = resolveDatasetBaseClassification(
+    dataset,
+    applications,
+    allPlatforms,
   );
-  // Assert all share the same classification (assert-all-share-then-fail-loud).
-  const base = classifications[0];
-  for (let i = 1; i < classifications.length; i++) {
-    if (classifications[i] !== base) {
-      throw new Error(
-        `effectiveDatasetClassification: application "${resolvedApps[0].id}" "(${resolvedApps[0].name})" and application "${resolvedApps[i].id}" ("${resolvedApps[i].name}") on dataset "${dataset.id}" have divergent classifications "${classifications[0]}" and "${classifications[i]}"`,
-      );
-    }
-  }
   if (dataset.classification_override !== null) {
     return dataset.classification_override;
   }
@@ -1390,7 +1373,7 @@ export function effectiveDatasetClassification(
 //
 // NOTE: effectiveDatasetClassification returns the override when one is set, so we
 // cannot use it directly here — we must derive the base classification ignoring the
-// override (see deriveBaseClassification below) and compare against that.
+// override (see resolveDatasetBaseClassification below) and compare against that.
 export function validateDatasetClassification(
   dataset: DatasetNode,
   applications: ApplicationNode[],
@@ -1399,18 +1382,32 @@ export function validateDatasetClassification(
   if (dataset.classification_override === null) {
     return null;
   }
-  const base = deriveBaseClassification(dataset, applications, allPlatforms);
+  const base = resolveDatasetBaseClassification(
+    dataset,
+    applications,
+    allPlatforms,
+  );
   if (CLEARANCE_RANK[dataset.classification_override] < CLEARANCE_RANK[base]) {
     return `DatasetNode "${dataset.id}" classification_override "${dataset.classification_override}" is strictly lower than parent effective classification "${base}"`;
   }
   return null;
 }
 
-// Derive the base classification for a dataset WITHOUT considering the override.
-// This is the classification the override is meant to modify — the validator compares
-// against this, not against effectiveDatasetClassification (which would return the
-// override itself when set, creating a self-equal comparison).
-function deriveBaseClassification(
+// Shared resolve-and-assert step for a dataset's base classification WITHOUT
+// considering classification_override (used by both effectiveDatasetClassification,
+// which may then apply the override, and validateDatasetClassification, which
+// compares the override against this). Extracted to keep the resolve/assert/
+// throw logic in one place (it previously drifted between two near-identical
+// copies).
+//
+// Throws if:
+//   - a referenced application_id does not resolve (seed integrity error).
+//   - application_ids is empty — never silently return `undefined` as the base
+//     classification (fail-loud, matching effectiveClassification's own
+//     no-silent-degrade contract).
+//   - resolved Applications diverge in classification (assert-all-share-then-
+//     fail-loud per RESEARCH.md's resolved Open Question 2).
+function resolveDatasetBaseClassification(
   dataset: DatasetNode,
   applications: ApplicationNode[],
   allPlatforms: PlatformNode[],
@@ -1420,10 +1417,15 @@ function deriveBaseClassification(
     const app = applications.find((a) => a.id === appId);
     if (!app) {
       throw new Error(
-        `deriveBaseClassification: application "${appId}" not found for dataset "${dataset.id}"`,
+        `resolveDatasetBaseClassification: application "${appId}" not found for dataset "${dataset.id}"`,
       );
     }
     resolvedApps.push(app);
+  }
+  if (resolvedApps.length === 0) {
+    throw new Error(
+      `resolveDatasetBaseClassification: dataset "${dataset.id}" has no application_ids to derive a classification from`,
+    );
   }
   const classifications = resolvedApps.map((app) =>
     effectiveClassification(app, allPlatforms),
@@ -1432,7 +1434,7 @@ function deriveBaseClassification(
   for (let i = 1; i < classifications.length; i++) {
     if (classifications[i] !== base) {
       throw new Error(
-        `deriveBaseClassification: application "${resolvedApps[0].id}" and application "${resolvedApps[i].id}" on dataset "${dataset.id}" have divergent classifications "${classifications[0]}" and "${classifications[i]}"`,
+        `resolveDatasetBaseClassification: application "${resolvedApps[0].id}" "(${resolvedApps[0].name})" and application "${resolvedApps[i].id}" ("${resolvedApps[i].name}") on dataset "${dataset.id}" have divergent classifications "${classifications[0]}" and "${classifications[i]}"`,
       );
     }
   }

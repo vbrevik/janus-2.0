@@ -330,6 +330,17 @@ describe("effectiveDatasetClassification", () => {
       /not found/i,
     );
   });
+
+  it("throws (never silently returns undefined) when application_ids is empty (WR-02 regression)", () => {
+    const ds = makeDataset({
+      application_ids: [],
+      classification_override: null,
+      id: "ds-empty-apps",
+    });
+    expect(() => effectiveDatasetClassification(ds, [], platforms)).toThrow(
+      /application_ids/i,
+    );
+  });
 });
 
 // =====================================================================
@@ -385,6 +396,17 @@ describe("validateDatasetClassification", () => {
     expect(
       validateDatasetClassification(ds, [appSecret], platforms),
     ).not.toBeNull();
+  });
+
+  it("throws (never silently derives undefined) when application_ids is empty and an override is set (WR-02 regression)", () => {
+    const ds = makeDataset({
+      application_ids: [],
+      classification_override: "SECRET",
+      id: "ds-ov-empty-apps",
+    });
+    expect(() =>
+      validateDatasetClassification(ds, [], platforms),
+    ).toThrow(/application_ids/i);
   });
 });
 
