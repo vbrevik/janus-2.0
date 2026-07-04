@@ -104,13 +104,17 @@ export function useAuth() {
 export function getDefaultRoute(role: string): string {
   switch (role) {
     case "admin":
+    case "manager":
+    case "operator":
+      return "/admin/dashboard";
+    case "viewer":
       return "/admin/dashboard";
     case "enduser":
       return "/enduser/tasks";
     case "official":
       return "/official/dashboard";
     default:
-      return "/login";
+      return "/admin/dashboard";
   }
 }
 

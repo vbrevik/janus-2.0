@@ -24,6 +24,5 @@ to a route that doesn't exist or a guard that bounces back. Note CLAUDE.md: no
 `enduser`/`official` seed users exist, and seed roles don't match the role-subtree names.
 
 **Scope notes:** Pre-existing — predates Phase 12; not caused by any v2.2 work.
-Did not block Phase 12 UAT (worked around by navigating directly to `/demo.html`
-after login). Fix belongs with the main-app auth/login flow, possibly alongside a
-decision about what the correct landing route for viewer/operator/manager roles is.
+
+**Fixed 2026-07-04:** Added `manager`, `operator`, `viewer` cases to `getDefaultRoute` in `frontend/src/contexts/auth-context.tsx`. `manager`/`operator`/`viewer` now redirect to `/admin/dashboard`; default fallback uses `/admin/dashboard` instead of `/login`.
