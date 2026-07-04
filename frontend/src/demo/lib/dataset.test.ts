@@ -29,6 +29,7 @@ import { describe, it, expect } from "vitest";
 import {
   archiveRoleCovers,
   assertNeverDatasetType,
+  canIssueDatasetGrant,
   DOCUMENT_SITE_LEVELS,
   effectiveArchiveCoverage,
   effectiveDatasetClassification,
@@ -40,6 +41,7 @@ import {
   validateDatasetNode,
   type ApplicationNode,
   type Clearance,
+  type DatasetAccessDelegate,
   type DatasetAccessGrant,
   type DatasetNode,
   type PlatformNode,
@@ -849,5 +851,225 @@ describe("resolveDatasetAccess — named pitfall blocking tests", () => {
     expect(
       deniedNotThrown.gates.find((g) => g.kind === "DATASET_GRANT")?.pass,
     ).toBe(false);
+  });
+});
+
+// =====================================================================
+// Plan 13-02 Task 2: canIssueDatasetGrant (delegate-capped issuing authority)
+// =====================================================================
+
+// Helper: active-unless-overridden DatasetAccessDelegate (PERSON-only shape).
+function makeDelegate(
+  personId: string,
+  datasetId: string,
+  overrides: Partial<DatasetAccessDelegate> = {},
+): DatasetAccessDelegate {
+  return {
+    id: `del-${personId}-${datasetId}`,
+    dataset_id: datasetId,
+    delegate_person_id: personId,
+    granted_by_org_id: "ORG-ADMIN",
+    valid_from: null,
+    valid_until: null,
+    ...overrides,
+  };
+}
+
+describe("canIssueDatasetGrant — admin path and delegate cap", () => {
+  const archiveDs = makeDataset({
+    id: "ds-i1",
+    dataset_type: "ARCHIVE_ROLE",
+    application_ids: ["APP-1"],
+    admin_org_id: "ORG-ADMIN",
+  });
+
+  it("admin_org actor can issue unconditionally, with ZERO personal grants on the dataset", () => {
+    expect(
+      canIssueDatasetGrant(
+        "ORG-ADMIN",
+        "admin-p",
+        archiveDs,
+        "ADMIN",
+        [],
+        [],
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("active delegate holding own active CASE_HANDLER grant can issue READER (at/below own coverage)", () => {
+    const delegate = makeDelegate("del-p", "ds-i1");
+    const ownGrant = makeDatasetGrant("del-p", "ds-i1", "CASE_HANDLER");
+    expect(
+      canIssueDatasetGrant(
+        "ORG-OTHER",
+        "del-p",
+        archiveDs,
+        "READER",
+        [ownGrant],
+        [delegate],
+        NOW,
+      ),
+    ).toBe(true);
+    // Issuing AT own coverage is also allowed.
+    expect(
+      canIssueDatasetGrant(
+        "ORG-OTHER",
+        "del-p",
+        archiveDs,
+        "CASE_HANDLER",
+        [ownGrant],
+        [delegate],
+        NOW,
+      ),
+    ).toBe(true);
+  });
+
+  it("delegate holding ONLY CASE_HANDLER cannot issue ADMIN — no escalation, including to themselves", () => {
+    const delegate = makeDelegate("del-p", "ds-i1");
+    const ownGrant = makeDatasetGrant("del-p", "ds-i1", "CASE_HANDLER");
+    expect(
+      canIssueDatasetGrant(
+        "ORG-OTHER",
+        "del-p",
+        archiveDs,
+        "ADMIN",
+        [ownGrant],
+        [delegate],
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("delegate with zero grants on the EXACT dataset can issue nothing (grant on a sibling dataset does not count)", () => {
+    const delegate = makeDelegate("del-p", "ds-i1");
+    const grantElsewhere = makeDatasetGrant("del-p", "ds-other", "ADMIN");
+    expect(
+      canIssueDatasetGrant(
+        "ORG-OTHER",
+        "del-p",
+        archiveDs,
+        "READER",
+        [grantElsewhere],
+        [delegate],
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("expired delegate cannot issue, even with an own active grant", () => {
+    const expiredDelegate = makeDelegate("del-p", "ds-i1", {
+      valid_until: EXPIRED_UNTIL,
+    });
+    const ownGrant = makeDatasetGrant("del-p", "ds-i1", "ADMIN");
+    expect(
+      canIssueDatasetGrant(
+        "ORG-OTHER",
+        "del-p",
+        archiveDs,
+        "READER",
+        [ownGrant],
+        [expiredDelegate],
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("non-admin, non-delegate actor cannot issue", () => {
+    const ownGrant = makeDatasetGrant("rand-p", "ds-i1", "ADMIN");
+    expect(
+      canIssueDatasetGrant(
+        "ORG-OTHER",
+        "rand-p",
+        archiveDs,
+        "READER",
+        [ownGrant],
+        [],
+        NOW,
+      ),
+    ).toBe(false);
+  });
+
+  it("ranked-type cap: delegate with SEND_AS can issue READ and SEND_AS but not FULL_ACCESS", () => {
+    const mailboxDs = makeDataset({
+      id: "ds-i2",
+      dataset_type: "MAILBOX",
+      application_ids: ["APP-1"],
+      admin_org_id: "ORG-ADMIN",
+    });
+    const delegate = makeDelegate("del-p", "ds-i2");
+    const ownGrant = makeDatasetGrant("del-p", "ds-i2", "SEND_AS");
+    const args = [[ownGrant], [delegate], NOW] as const;
+    expect(
+      canIssueDatasetGrant("ORG-OTHER", "del-p", mailboxDs, "READ", ...args),
+    ).toBe(true);
+    expect(
+      canIssueDatasetGrant("ORG-OTHER", "del-p", mailboxDs, "SEND_AS", ...args),
+    ).toBe(true);
+    expect(
+      canIssueDatasetGrant(
+        "ORG-OTHER",
+        "del-p",
+        mailboxDs,
+        "FULL_ACCESS",
+        ...args,
+      ),
+    ).toBe(false);
+  });
+
+  it("out-of-vocabulary requestedLevel is denied on the delegate path (false, not thrown)", () => {
+    const delegate = makeDelegate("del-p", "ds-i1");
+    const ownGrant = makeDatasetGrant("del-p", "ds-i1", "ADMIN");
+    expect(
+      canIssueDatasetGrant(
+        "ORG-OTHER",
+        "del-p",
+        archiveDs,
+        "SEND_AS", // MAILBOX level against an ARCHIVE_ROLE dataset
+        [ownGrant],
+        [delegate],
+        NOW,
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("canIssueDatasetGrant — named prohibition test", () => {
+  it("issuing-vs-access-independence: admin_org can ISSUE unconditionally but its own content ACCESS still runs the full 3-gate resolver", () => {
+    // Same actor, same dataset, both assertions in ONE test (SPEC.md row 16):
+    // an admin_org person with no clearance, no Application grant, and no
+    // dataset grant is DENIED content access while retaining issuing authority.
+    const platform = makePlatform("PLAT-1", "SECRET");
+    const app1 = makeApplication("APP-1", "PLAT-1");
+    const ds = makeDataset({
+      id: "ds-i3",
+      application_ids: ["APP-1"],
+      admin_org_id: "ORG-ADMIN",
+    });
+
+    const access = resolveDatasetAccess(
+      "admin-p",
+      "UNCLASSIFIED", // insufficient for the SECRET dataset
+      ds,
+      [app1],
+      [platform],
+      [], // no Application grants
+      [], // no dataset grants
+      "READ",
+      NOW,
+    );
+    expect(access.allow).toBe(false);
+    expect(access.visible).toBe(false);
+
+    const canIssue = canIssueDatasetGrant(
+      "ORG-ADMIN",
+      "admin-p",
+      ds,
+      "FULL_ACCESS",
+      [],
+      [],
+      NOW,
+    );
+    expect(canIssue).toBe(true);
   });
 });
