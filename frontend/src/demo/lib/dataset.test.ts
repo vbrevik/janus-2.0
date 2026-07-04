@@ -35,12 +35,15 @@ import {
   effectiveRankedLevel,
   isLevelInVocabulary,
   MAILBOX_LEVELS,
+  resolveDatasetAccess,
   validateDatasetClassification,
   validateDatasetNode,
   type ApplicationNode,
   type Clearance,
+  type DatasetAccessGrant,
   type DatasetNode,
   type PlatformNode,
+  type ResourceAccessGrant,
 } from "./model";
 
 // --- Minimal inline fixtures (D3-13 pattern) ---
@@ -464,5 +467,387 @@ describe("effectiveArchiveCoverage", () => {
     expect(coverage.has("CASE_HANDLER")).toBe(true);
     expect(coverage.has("READER")).toBe(true);
     expect(coverage.size).toBe(3);
+  });
+});
+
+// =====================================================================
+// Plan 13-02 Task 1: resolveDatasetAccess (3-gate chain + visibility)
+// =====================================================================
+
+// Single fixed NOW for all point-in-time resolver tests (Pitfall 8: never
+// Date.now() — all windows are checked against this explicit timestamp).
+const NOW = new Date("2026-07-01T12:00:00Z");
+// A window that ended strictly before NOW (expired at evaluation time).
+const EXPIRED_UNTIL = new Date("2026-06-01T00:00:00Z");
+
+// Helper: active-unless-overridden Application-level ResourceAccessGrant.
+function makeAppGrant(
+  personId: string,
+  resourceId: string,
+  overrides: Partial<ResourceAccessGrant> = {},
+): ResourceAccessGrant {
+  return {
+    id: `ag-${personId}-${resourceId}`,
+    person_id: personId,
+    resource_id: resourceId,
+    valid_from: null,
+    valid_until: null,
+    ...overrides,
+  };
+}
+
+// Helper: active-unless-overridden DatasetAccessGrant.
+function makeDatasetGrant(
+  personId: string,
+  datasetId: string,
+  level: string,
+  overrides: Partial<DatasetAccessGrant> = {},
+): DatasetAccessGrant {
+  return {
+    id: `dg-${personId}-${datasetId}-${level}`,
+    person_id: personId,
+    dataset_id: datasetId,
+    level,
+    valid_from: null,
+    valid_until: null,
+    ...overrides,
+  };
+}
+
+describe("resolveDatasetAccess — 3-gate chain", () => {
+  // Shared world: one SECRET platform, two Applications on it (same effective
+  // classification, so effectiveDatasetClassification's all-share assert holds).
+  const platform = makePlatform("PLAT-1", "SECRET");
+  const app1 = makeApplication("APP-1", "PLAT-1");
+  const app2 = makeApplication("APP-2", "PLAT-1");
+  const apps = [app1, app2];
+  const platforms = [platform];
+
+  it("denies when the app grant expired before now, even with a still-active dataset grant (APP_GRANT_OR is the sole failing gate)", () => {
+    const ds = makeDataset({ id: "ds-r1", application_ids: ["APP-1"] });
+    const expiredAppGrant = makeAppGrant("p1", "APP-1", {
+      valid_until: EXPIRED_UNTIL,
+    });
+    const liveDatasetGrant = makeDatasetGrant("p1", "ds-r1", "READ");
+
+    const result = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [expiredAppGrant],
+      [liveDatasetGrant],
+      "READ",
+      NOW,
+    );
+
+    expect(result.allow).toBe(false);
+    const appGate = result.gates.find((g) => g.kind === "APP_GRANT_OR");
+    expect(appGate?.pass).toBe(false);
+    // The OTHER two substantive gates pass — the app-grant gate alone decides.
+    expect(result.gates.find((g) => g.kind === "CLEARANCE")?.pass).toBe(true);
+    expect(result.gates.find((g) => g.kind === "DATASET_GRANT")?.pass).toBe(
+      true,
+    );
+    expect(result.visible).toBe(false);
+  });
+
+  it("OR across application_ids: an active grant on exactly ONE of two linked Applications suffices", () => {
+    const ds = makeDataset({
+      id: "ds-r2",
+      application_ids: ["APP-1", "APP-2"],
+    });
+    // Grant only on APP-2 — none on APP-1. OR-gate must still pass.
+    const appGrant = makeAppGrant("p1", "APP-2");
+    const datasetGrant = makeDatasetGrant("p1", "ds-r2", "READ");
+
+    const result = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [appGrant],
+      [datasetGrant],
+      "READ",
+      NOW,
+    );
+
+    expect(result.allow).toBe(true);
+    expect(result.visible).toBe(true);
+    expect(result.gates.find((g) => g.kind === "APP_GRANT_OR")?.pass).toBe(
+      true,
+    );
+  });
+
+  it("app grant but NO dataset grant -> visible: true, allow: false (distinct reachable state)", () => {
+    const ds = makeDataset({ id: "ds-r3", application_ids: ["APP-1"] });
+    const appGrant = makeAppGrant("p1", "APP-1");
+
+    const result = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [appGrant],
+      [],
+      "READ",
+      NOW,
+    );
+
+    expect(result.visible).toBe(true);
+    expect(result.allow).toBe(false);
+    expect(result.gates.find((g) => g.kind === "DATASET_GRANT")?.pass).toBe(
+      false,
+    );
+  });
+
+  it("orphan case: dataset grant held directly but ZERO qualifying app grants -> visible: false, no exemption", () => {
+    const ds = makeDataset({ id: "ds-r4", application_ids: ["APP-1"] });
+    const orphanDatasetGrant = makeDatasetGrant("p1", "ds-r4", "FULL_ACCESS");
+
+    const result = resolveDatasetAccess(
+      "p1",
+      "TOP_SECRET", // ample clearance — visibility must STILL be false
+      ds,
+      apps,
+      platforms,
+      [], // zero app grants
+      [orphanDatasetGrant],
+      "READ",
+      NOW,
+    );
+
+    expect(result.visible).toBe(false);
+    expect(result.allow).toBe(false);
+    expect(result.gates.find((g) => g.kind === "VISIBILITY")?.pass).toBe(false);
+  });
+
+  it("denies on insufficient clearance with CLEARANCE as the failing gate (visible stays true)", () => {
+    const ds = makeDataset({ id: "ds-r5", application_ids: ["APP-1"] });
+    const appGrant = makeAppGrant("p1", "APP-1");
+    const datasetGrant = makeDatasetGrant("p1", "ds-r5", "READ");
+
+    const result = resolveDatasetAccess(
+      "p1",
+      "UNCLASSIFIED", // dataset is SECRET via platform
+      ds,
+      apps,
+      platforms,
+      [appGrant],
+      [datasetGrant],
+      "READ",
+      NOW,
+    );
+
+    expect(result.allow).toBe(false);
+    expect(result.gates.find((g) => g.kind === "CLEARANCE")?.pass).toBe(false);
+    expect(result.gates.find((g) => g.kind === "APP_GRANT_OR")?.pass).toBe(
+      true,
+    );
+    expect(result.visible).toBe(true);
+  });
+
+  it("throws when requiredLevel is from the WRONG dataset type's vocabulary (rank-table type)", () => {
+    const ds = makeDataset({ id: "ds-r6", application_ids: ["APP-1"] });
+    // CONTRIBUTE is a DOCUMENT_SITE level — never valid against a MAILBOX.
+    expect(() =>
+      resolveDatasetAccess(
+        "p1",
+        "SECRET",
+        ds,
+        apps,
+        platforms,
+        [makeAppGrant("p1", "APP-1")],
+        [],
+        "CONTRIBUTE",
+        NOW,
+      ),
+    ).toThrow(/not in the vocabulary/i);
+  });
+
+  it("throws when requiredLevel is from the WRONG vocabulary (containment type)", () => {
+    const ds = makeDataset({
+      id: "ds-r7",
+      dataset_type: "ARCHIVE_ROLE",
+      application_ids: ["APP-1"],
+    });
+    // SEND_AS is a MAILBOX level — never valid against an ARCHIVE_ROLE.
+    expect(() =>
+      resolveDatasetAccess(
+        "p1",
+        "SECRET",
+        ds,
+        apps,
+        platforms,
+        [makeAppGrant("p1", "APP-1")],
+        [],
+        "SEND_AS",
+        NOW,
+      ),
+    ).toThrow(/not in the vocabulary/i);
+  });
+
+  it("throws when the dataset references a non-existent application_id (fail-closed, not silent deny)", () => {
+    const ds = makeDataset({
+      id: "ds-r8",
+      application_ids: ["APP-NONEXISTENT"],
+    });
+    expect(() =>
+      resolveDatasetAccess(
+        "p1",
+        "SECRET",
+        ds,
+        apps,
+        platforms,
+        [],
+        [],
+        "READ",
+        NOW,
+      ),
+    ).toThrow(/not found/i);
+  });
+
+  it("gate trace has exactly 4 entries in canonical order CLEARANCE, APP_GRANT_OR, DATASET_GRANT, VISIBILITY", () => {
+    const ds = makeDataset({ id: "ds-r9", application_ids: ["APP-1"] });
+    const result = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [makeAppGrant("p1", "APP-1")],
+      [makeDatasetGrant("p1", "ds-r9", "READ")],
+      "READ",
+      NOW,
+    );
+    expect(result.gates.length).toBe(4);
+    expect(result.gates.map((g) => g.kind)).toEqual([
+      "CLEARANCE",
+      "APP_GRANT_OR",
+      "DATASET_GRANT",
+      "VISIBILITY",
+    ]);
+  });
+
+  it("ARCHIVE_ROLE gate 3 goes through containment: a CASE_HANDLER grant satisfies a READER requirement", () => {
+    const ds = makeDataset({
+      id: "ds-r10",
+      dataset_type: "ARCHIVE_ROLE",
+      application_ids: ["APP-1"],
+    });
+    const result = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [makeAppGrant("p1", "APP-1")],
+      [makeDatasetGrant("p1", "ds-r10", "CASE_HANDLER")],
+      "READER",
+      NOW,
+    );
+    expect(result.allow).toBe(true);
+    // ...but the same grant does NOT satisfy ADMIN (no reverse containment).
+    const denied = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [makeAppGrant("p1", "APP-1")],
+      [makeDatasetGrant("p1", "ds-r10", "CASE_HANDLER")],
+      "ADMIN",
+      NOW,
+    );
+    expect(denied.allow).toBe(false);
+  });
+});
+
+// Named pitfall tests (digital-resource.test.ts convention): exactly-named,
+// each proving one prohibition/pitfall is structurally blocked.
+describe("resolveDatasetAccess — named pitfall blocking tests", () => {
+  const platform = makePlatform("PLAT-1", "SECRET");
+  const app1 = makeApplication("APP-1", "PLAT-1");
+  const apps = [app1];
+  const platforms = [platform];
+
+  it("visible-allow-independence", () => {
+    // DATA-ACCESS-04 prohibition: visible and allow are independent fields.
+    // Both non-trivial combinations must be reachable.
+    const ds = makeDataset({ id: "ds-p1", application_ids: ["APP-1"] });
+
+    // Subject A: app grant only -> visible: true, allow: false.
+    const onlyVisible = resolveDatasetAccess(
+      "subj-a",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [makeAppGrant("subj-a", "APP-1")],
+      [],
+      "READ",
+      NOW,
+    );
+    expect(onlyVisible.visible).toBe(true);
+    expect(onlyVisible.allow).toBe(false);
+
+    // Subject B: dataset grant only (orphan) -> visible: false, allow: false.
+    const notVisible = resolveDatasetAccess(
+      "subj-b",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [],
+      [makeDatasetGrant("subj-b", "ds-p1", "READ")],
+      "READ",
+      NOW,
+    );
+    expect(notVisible.visible).toBe(false);
+    expect(notVisible.allow).toBe(false);
+  });
+
+  it("malformed-stored-grant-excluded-not-thrown", () => {
+    // Pitfall B: a stored grant with an out-of-vocabulary level is bad DATA,
+    // not a bad CALL — it is silently excluded from gate 3, never thrown, and
+    // sibling valid grants for the same subject/dataset still resolve normally.
+    const ds = makeDataset({ id: "ds-p2", application_ids: ["APP-1"] });
+    const badGrant = makeDatasetGrant("p1", "ds-p2", "CONTRIBUTE"); // DOCUMENT_SITE level on a MAILBOX
+    const goodGrant = makeDatasetGrant("p1", "ds-p2", "SEND_AS");
+    const appGrant = makeAppGrant("p1", "APP-1");
+
+    // With the bad grant ALONGSIDE a valid one: no throw, valid grant resolves.
+    const result = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [appGrant],
+      [badGrant, goodGrant],
+      "READ",
+      NOW,
+    );
+    expect(result.allow).toBe(true);
+
+    // With ONLY the bad grant: denied (not thrown) — the grant is excluded.
+    const deniedNotThrown = resolveDatasetAccess(
+      "p1",
+      "SECRET",
+      ds,
+      apps,
+      platforms,
+      [appGrant],
+      [badGrant],
+      "READ",
+      NOW,
+    );
+    expect(deniedNotThrown.allow).toBe(false);
+    expect(
+      deniedNotThrown.gates.find((g) => g.kind === "DATASET_GRANT")?.pass,
+    ).toBe(false);
   });
 });
