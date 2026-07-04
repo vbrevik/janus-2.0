@@ -22,14 +22,15 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
 ## Dataset Model (DATA)
 
-- [ ] **DATA-01**: A `Dataset` is a named, authorizable resource within exactly one Application (from v2.2). Examples: a mailbox, an archive role, a document site. A dataset belongs to a single parent Application — no multi-homing (mirrors v2.2's strict-tree invariant).
+- [ ] **DATA-01**: A `Dataset` is a named, authorizable resource that can be linked to one or more Applications (`application_ids: string[]`, non-empty) — a dataset MAY span multiple Applications (e.g. a shared mailbox reachable from two mail-client Applications). Examples: a mailbox, an archive role, a document site. **Revised from the original 1:1 assumption** — see Resolved Decisions.
 - [ ] **DATA-02**: Each dataset has a `dataset_type` indicating the access level vocabulary it uses. Initial types: `MAILBOX`, `ARCHIVE_ROLE`, `DOCUMENT_SITE`. Open vocabulary — additional types can be added without a schema change.
-- [ ] **DATA-03**: Access levels per dataset type, each a total-ordered ladder (higher level implies all capabilities of lower levels — validated against Exchange/SharePoint/Noark-5 archive-role patterns):
-  - `MAILBOX`: `READ` < `SEND_AS` < `FULL_ACCESS`
-  - `ARCHIVE_ROLE`: `READER` < `CASE_HANDLER` < `ADMIN`
-  - `DOCUMENT_SITE`: `READ` < `CONTRIBUTE` < `FULL_CONTROL`
+- [ ] **DATA-03**: Access levels per dataset type use one of two mechanisms, chosen per type:
+  - **Ranked types** (`MAILBOX`, `DOCUMENT_SITE`): a total-ordered ladder — higher level implies all capabilities of lower levels (validated against Exchange/SharePoint patterns):
+    - `MAILBOX`: `READ` < `SEND_AS` < `FULL_ACCESS`
+    - `DOCUMENT_SITE`: `READ` < `CONTRIBUTE` < `FULL_CONTROL`
+  - **Containment type** (`ARCHIVE_ROLE`): an explicit containment map, not a numeric rank — `ADMIN` contains `{CASE_HANDLER, READER}`, `CASE_HANDLER` contains `{READER}`, `READER` contains `{}`. A held role covers a required role only if the required role is itself or is contained (directly or transitively) within the held role; **no containment relationship means no substitution** — holding one role grants zero capability for a role it does not contain. **Revised from a simple rank table** — see Resolved Decisions. For the current 3-role vocabulary this produces the same chain as a linear order, but the mechanism must be a containment structure (not a `Record<role, number>`) so a future non-linear role can be added without becoming falsely comparable.
 
-  Per-type rank tables — cross-type level comparison is not representable (Pitfall 1).
+  Per-type mechanism — cross-type level comparison is not representable either way (Pitfall 1).
 - [ ] **DATA-04**: Each dataset carries `admin_org_id` (controls the dataset, delegates access) and `asset_owner_org_id` (owns the content) — mirrors v2.1/v2.2 dual-org pattern.
 - [ ] **DATA-05**: Dataset classification inherits from its parent Application unless explicitly overridden via `classification_override`; an override must be equal to or higher than the parent's effective classification, never lower (validated at construction, mirrors v2.2's inheritance pattern).
 
@@ -37,9 +38,10 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
 ## Access Rules (DATA-ACCESS)
 
-- [ ] **DATA-ACCESS-01**: Access to a Dataset requires an active Application grant for the dataset's parent Application. This is a **hard prerequisite evaluated at resolution time** (not just at grant-issue time) — an expired Application grant must deny dataset access even if a DatasetAccessGrant is still nominally active (Pitfall 2).
-- [ ] **DATA-ACCESS-02**: Dataset access also requires an explicit `DatasetAccessGrant` for the specific dataset at or above the required access level.
-- [ ] **DATA-ACCESS-03**: Access resolution is a 3-gate chain, in order: (1) clearance ≥ effective dataset classification, (2) active Application grant (hard prerequisite, gate 1's failure denies outright), (3) active DatasetAccessGrant at required level. The resolver is a standalone `resolveDatasetAccess` function — it composes v2.2 primitives (`isWindowActive`, `CLEARANCE_RANK`, `effectiveClassification`) but does **not** modify the v2.2 `ResourceTier` union or `resolveResourceAccess` (byte-exact TS↔Rust golden-fixture parity contract; Pitfall 5).
+- [ ] **DATA-ACCESS-01**: Access to a Dataset requires an active Application grant for **at least one** of the dataset's linked Applications (OR-gate across `application_ids` — any one qualifying Application is sufficient; **revised from single-Application to OR-across-list**, see Resolved Decisions). This is a **hard prerequisite evaluated at resolution time** (not just at grant-issue time) — an expired Application grant must deny dataset access even if a DatasetAccessGrant is still nominally active (Pitfall 2).
+- [ ] **DATA-ACCESS-02**: Dataset access also requires an explicit `DatasetAccessGrant` for the specific dataset at/covering the required access level (rank ≥ for ranked types; containment-covers for `ARCHIVE_ROLE`, per DATA-03).
+- [ ] **DATA-ACCESS-03**: Access resolution is a 3-gate chain, in order: (1) clearance ≥ effective dataset classification, (2) active Application grant on ≥1 linked Application (hard prerequisite, gate 1's failure denies outright), (3) active DatasetAccessGrant covering the required level/role. The resolver is a standalone `resolveDatasetAccess` function — it composes v2.2 primitives (`isWindowActive`, `CLEARANCE_RANK`, `effectiveClassification`) but does **not** modify the v2.2 `ResourceTier` union or `resolveResourceAccess` (byte-exact TS↔Rust golden-fixture parity contract; Pitfall 5).
+- [ ] **DATA-ACCESS-04** *(new — added during Phase 13 spec)*: Dataset **existence-visibility** is gated independently from content access. `visible = true` iff the person holds an active Application grant on at least one linked Application (i.e. gate 2 of DATA-ACCESS-03, evaluated standalone) — clearance and the dataset-level grant do NOT affect `visible`. A person with zero qualifying Application grants cannot see that the dataset exists at all (not merely denied — absent from any listing/query). `visible = true` does NOT imply `allow = true`: a person with only an Application grant sees the dataset exists but is still denied content access without a DatasetAccessGrant. This rule applies uniformly — **no exemption for `admin_org` or active delegates**, who must also hold a qualifying Application grant to see the dataset. The resolver surfaces this as an explicit `visible: boolean` field (distinct from `allow`) so Phase 15's UI can filter dataset listings without re-deriving the rule.
 
 ---
 
@@ -47,13 +49,13 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
 - [ ] **DATA-GRANT-01**: A `DatasetAccessGrant` links a person to a specific dataset at a specific access level, with `valid_from` and `valid_until` (nullable = permanent).
 - [ ] **DATA-GRANT-02**: A person may hold multiple grants for the same dataset at different access levels (e.g., READ and CONTRIBUTE on the same SharePoint site).
-- [ ] **DATA-GRANT-03**: Effective access level = highest active grant, using the per-type rank table from DATA-03.
+- [ ] **DATA-GRANT-03**: Effective access = highest active grant for ranked types (`MAILBOX`, `DOCUMENT_SITE`, using the rank table from DATA-03); for `ARCHIVE_ROLE`, effective access = the union of all actively-held roles' containment coverage (a person holding both `CASE_HANDLER` and an unrelated future role has the coverage of both — there is no single "highest" role to collapse to when roles aren't fully linear).
 
 ---
 
 ## Delegation (DATA-DELEG)
 
-- [ ] **DATA-DELEG-01**: `admin_org` can delegate dataset access-granting authority to a named person or org — mirrors v2.1/v2.2 delegation model. A delegate may issue grants at **any level defined for the dataset**, not capped at the delegate's own held level (matches Microsoft Entra entitlement-management delegation behavior; delegation is an org-level authority grant, not a personal-level cap).
+- [ ] **DATA-DELEG-01**: `admin_org` can delegate dataset access-granting authority to a named person or org — mirrors v2.1/v2.2 delegation model. **A delegate is capped at their own held level** (revised from the original uncapped default — see Resolved Decisions): the delegate must hold their own active `DatasetAccessGrant` on that exact dataset, and may only issue grants at/below what their own grant covers (rank ≤ for ranked types; within their held role's containment for `ARCHIVE_ROLE`). A delegate with no active grant on the dataset can issue nothing. `admin_org` itself retains unrestricted issuing authority regardless of whether it holds a personal grant — the cap applies to delegates, not to the org that originates the authority. *(Assumption — this admin_org/delegate split was inferred from the phrasing of the original success criteria, not separately live-confirmed; flag for a quick sanity check at discuss-phase if it doesn't match intent.)*
 
 ---
 
@@ -77,15 +79,16 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
 ---
 
-## Resolved Decisions (from research, no response received on live confirmation — proceeding with researched recommendations)
+## Resolved Decisions (live-confirmed during Phase 13 spec-phase — supersedes the earlier research defaults)
 
 | Question | Decision | Rationale |
 |----------|----------|-----------|
-| ARCHIVE_ROLE: total order or role-shaped? | Total order, highest-wins applies | Validated against Noark 5 / Public 360: leser→saksbehandler→arkivar/admin is an escalating ladder, not independent roles |
-| Delegation level-bound? | Delegate can issue up to dataset max, not capped at own level | Matches Entra entitlement-management delegation; consistent with v1/v2 org-level (not personal-level) delegation authority |
-| Dataset spans multiple Applications? | No — one dataset : one parent Application | Preserves v2.2's strict-tree invariant; multi-client reachability is a client concern, not a data-model concern |
+| ARCHIVE_ROLE: total order or role-shaped? | Containment map, not a numeric rank. A role covers a required role only if contained (directly/transitively); no containment = no substitution | User explicitly wants a containment/coverage model (extensible to non-linear roles later), not a plain rank array — even though the 3-role vocabulary today produces the same chain as a linear order |
+| Delegation level-bound? | Delegate capped at their own held DatasetAccessGrant on that exact dataset; no personal grant = can issue nothing. `admin_org` itself stays unrestricted | User flipped the research default — delegation authority is now bounded by the delegate's own access, not the dataset's max |
+| Dataset spans multiple Applications? | Yes — `application_ids: string[]`, non-empty. Application-grant prerequisite is an OR-gate (any one qualifying Application suffices) | User flipped the research default (which recommended 1:1) — the shared-mailbox-across-clients case is real scope, not deferred |
+| Dataset existence-visibility *(new)* | `visible` gated solely by an active Application grant on ≥1 linked Application — independent of clearance and dataset-level grant. No admin_org/delegate exemption. Surfaced as an explicit resolver field | Datasets without any Application-level relationship to the person should not even appear to exist, not merely read-denied — a genuinely new requirement surfaced during spec-phase, not in the original placeholder |
 
-**Note:** These were presented to the user via AskUserQuestion but received no response within the session window; the "Recommended" (research-backed) option was taken for each. Revisit at `/gsd-discuss-phase 13` if this doesn't match intent — flagged as a check item for that phase's context gathering.
+**Note:** All four rows above were live-confirmed with the user during `/gsd-spec-phase 13` (superseding the earlier un-confirmed research defaults noted in STATE.md). One inference remains unconfirmed and is flagged inline at DATA-DELEG-01: whether `admin_org` itself is exempt from the delegate-level cap.
 
 ---
 
@@ -122,6 +125,7 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 | DATA-ACCESS-01 | Phase 13 |
 | DATA-ACCESS-02 | Phase 13 |
 | DATA-ACCESS-03 | Phase 13 |
+| DATA-ACCESS-04 | Phase 13 |
 | DATA-GRANT-01 | Phase 13 |
 | DATA-GRANT-02 | Phase 13 |
 | DATA-GRANT-03 | Phase 13 |
@@ -137,4 +141,4 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 | DATA-UI-03 | Phase 15 |
 | DATA-UI-04 | Phase 15 |
 
-**Coverage:** 22/22 v2.3 requirements mapped — 0 orphans, 0 duplicates.
+**Coverage:** 23/23 v2.3 requirements mapped — 0 orphans, 0 duplicates. (DATA-ACCESS-04 added during Phase 13 spec-phase.)
