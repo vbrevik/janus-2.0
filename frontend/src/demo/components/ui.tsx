@@ -1,7 +1,7 @@
 // demo/components/ui.tsx — presentational helpers lifted VERBATIM from spikes/components/ui.tsx.
 // Only change vs the spike: import Decision from ../lib/abac (demo path) and add MockTag.
 // Do NOT fork DecisionTrace — its verdict/rows/override line are the UI-SPEC visual contract.
-import type { ReactNode } from "react";
+import { Component, type ReactNode } from "react";
 import type { Decision } from "../lib/abac";
 
 export function Pill({
@@ -134,4 +134,43 @@ export function DecisionTrace({
       </ul>
     </div>
   );
+}
+
+// ErrorBoundary — generic reusable class component, the first error boundary in this
+// codebase (per 15-CONTEXT D-13). Catches render/selector throws in its children subtree
+// and shows a static fallback + reset button (D-14). Class fields only — no constructor
+// parameter properties — since tsconfig.app.json's erasableSyntaxOnly:true rejects that
+// shorthand at compile time.
+export class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  state: { hasError: boolean } = { hasError: false };
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error): void {
+    console.error("DatasetsPanel ErrorBoundary caught:", error);
+  }
+
+  reset = (): void => this.setState({ hasError: false });
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded bg-destructive/10 p-3 text-sm text-destructive">
+          <p className="font-semibold">
+            Couldn't resolve access for this dataset.
+          </p>
+          <p>Seed data may be inconsistent — this shouldn't happen.</p>
+          <button className="underline text-xs mt-1" onClick={this.reset}>
+            Try again
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
