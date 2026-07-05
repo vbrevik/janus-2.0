@@ -223,6 +223,8 @@ export type Action =
       personId: string;
       level: string;
       now: Date;
+      validFrom?: Date | null;
+      validUntil?: Date | null;
     };
 
 /** Immutable subject clone — new object, new compartments array, new flags object. */
@@ -587,8 +589,8 @@ export function reducer(state: WorldState, action: Action): WorldState {
         person_id: action.personId,
         dataset_id: action.datasetId,
         level: action.level,
-        valid_from: null,
-        valid_until: null,
+        valid_from: action.validFrom ?? null,
+        valid_until: action.validUntil ?? null,
       };
       const auditEntry: DatasetAuditEntry = {
         seq: state.seq + 1,

@@ -370,6 +370,27 @@ describe("world-state reducer", () => {
       });
     });
 
+    it("wires validFrom/validUntil into the constructed grant when provided", () => {
+      const state = seedWorld();
+      const validFrom = new Date("2026-01-01T00:00:00Z");
+      const validUntil = new Date("2026-12-31T00:00:00Z");
+
+      const next = reducer(state, {
+        type: "ISSUE_DATASET_GRANT",
+        actorOrgId: "MILITARY_1",
+        actorPersonId: "subj-1",
+        datasetId: "ds-archive-caserecords",
+        personId: "subj-2",
+        level: "READER",
+        now: NOW,
+        validFrom,
+        validUntil,
+      });
+
+      expect(next.datasets.grants.at(-1)!.valid_from).toBe(validFrom);
+      expect(next.datasets.grants.at(-1)!.valid_until).toBe(validUntil);
+    });
+
     it("creates neither a grant nor an audit entry when canIssueDatasetGrant returns false", () => {
       const state = seedWorld();
 
