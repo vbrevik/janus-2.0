@@ -115,7 +115,11 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
   4. An admin-gated form lets an authorized admin/delegate issue a new DatasetAccessGrant; live UAT with a non-admin persona confirms the action is blocked (`canIssueDatasetGrant` gate holds), and the v2.2 golden-fixture and regression suites remain green after UI wiring (DATA-UI-04)
 
 **UI hint**: yes
-**Plans**: TBD
+**Plans**: 3 plans
+
+- [ ] 15-01-PLAN.md — Store extension (ISSUE_DATASET_GRANT validFrom/validUntil) + ErrorBoundary + useIssueDatasetGrant hook (denial-safe)
+- [ ] 15-02-PLAN.md — DatasetAccessExplorer (4-gate trace + admin-gated issuing form) + DatasetReverseLookup
+- [ ] 15-03-PLAN.md — DatasetsPanel + DemoRoot wiring + full regression sweep + live UAT checkpoint
 
 ---
 
