@@ -13,6 +13,7 @@ import { AuditView } from "./components/AuditView";
 import { ContextView } from "./components/ContextView";
 import { PhysicalAccessPanel } from "./components/physical-access-panel";
 import { DigitalResourcesPanel } from "./components/digital-resources-panel";
+import { DatasetsPanel } from "./components/datasets-panel";
 
 type ActiveView =
   | "decisions"
@@ -21,7 +22,8 @@ type ActiveView =
   | "audit"
   | "context"
   | "physical-access"
-  | "digital-resources";
+  | "digital-resources"
+  | "datasets";
 
 export function DemoRoot() {
   const [activeView, setActiveView] = useState<ActiveView>("decisions");
@@ -74,6 +76,12 @@ export function DemoRoot() {
           >
             Digital Resources
           </button>
+          <button
+            className={`rounded px-3 py-1.5 text-sm ${activeView === "datasets" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => setActiveView("datasets")}
+          >
+            Datasets
+          </button>
         </div>
         <main className="mx-auto max-w-5xl px-6 py-6">
           {activeView === "decisions" && <DecisionExplorer />}
@@ -83,6 +91,7 @@ export function DemoRoot() {
           {activeView === "context" && <ContextView />}
           {activeView === "physical-access" && <PhysicalAccessPanel />}
           {activeView === "digital-resources" && <DigitalResourcesPanel />}
+          {activeView === "datasets" && <DatasetsPanel />}
         </main>
       </div>
     </WorldProvider>
