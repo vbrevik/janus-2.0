@@ -4,13 +4,13 @@ milestone: v2.3
 milestone_name: Dataset Access
 status: executing
 stopped_at: Phase 15 UI-SPEC approved
-last_updated: "2026-07-05T17:02:38.527Z"
-last_activity: 2026-07-05 -- Phase 15 planning complete
+last_updated: "2026-07-05T17:19:49.086Z"
+last_activity: 2026-07-05
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
   percent: 67
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-03 after v2.2 milestone)
 
 **Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — federated ABAC model proven through v2.2; fullstack transition begun (Phase 11 backend slice).
-**Current focus:** Phase 15 — demo ui & access explorer
+**Current focus:** Phase 15 — demo-ui-access-explorer
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
+Phase: 15 (demo-ui-access-explorer) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-05 -- Phase 15 planning complete
+Last activity: 2026-07-05
 
-Progress: [███████░░░] 67%
+Progress: [████████░░] 78%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [███████░░░] 67%
 | Phase 14 P02 | 5min | 2 tasks | 2 files |
 | Phase 14 P03 | 12min | 2 tasks | 3 files |
 | Phase 14 P04 | 8min | 1 tasks | 1 files |
+| Phase 15 P01 | 4min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,7 @@ v2.3 resolved decisions (from REQUIREMENTS.md, research-recommended — not user
 - [Phase ?]: 14-03: DatasetAuditEntry mirrors AttrEvent's pattern (seq/actor/append-only) but not its literal shape -- new type per D-05/D-06/D-07
 - [Phase ?]: 14-03: WorldState.datasets is eagerly seed-populated (zones/grants/delegates pattern), not backend-fetch-populated (digitalResources pattern) -- datasets stay pure frontend mock this milestone (D-10)
 - [Phase 14]: 14-04: Closed the sole SPEC.md acceptance-criteria gap (WorldState.datasets seed-population) with one appended assertion to the existing ISSUE_DATASET_GRANT describe block; both Prohibitions rows resolved via judgment per SPEC.md's own disposition
+- [Phase 15]: 15-01: componentDidCatch drops the unused ErrorInfo param entirely instead of underscore-prefixing (eslint has no argsIgnorePattern exemption, unlike tsc's noUnusedParameters)
 
 ### Pending Todos
 
@@ -143,9 +145,9 @@ Items deferred from v2.0/v2.1, carried forward:
 
 ## Session Continuity
 
-Last session: 2026-07-05T16:08:39.984Z
+Last session: 2026-07-05T17:16:57.681Z
 Stopped at: Phase 15 UI-SPEC approved
-Resume file: .planning/phases/15-demo-ui-access-explorer/15-UI-SPEC.md
+Resume file: None
 
 ## Operator Next Steps
 
