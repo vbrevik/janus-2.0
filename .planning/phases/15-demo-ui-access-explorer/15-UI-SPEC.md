@@ -63,8 +63,12 @@ introduce new spacing tokens.
 | md | `p-4` / `gap-4` | 16px | `Card` padding, top-level `space-y-4` / `grid gap-4` layout rhythm |
 | lg | `mt-2` / `space-y-3` | 8–12px | Field-to-field spacing inside a `Card` |
 
-Exceptions: `py-1.5` (6px) on all buttons is an existing project-wide exception — reuse it exactly,
-do not round to 8px. No new exceptions introduced by this phase.
+Exceptions (both grandfathered from existing code, not new debt introduced by this phase):
+- `py-0.5` (2px, `Pill` vertical padding) — existing project-wide exception, reuse verbatim.
+- `py-1.5` (6px) on all buttons — existing project-wide exception, reuse it exactly, do not round to 8px.
+
+No new non-4px exceptions introduced by this phase. Future phases should not add further exceptions
+beyond these two grandfathered values.
 
 ---
 
@@ -183,6 +187,10 @@ Flat row list, **not** a `Select` dropdown, **not** the collapsible tree:
 
 ### Dataset Access Resolution Explorer (`DatasetResolutionTrace`)
 
+**Primary focal point:** the ALLOW/DENY verdict card in the trace — matching
+`ResourceResolutionTrace`'s existing visual weight (green/red background, `text-lg font-semibold`).
+Every other element on the Datasets tab (picker rows, gate list, form fields) is secondary to this.
+
 Must visually match `ResourceResolutionTrace` exactly: `rounded-lg border p-4`, green/red verdict
 background, `text-lg font-semibold` verdict line (`✓ ALLOW` / `✗ DENY`), then an unconditional
 `<ul className="mt-3 space-y-1.5">` of all 4 gates in order — **no short-circuit, no hiding
@@ -265,11 +273,11 @@ collapsed-by-default `+ Issue new grant` toggle (D-09):
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS (focal-point sentence added post-review)
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS (both non-4px exceptions explicitly grandfathered post-review)
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved
