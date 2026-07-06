@@ -141,4 +141,4 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 7/7 | Complete | 2026-07-03 |
 | 13. Dataset Model & Access Resolver | v2.3 | 2/2 | Complete    | 2026-07-04 |
 | 14. Mock Dataset & WorldState | v2.3 | 4/4 | Complete    | 2026-07-05 |
-| 15. Demo UI & Access Explorer | v2.3 | 3/3 | Complete   | 2026-07-06 |
+| 15. Demo UI & Access Explorer | v2.3 | 3/3 | Complete    | 2026-07-06 |
