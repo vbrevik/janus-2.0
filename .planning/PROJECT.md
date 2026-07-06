@@ -115,9 +115,15 @@ See `.planning/MILESTONES.md` and `.planning/milestones/v2.2-*` for the archived
 
 Full archived record: `.planning/milestones/v2.2-REQUIREMENTS.md`.
 
-### Active (v2.3)
+### Validated (v2.3)
 
-Defined in `.planning/REQUIREMENTS.md` (refined from the `.planning/milestones/v2.3-REQUIREMENTS.md` placeholder).
+- [x] Dataset model: named authorizable resource within an Application, spanning ≥1 Applications via OR-gated `application_ids`; open `dataset_type` vocabulary (`MAILBOX`/`ARCHIVE_ROLE`/`DOCUMENT_SITE`) with per-type access-level mechanism — ranked ladder or containment map (DATA-01..05) — Validated in Phase 13
+- [x] 3-gate access resolution (clearance → Application-grant prerequisite → DatasetAccessGrant), plus an independent existence-visibility gate — `visible` driven solely by the Application-grant gate, no admin_org/delegate exemption (DATA-ACCESS-01..04) — Validated in Phase 13
+- [x] Time-windowed `DatasetAccessGrant` with effective-level union/highest-rank resolution; delegate authority capped at the delegate's own held grant (DATA-GRANT-01..03, DATA-DELEG-01) — Validated in Phase 13
+- [x] Mock dataset demonstrating the prerequisite chain, denied-access cases, and a 3-scenario deny-matrix isolating each resolver gate (DATA-SEED-01..06) — Validated in Phase 14
+- [x] Demo UI: dedicated "Datasets" tab (Application picker + Datasets list), dataset-level Access Resolution Explorer with full gate-chain trace, reverse-lookup ("who has access"), and an admin-gated issuing form — live-UAT'd, including a non-admin block and an issued-grant round trip (DATA-UI-01..04) — Validated in Phase 15
+
+All 23/23 v2.3 requirements validated (`.planning/REQUIREMENTS.md` Traceability table). Phase 15 was the milestone's final phase.
 
 ### Future milestones
 
@@ -188,4 +194,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 — milestone v2.3 Dataset Access started*
+*Last updated: 2026-07-06 — Phase 15 (final phase of v2.3) complete; all 23/23 v2.3 requirements validated*
