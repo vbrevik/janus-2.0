@@ -20,10 +20,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-03 after v2.2 milestone)
+See: .planning/PROJECT.md (updated 2026-07-06 after v2.3 milestone)
 
-**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — federated ABAC model proven through v2.2; fullstack transition begun (Phase 11 backend slice).
-**Current focus:** Milestone complete
+**Core value:** Multiple entities can discover and exchange authorization information without exposing details, with every access decision computed live from attributes and fully explainable/auditable — federated ABAC model proven through v2.3 (innermost dataset-access layer added); fullstack transition begun (Phase 11 backend slice), v2.3 stayed demo-only.
+**Current focus:** Planning next milestone — no active milestone scoped yet
 
 ## Current Position
 
@@ -85,13 +85,12 @@ v2.2 key decisions (from research/ARCHITECTURE.md and PITFALLS.md):
 - [Phase ?]: 09-04 RESOURCE_DELEGATES omitted (plan-sanctioned): canIssueResourceGrant covered by inline 09-03 fixtures
 - [Phase 12]: 12-01: Seed-apply script contains zero extra idempotency logic — relies entirely on the seed migration's own ON CONFLICT DO NOTHING / WHERE NOT EXISTS guards
 
-v2.3 resolved decisions (from REQUIREMENTS.md, research-recommended — not user-confirmed live):
+v2.3 resolved decisions (SUPERSEDED — live-confirmed during `/gsd-spec-phase 13`, all 3 research defaults below were flipped; see REQUIREMENTS.md "Resolved Decisions" table for the shipped decisions):
 
-- ARCHIVE_ROLE is total-ordered, highest-wins (not role-shaped) — validated against Noark 5 / Public 360
-- Delegation is not level-bound — a delegate can issue up to the dataset's max level, not capped at their own held level (matches Entra entitlement-management)
-- One dataset : one parent Application, no multi-homing — preserves v2.2's strict-tree invariant
-- **Flagged for revisit** at `/gsd-discuss-phase 13` since these were never live-confirmed by the user (see REQUIREMENTS.md "Resolved Decisions" note)
-- [Phase ?]: canIssueDatasetGrant reuses gate-3 aggregation (effectiveRankedLevel/effectiveArchiveCoverage) for the delegate cap — one aggregation implementation for issuing and access
+- ~~ARCHIVE_ROLE is total-ordered, highest-wins~~ → shipped as a containment map (role covers only itself + contained roles; no substitution without containment)
+- ~~Delegation is not level-bound~~ → shipped capped at the delegate's own held grant on that exact dataset; `admin_org` itself stays unrestricted
+- ~~One dataset : one parent Application~~ → shipped as `application_ids: string[]` (OR-gated, ≥1 Applications)
+- [Phase 13 spec-phase]: canIssueDatasetGrant reuses gate-3 aggregation (effectiveRankedLevel/effectiveArchiveCoverage) for the delegate cap — one aggregation implementation for issuing and access
 - [Phase ?]: Out-of-vocabulary requestedLevel on canIssueDatasetGrant's delegate path returns false (permission query), unlike resolveDatasetAccess's requiredLevel which throws (resolver invariant)
 - [Phase 14]: 14-01: Followed CONTEXT.md D-01..D-04 exactly -- 3-person cast plus 1 new denial-narrative subject (ds-deny-subj), additive RESOURCE_GRANTS entries only
 - [Phase 14]: 14-01: Single archive dataset (ds-archive-caserecords) isolates each deny-matrix gate as the sole failing gate -- subj-3/Lee fails CLEARANCE only, subj-2/Sam fails APP_GRANT_OR only (expired grant), ds-deny-subj fails DATASET_GRANT only (zero dataset grants anywhere)
@@ -119,7 +118,8 @@ None.
 
 - ~~Seed migration not applied to dev DB~~ RESOLVED by 12-01 (`backend/scripts/apply-digital-resource-seed.sh`); re-verified against live DB 2026-07-03 — all 8 `resource_*` tables populated (6/4/4/18/3/15/18/1). `sqlx migrate run` remains broken on the drifted DB (see [[project_migrations_fresh_db_broken]]); use the apply script for reseeding.
 - 11-03 authz is role-based (Option B), diverging from the resolver's org-based rule. Correct long-term model deferred to SEED-012 (dormant by decision).
-- v2.3's three "Resolved Decisions" (ARCHIVE_ROLE total order, delegation not level-bound, one dataset per Application) were AskUserQuestion'd but never answered live — research-recommended defaults were taken. Check against intent at `/gsd-discuss-phase 13`.
+- ~~v2.3's three "Resolved Decisions" were never live-confirmed~~ RESOLVED — all 4 (incl. the new DATA-ACCESS-04 visibility rule) were live-confirmed with the user during `/gsd-spec-phase 13`; see REQUIREMENTS.md "Resolved Decisions" table.
+- `canIssueDatasetGrant`'s delegate-cap deny path (DATA-DELEG-01) has no reachable path through the demo UI (only actor is always `admin_org`-equivalent) — proven only by unit tests. Documented as an intentional, accepted limitation in `dataset-access-explorer.tsx`'s file header; not tracked as a blocker.
 
 ### Roadmap Evolution
 
