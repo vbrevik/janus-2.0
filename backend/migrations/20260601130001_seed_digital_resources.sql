@@ -22,7 +22,7 @@
 -- Re-running this migration is a no-op (idempotent).
 --
 -- Seeded counts: 6 networks | 4 platforms | 4 applications | 18 org_links |
---                3 policies | 15 policy_assignments | 18 grants | 1 delegate
+--                3 policies | 15 policy_assignments | 20 grants | 1 delegate
 
 -- ==========================================================================
 -- 1. resource_policies (must come before policy_assignments FK)
@@ -364,7 +364,7 @@ WHERE NOT EXISTS (
 );
 
 -- ==========================================================================
--- 7. resource_access_grants (18 rows — RSRC-SEED-05)
+-- 7. resource_access_grants (20 rows — RSRC-SEED-05)
 -- ==========================================================================
 
 INSERT INTO resource_access_grants (id, person_id, resource_id, valid_from, valid_until) VALUES
@@ -389,7 +389,13 @@ INSERT INTO resource_access_grants (id, person_id, resource_id, valid_from, vali
   -- Infra grants (network, platform, app)
   ('rsrc-grant-infra-active',    'subj-1', 'rsrc-infrastructure', NULL,                         NULL),
   ('rsrc-grant-infrapl-active',  'subj-1', 'rsrc-infrapl-1',      NULL,                         NULL),
-  ('rsrc-grant-infraapp-active', 'subj-1', 'rsrc-infraapp-1',     NULL,                         NULL)
+  ('rsrc-grant-infraapp-active', 'subj-1', 'rsrc-infraapp-1',     NULL,                         NULL),
+  -- Phase 13/14 dataset-domain deny-matrix fixtures on MilApp-1 (added later in
+  -- frontend/src/demo/lib/seed.ts's RESOURCE_GRANTS than this migration was first
+  -- written — ported here to keep the two sources in sync for the dataset
+  -- resolver's APP_GRANT_OR gate, found missing during Phase 15 live UAT).
+  ('rsrc-grant-subj3-milapp-active',      'subj-3',       'rsrc-milapp-1', NULL, NULL),
+  ('rsrc-grant-dsdenysubj-milapp-active', 'ds-deny-subj', 'rsrc-milapp-1', NULL, NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- ==========================================================================
