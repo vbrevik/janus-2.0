@@ -9,9 +9,10 @@ without exposing the underlying details. Access decisions are **pure-computed AB
 evaluated live, no stored grants), fully explainable and reconstructable from an append-only audit log.
 **Clearance is determined externally** and consumed as a read-only attribute.
 
-Three demo milestones are **shipped and archived** (v2.0 hub, v2.1 physical zones, v2.2 digital
-resources), and the fullstack transition has begun: v2.2's Phase 11 put the digital-resource domain
-on the real Rust/Rocket + PostgreSQL substrate with a parity-proven Rust resolver and hardened API.
+Four demo milestones are **shipped and archived** (v2.0 hub, v2.1 physical zones, v2.2 digital
+resources, v2.3 dataset access), and the fullstack transition has begun: v2.2's Phase 11 put the
+digital-resource domain on the real Rust/Rocket + PostgreSQL substrate with a parity-proven Rust
+resolver and hardened API.
 
 The design contract is `.planning/AUTH-MODEL.md`; the model was validated end-to-end by 9 spikes
 (`.planning/spikes/`, skill `spike-findings-janus-2.0`).
@@ -24,23 +25,29 @@ federated ABAC model is proven. The next milestone transitions this from demo to
 
 ## Current State
 
-**Shipped:** v2.2 Platform, Network & Application Access (demo) — 2026-07-03 (Phases 9–12, audit tech_debt with all items resolved or accepted; 31/31 requirements). Adds the digital-resource access stack: a Network → Platform → Application hierarchy with data-driven, **time-versioned per-resource policies**, explicit per-tier grants with a prerequisite chain (no cross-tier inheritance), the advisory zone-prerequisite link back to v2.1, and delegation. **First milestone with a real backend slice:** 8 Postgres tables, the gate-chain resolver ported to Rust with byte-exact TS↔Rust golden-fixture parity, AuthGuard-protected read/issue endpoints (IDOR closed, SEC-01..04 hardening), a repaired migration chain (fresh DB migrates end-to-end), and Postgres as the single source of truth for the digital-resource dataset. Demo UI: 7th "Digital Resources" tab with Resource Browser, Access Resolution Explorer, six-state loader, and admin-gated issuing forms — live-UAT'd 13/13.
+**Shipped:** v2.3 Dataset Access (demo) — 2026-07-06 (Phases 13–15, audit passed; 23/23 requirements). Adds the innermost access layer — fine-grained authorization for named datasets (`MAILBOX`/`ARCHIVE_ROLE`/`DOCUMENT_SITE`) nested within Applications, each with its own per-type level mechanism (ranked ladder or containment map). A standalone 3-gate `resolveDatasetAccess` resolver (clearance → Application-grant OR-gate → dataset-grant) adds an independent existence-visibility gate on top of the v2.2 access stack, plus delegate-capped issuing authority. Demo UI: new "Datasets" top-level tab with dataset-level Access Resolution Explorer (4-gate trace), reverse-lookup view, and an admin-gated issuing form — live-UAT'd, closing all 4 DATA-UI requirements. One accepted tech-debt item: the delegate-cap deny path is unit-tested but has no reachable UI path in the demo (documented, not a gap).
 
-See `.planning/MILESTONES.md` and `.planning/milestones/v2.2-*` for the archived record. Prior milestones: v2.0 (2026-05-22), v2.1 (2026-05-23).
+See `.planning/MILESTONES.md` and `.planning/milestones/v2.3-*` for the archived record. Prior milestones: v2.0 (2026-05-22), v2.1 (2026-05-23), v2.2 (2026-07-03).
 
-## Current Milestone: v2.3 Dataset Access (demo)
+## Current Milestone: Not yet started
+
+No active milestone. Run `/gsd-new-milestone` to scope the next one — candidates already on record in Future Milestones below (demo→fullstack transition, physical/digital-resource backends, real data-level ownership scoping) and in the dormant seed backlog (`.planning/seeds/`, 12 items, see STATE.md Deferred Items).
+
+<details>
+<summary>v2.3 goal (shipped 2026-07-06)</summary>
 
 **Goal:** Establish fine-grained authorization for named datasets within applications — the innermost access layer. Application access (v2.2) does not grant access to everything inside; each dataset (mailbox, archive role, document site) requires its own authorization with its own access level vocabulary.
 
-**Target features:**
-- Dataset model: named authorizable resource within an Application (`MAILBOX` / `ARCHIVE_ROLE` / `DOCUMENT_SITE` types)
-- Access levels per type: Mailbox (READ/SEND_AS/FULL_ACCESS), Archive (READER/CASE_HANDLER/ADMIN), Document site (READ/CONTRIBUTE/FULL_CONTROL)
-- Active Application grant (v2.2) is a hard prerequisite for any dataset grant
-- Admin org + asset-owner org per dataset; delegation mirrors v2.1/v2.2 pattern
-- Time-limited `DatasetAccessGrant` with effective level = highest active grant
-- Mock dataset + demo UI showing prerequisite chain and denied-access cases
+- Dataset model: named authorizable resource within an Application (`MAILBOX` / `ARCHIVE_ROLE` / `DOCUMENT_SITE` types), spanning ≥1 Applications via OR-gated `application_ids`
+- Access levels per type: Mailbox (READ/SEND_AS/FULL_ACCESS), Archive (READER/CASE_HANDLER/ADMIN containment map), Document site (READ/CONTRIBUTE/FULL_CONTROL)
+- Active Application grant (v2.2) is a hard prerequisite for any dataset grant, enforced at resolution time
+- Admin org + asset-owner org per dataset; delegation capped at the delegate's own held grant (not the dataset's max)
+- Time-limited `DatasetAccessGrant` with effective level = highest active grant (or containment-union for ARCHIVE_ROLE)
+- Mock dataset + demo UI showing prerequisite chain, denied-access cases, and a full deny-matrix
 
-**Scope constraint:** Demo/mock only — backend defers to a later milestone. No seeds included. Phase numbering continues from v2.2 (starts at Phase 13).
+**Scope constraint:** Demo/mock only — backend deferred. Phase numbering continued from v2.2 (Phases 13–15).
+
+</details>
 
 <details>
 <summary>v2.2 goal (shipped 2026-07-03)</summary>
@@ -144,10 +151,11 @@ All 23/23 v2.3 requirements validated (`.planning/REQUIREMENTS.md` Traceability 
 
 ## Context
 
+- **v2.3 shipped (2026-07-06).** 3 phases · 9 plans · 23/23 requirements · 67 commits · 60 files (+9,531/−92) · 317/317 Vitest · 0 TypeScript errors · integration audit 12/12 wired, 0 orphans. Demo-only, no backend changes.
 - **v2.2 shipped (2026-07-03).** 4 phases · 17 plans · 31/31 requirements · 119 commits · 178 files (+20,334/−2,460) · 228/228 Vitest · 0 TypeScript errors · full-crate `cargo test` green (fixed at close) · TS↔Rust resolver parity byte-exact.
-- **Cumulative:** v2.0 (2026-05-22, 21/21 reqs) → v2.1 (2026-05-23, 38/38 reqs) → v2.2. Every mechanism validated: ABAC engine, pointer hub, signed credentials, audit reconstruction, policy divergence, physical zones, digital-resource policy engine.
-- **Fullstack transition has begun.** Phase 11 was the first real backend build (Postgres persistence + Rust resolver + hardened API). SEED-011 (`demo-to-fullstack-transition`) captures the broader strategy; SEED-012 holds the deferred org-based issue-authorization model.
-- **Brownfield substrate.** Tech-debt inventory in `.planning/TECH-DEBT-SCAN.md` (superseded `.planning/codebase/`). Known open item: non-admin login redirect bug (`.planning/todos/pending/`).
+- **Cumulative:** v2.0 (2026-05-22, 21/21 reqs) → v2.1 (2026-05-23, 38/38 reqs) → v2.2 (2026-07-03, 31/31 reqs) → v2.3 (2026-07-06, 23/23 reqs). Every mechanism validated: ABAC engine, pointer hub, signed credentials, audit reconstruction, policy divergence, physical zones, digital-resource policy engine, dataset-level access resolution.
+- **Fullstack transition has begun, but v2.3 stayed demo-only.** Phase 11 (v2.2) was the first real backend build (Postgres persistence + Rust resolver + hardened API); v2.3's dataset model deliberately deferred its own backend port. SEED-011 (`demo-to-fullstack-transition`) captures the broader strategy; SEED-012 holds the deferred org-based issue-authorization model.
+- **Brownfield substrate.** Tech-debt inventory in `.planning/TECH-DEBT-SCAN.md` (superseded `.planning/codebase/`). Known open item: non-admin login redirect bug (`.planning/todos/pending/`). New accepted item: `canIssueDatasetGrant`'s delegate-cap deny path (DATA-DELEG-01) has no reachable demo-UI path, unit-tested only — documented in `dataset-access-explorer.tsx` file header.
 
 ## Constraints
 
@@ -175,6 +183,12 @@ All 23/23 v2.3 requirements validated (`.planning/REQUIREMENTS.md` Traceability 
 | v2.2: multi-org per resource via role-tagged time-windowed org_links list | User need: up to ~5 orgs now, more later; generalizes v2.1 dual-org into an extensible list | ✓ Validated (18 org_links across 6 canonical units) |
 | v2.2: Phase 11 scope expansion — real backend slice (Postgres + Rust resolver + hardened API) | Migration chain was already broken and security holes were live; sharing the trust boundary made backend work unavoidable | ✓ Shipped — first fullstack milestone slice; parity byte-exact |
 | v2.2: server-side issue authz = flat role gate (Option B), not org-based delegate authority | No person→org linkage exists in the schema; Option A is a data-model build, not a code change. Closes the confirmed IDOR minimally | ⚠️ Revisit — deferred to SEED-012; "defer features, not enforcement" lesson recorded in retrospective |
+| v2.3: ARCHIVE_ROLE is a containment map, not a numeric rank | User explicitly wants a coverage model extensible to non-linear roles later, even though the 3-role vocabulary today produces the same chain as a linear order | ✓ Validated (Phase 13; live-confirmed at spec-phase, superseding the research-recommended rank-table default) |
+| v2.3: delegate issuing authority capped at the delegate's own held grant, not the dataset's max | User flipped the research default — a delegate with no personal grant on the dataset can issue nothing; `admin_org` itself stays unrestricted | ✓ Validated (Phase 13; live-confirmed at spec-phase) |
+| v2.3: dataset can span ≥1 Applications (OR-gated `application_ids`), not strictly 1:1 | User flipped the research default — shared-mailbox-across-clients is real scope, not deferred | ✓ Validated (Phase 13; live-confirmed at spec-phase) |
+| v2.3: existence-visibility (`visible`) is an independent gate, driven solely by the Application-grant check | New requirement surfaced during spec-phase: datasets with no Application-level relationship shouldn't appear to exist at all, not merely read-denied. No admin_org/delegate exemption | ✓ Validated (Phase 13) |
+| v2.3: "Datasets" shipped as a new top-level tab, not nested inside the existing Digital Resources tab | ROADMAP wording implied nesting, but 15-SPEC.md explicitly reasoned through and locked the separate-tab interpretation before code was written | ✓ Validated (Phase 15) — not a silent deviation, resolved at spec-phase |
+| v2.3: delegate-cap deny path (DATA-DELEG-01) left unreachable via the demo UI, proven only by unit tests | The demo's only actor is always `admin_org`-equivalent; building a second non-admin-delegate persona was out of scope for this milestone | ⚠️ Accepted — documented as a known limitation in `dataset-access-explorer.tsx`'s file header, not a silent gap |
 
 ## Evolution
 
@@ -194,4 +208,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-06 — Phase 15 (final phase of v2.3) complete; all 23/23 v2.3 requirements validated*
+*Last updated: 2026-07-06 after v2.3 milestone (Dataset Access, shipped) — full evolution review complete*

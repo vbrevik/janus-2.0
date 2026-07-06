@@ -2,10 +2,12 @@
 gsd_state_version: 1.0
 milestone: v2.3
 milestone_name: Dataset Access
-status: milestone_complete
-stopped_at: Milestone complete (Phase 15 was final phase)
-last_updated: 2026-07-06T13:39:33.901Z
+current_phase: 3
+status: Awaiting next milestone
+stopped_at: Completed 15-03-PLAN.md (Phase 15 complete)
+last_updated: "2026-07-06T15:31:25.260Z"
 last_activity: 2026-07-06
+last_activity_desc: Milestone v2.3 completed and archived
 progress:
   total_phases: 3
   completed_phases: 3
@@ -25,12 +27,10 @@ See: .planning/PROJECT.md (updated 2026-07-03 after v2.2 milestone)
 
 ## Current Position
 
-Phase: 15
-Plan: Not started
-Status: Milestone complete
-Last activity: 2026-07-06
-
-Progress: [██████████] 100%
+Phase: Milestone v2.3 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-06 — Milestone v2.3 completed and archived
 
 ## Performance Metrics
 
@@ -156,5 +156,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Review `.planning/ROADMAP.md` v2.3 section and `.planning/REQUIREMENTS.md` for approval
-- Then run `/gsd-plan-phase 13` (or `/gsd-discuss-phase 13` first to confirm the three research-recommended decisions flagged above)
+- Start the next milestone with /gsd-new-milestone

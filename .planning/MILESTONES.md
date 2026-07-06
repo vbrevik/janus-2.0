@@ -1,5 +1,34 @@
 # Milestones — Janus 2.0
 
+## v2.3 Dataset Access (Shipped: 2026-07-06)
+
+**Phases completed:** 3 phases, 9 plans, 12 tasks
+
+**Key accomplishments:**
+
+- Dataset entity types (MAILBOX/ARCHIVE_ROLE/DOCUMENT_SITE) with per-type level/containment vocabularies, classification derive-with-override, and effective-access aggregation functions, plus a standalone 3-gate `resolveDatasetAccess` resolver with an independent existence/visibility gate and delegate-capped `canIssueDatasetGrant`.
+- Extended `seed.ts` additively with a full v2.3 dataset fixture set — 5 datasets, 10 grants, 3 new Application-tier grants, and one new denial-narrative Subject — hand-designed so a single archive dataset proves every gate in Phase 13's 3-gate deny-matrix.
+- Built `dataset-selectors.ts` (3 pure read functions wrapping Phase 13's `resolveDatasetAccess`) and `dataset-selectors.test.ts` (11 passing tests) proving DATA-SEED-01 through DATA-SEED-06 against Plan 14-01's real seed.ts fixtures — including all three deny-matrix gates isolated as sole deciders.
+- Gave Plan 14-01's seed fixtures a live home in `WorldState.datasets` (eager-seeded, not backend-fetched) and added the one write-path action SPEC.md's Requirement 7 locks in -- `ISSUE_DATASET_GRANT`, gated by Phase 13's `canIssueDatasetGrant` and silently refusing on failure.
+- Audited all 13 SPEC.md Acceptance Criteria, both applicable Edge Coverage rows, and both Prohibitions rows against Plans 14-01/02/03's actual test output; found and closed one gap (direct proof that `WorldState.datasets` is seed-populated); confirmed whole-repo regression green (314/314 tests, zero TypeScript errors) and the phase's `git diff --stat` touches exactly its 6 declared files.
+- Extended ISSUE_DATASET_GRANT with validFrom/validUntil, added the demo's first ErrorBoundary class component, and shipped a denial-safe useIssueDatasetGrant hook that survives React's useReducer Object.is bailout on a silent-denial dispatch.
+- DatasetAccessExplorer (4-gate ALLOW/DENY trace + admin-gated issuing form) and DatasetReverseLookup (per-person effective-level listing), both calling Phase 13's resolveDatasetAt verbatim — no re-derived access logic.
+- New "Datasets" top-level tab wiring `datasets-panel.tsx` (own digital-resources fetch, flat Application picker, grid-cols-3 Datasets list, dataset-keyed ErrorBoundary) into `DemoRoot.tsx`; full 317-test regression suite green; live UAT approved, closing all 4 DATA-UI requirements.
+
+**Requirements:** 23/23 satisfied · 0 gaps
+
+**Audit:** `.planning/milestones/v2.3-MILESTONE-AUDIT.md` (passed)
+
+**Known Deferred Items:** 12 dormant seeds acknowledged at close (SEED-001..012, pre-existing, unrelated to v2.3 scope) — see STATE.md Deferred Items
+
+**Archive:**
+
+- `.planning/milestones/v2.3-ROADMAP.md` — full phase details
+- `.planning/milestones/v2.3-REQUIREMENTS.md` — requirements with outcomes
+- `.planning/milestones/v2.3-MILESTONE-AUDIT.md` — audit report (passed)
+
+---
+
 ## v2.2 Platform, Network & Application Access (Shipped: 2026-07-03)
 
 **Phases completed:** 4 phases, 17 plans, 11 tasks
