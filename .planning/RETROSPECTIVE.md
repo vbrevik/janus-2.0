@@ -142,6 +142,51 @@
 
 ---
 
+## Milestone: v2.3 — Dataset Access (demo)
+
+**Shipped:** 2026-07-06
+**Phases:** 3 (13–15) | **Plans:** 9 | **Timeline:** 2026-07-04 → 2026-07-06 (2 days)
+
+### What Was Built
+
+- Dataset model (`MAILBOX`/`ARCHIVE_ROLE`/`DOCUMENT_SITE`) spanning ≥1 Applications via OR-gated `application_ids`, with a per-type level mechanism — ranked ladder for MAILBOX/DOCUMENT_SITE, containment map for ARCHIVE_ROLE
+- Standalone 3-gate `resolveDatasetAccess` resolver (clearance → Application-grant OR-gate → dataset-grant) with an independent existence/visibility gate, plus delegate-capped `canIssueDatasetGrant`
+- Full seed fixture set (5 datasets, 10 grants, 1 new denial-narrative subject) + `dataset-selectors.ts` read path + `WorldState.datasets` wiring + `ISSUE_DATASET_GRANT` write-path action, with a deny-matrix fixture proving every resolver gate as sole decider
+- Demo UI: dataset-level Access Resolution Explorer (4-gate trace), reverse-lookup view, admin-gated issuing form, all wired into a new "Datasets" top-level tab
+
+### What Worked
+
+- **Reuse-verbatim discipline held across all 3 phases.** Phase 15's UI calls Phase 13's `resolveDatasetAccess`/`canIssueDatasetGrant` through a thin pass-through selector — confirmed by the integration checker (12/12 exports wired, 0 orphans, 0 re-derived logic). The `lib/`+`store/`+`components/` boundary from v2.0 held for a third domain running.
+- **Spec-phase live-confirmation caught 4 research defaults that were wrong.** ARCHIVE_ROLE-as-containment (not rank), delegate-capped-at-own-grant (not dataset max), multi-Application OR-gate (not 1:1), and the new independent-visibility-gate requirement were all live-confirmed with the user during `/gsd-spec-phase 13` before any code was written — avoiding a repeat of v2.2's RSRC-BE-04 mismatch (a requirement written against a data model that didn't exist).
+- **Live UAT caught a real backend seed gap, again.** Phase 15's live UAT surfaced a pre-existing backend seed-data gap (2 missing grants) that no automated test caught — same class of bug as v2.2's dead zone-advisory row (Lesson 2, v2.2). Fixed same-day, closing all 4 DATA-UI requirements.
+- **Known-limitation-as-code-comment pattern.** The delegate-cap deny path (WR-02) has no reachable UI path in the demo (the only actor is always `admin_org`-equivalent) — instead of silently leaving this undocumented, Phase 15's authors wrote it directly into `dataset-access-explorer.tsx`'s file header. The milestone audit's integration checker treated it as an accepted note, not a gap, precisely because it was self-documented.
+
+### What Was Inefficient
+
+- **REQUIREMENTS.md checkbox drift, a fourth time.** 13-VERIFICATION.md flagged DATA-01..05 and DATA-GRANT-01..03 as unchecked (`[ ]`) despite being fully implemented and tested — the same class of drift called out in v2.0 (Lesson, "checkbox state should be updated at phase close") and repeated in v2.2. This is now a 3-for-3 recurrence across all shipped milestones; worth a mechanical fix (auto-check on VERIFICATION `passed`) rather than a fourth retrospective note.
+- **`summary-extract --fields one_liner` mis-extracted 13-01's one-liner.** It pulled a "[Pre-existing implementation]" deviation note instead of the actual accomplishment, and the bad text made it verbatim into the auto-generated MILESTONES.md entry — caught and hand-fixed only because the milestone-close review read the output before committing. SUMMARY.md files that predate a frontmatter convention (13-01 has no `requirements-completed` field, unlike every later plan) are the files most likely to confuse field-based extraction; worth backfilling the convention retroactively, or hardening the extractor's fallback.
+- **The pre-close artifact audit still surfaces the same 12 dormant seeds every milestone.** They were correctly re-acknowledged (not a new problem), but a milestone-close gate that always shows the same 12 items trains the operator to click through it — a genuinely new blocking item could get the same reflexive "acknowledge all".
+
+### Patterns Established
+
+- **Containment-map vocabulary for non-linear role hierarchies.** `ARCHIVE_ROLE_CONTAINS` (a `Record<Role, Role[]>` transitive-coverage map) instead of a numeric rank table — the model for any future access-level vocabulary that isn't strictly linear.
+- **Independent visibility gate as a first-class resolver output.** `resolveDatasetAccess` returns `visible` and `allow` as two genuinely independent booleans (not derived from each other), with `visible` computed from exactly one gate and no admin/delegate exemption anywhere in the function. Reusable shape for "does this exist to you" vs "can you use it" wherever that distinction matters.
+- **Integration-checker as a milestone-audit stage, not just a phase-verify stage.** Explicitly re-verifying cross-phase wiring (not just each phase's own VERIFICATION.md) at milestone-close caught nothing broken here, but is now the standing check that would catch a Phase-15-imports-nothing-from-Phase-13 regression before it shipped.
+
+### Key Lessons
+
+1. **Spec-phase live-confirmation is cheap insurance against v2.2-style requirement/data-model mismatches.** All 4 of v2.3's flipped research defaults were confirmed with the user in one sitting before Phase 13 started, at effectively zero cost compared to discovering them as a mid-phase IDOR.
+2. **A documented known-limitation survives an audit; an undocumented one becomes a "gap".** WR-02's file-header comment is the difference between the integration checker filing it as a WARNING-for-awareness versus a BLOCKER. Any deliberately-scoped-out enforcement path should get the same treatment going forward (this generalizes v2.1's Lesson 1, "defer features, not enforcement" — deferring is fine if it's written down where the next auditor will find it).
+3. **REQUIREMENTS.md checkbox drift is now a confirmed pattern across 3/3 milestones, not a one-off.** Worth fixing mechanically (e.g., auto-checking boxes when the assigned phase's VERIFICATION.md flips to `passed`) rather than continuing to catch it by hand at milestone audit.
+
+### Cost Observations
+
+- Model mix: sonnet-5 throughout (planning, execution, and this close)
+- Sessions: ~2–3 across 3 phases (fastest multi-phase milestone since v2.1)
+- Notable: zero re-plans, zero reverted commits; the only rework was the same-day backend-seed fix surfaced by live UAT (Phase 15) — consistent with v2.2's finding that live UAT remains the one verification tier that catches what build/grep cannot
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -151,6 +196,7 @@
 | v2.0 | 4 | 16 | Spike-first validation before any composition work |
 | v2.1 | 4 | 9 | NSM concepts encoded as typed model values with named tests; TDD RED/GREEN held at 1-day pace |
 | v2.2 | 4 | 17 | First real backend slice; golden-fixture TS↔Rust parity; live-browser UAT as a verification tier |
+| v2.3 | 3 | 9 | Spec-phase live-confirmation of research-flipped decisions before build; documented-known-limitation pattern for unenforceable UI paths |
 
 ### Cumulative Quality
 
@@ -159,10 +205,13 @@
 | v2.0 | 80/80 Vitest | 0 | Clean |
 | v2.1 | 116/116 Vitest (at Phase 7 close) | 0 | Clean |
 | v2.2 | 228/228 Vitest + 22/22 cargo unit + parity/integration suites | 0 | Clean (repaired at close — was silently broken 2 phases) |
+| v2.3 | 317/317 Vitest | 0 | Clean (demo-only, no backend touched) |
 
 ### Top Lessons (To Verify Across Milestones)
 
 1. Spike-first validation compresses planning cycles — HELD for v2.2's backend phase (golden fixtures acted as the spike)
-2. Demo island isolation (separate Vite entry) eliminates router complexity — HELD through v2.2 (routeTree.gen.ts byte-identical)
+2. Demo island isolation (separate Vite entry) eliminates router complexity — HELD through v2.3 (routeTree.gen.ts byte-identical)
 3. Verification gates that never execute are indistinguishable from passing — add full typecheck/compile to every phase verify step (v2.2)
-4. Defer features, not enforcement — unenforced access-control gaps resurface as vulnerabilities next milestone (v2.1 → v2.2 IDOR)
+4. Defer features, not enforcement — unenforced access-control gaps resurface as vulnerabilities next milestone (v2.1 → v2.2 IDOR); v2.3's WR-02 delegate-cap path shows the fix — document the deferral inline so the next audit can tell "deferred" from "forgotten"
+5. Live UAT remains the one verification tier that catches what build/grep/unit-tests cannot — HELD a third time (v2.2 zone-advisory dead code, v2.3 backend seed gap)
+6. REQUIREMENTS.md checkbox drift at phase close — recurring in 3/3 milestones (v2.0, v2.2, v2.3); needs a mechanical fix, not another retrospective note
