@@ -3,6 +3,16 @@
 // grant-issuing form docked directly beneath it. Sibling to
 // resource-access-explorer.tsx (SPEC R2 — NOT an extension of it). Per
 // 15-UI-SPEC §Dataset Access Resolution Explorer / §Admin-gated issuing form.
+//
+// KNOWN LIMITATION (WR-02): the issuing form always issues as
+// dataset.admin_org_id (there is no "logged in as a delegate Subject"
+// concept in this UI — see the comment in handleIssueGrant below). Because
+// canIssueDatasetGrant's admin-org path unconditionally allows any
+// in-vocabulary level, the delegate-cap deny branch (and the "Not
+// authorized to issue this grant" banner) can never be reached through real
+// user interaction in this demo surface — it is exercised only by unit
+// tests that call the hook directly with a mismatched actorOrgId. This is
+// intentionally out of scope for this phase.
 import { useEffect, useMemo, useState } from "react";
 import { resolveDatasetAt } from "../lib/dataset-selectors";
 import {
@@ -78,7 +88,13 @@ function DatasetResolutionTrace({ result }: { result: DatasetAccessResult }) {
 }
 
 function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Build from local date components rather than an ISO/UTC round-trip —
+  // toISOString() always renders in UTC, which returns yesterday's date for
+  // any user in a timezone ahead of UTC during the hours between local
+  // midnight and UTC midnight (WR-01).
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 // Admin-gated issuing form (D-08/D-09/D-10) — mirrors IssueGrantSection
@@ -129,6 +145,14 @@ function IssueDatasetGrantSection({ dataset }: { dataset: DatasetNode }) {
   }
 
   const handleIssueGrant = () => {
+    // Guard against an emptied "Valid from" (native date inputs allow this):
+    // new Date("") is an Invalid Date whose valid_from would forever fail
+    // isWindowActive's valid_from <= now check, silently issuing a grant
+    // that can never become active while the UI reports success (CR-01).
+    if (!validFrom) return;
+    const parsedFrom = new Date(validFrom);
+    if (Number.isNaN(parsedFrom.getTime())) return;
+
     setSubmitted(true);
     // The only reachable authority path from this UI is the admin_org
     // exemption — there is no demo concept of "logged in as a specific
@@ -142,7 +166,7 @@ function IssueDatasetGrantSection({ dataset }: { dataset: DatasetNode }) {
       datasetId: dataset.id,
       personId: formPersonId,
       level: formLevel,
-      validFrom: new Date(validFrom),
+      validFrom: parsedFrom,
       validUntil: validUntil ? new Date(validUntil) : null,
     };
     mutate(vars);
@@ -178,6 +202,7 @@ function IssueDatasetGrantSection({ dataset }: { dataset: DatasetNode }) {
           <Field label="Valid from">
             <input
               type="date"
+              required
               className="mt-1 w-full rounded border border-slate-300 p-2 text-sm"
               value={validFrom}
               onChange={(e) => setValidFrom(e.target.value)}
