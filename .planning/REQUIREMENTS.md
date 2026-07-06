@@ -73,7 +73,7 @@ Each layer requires explicit authorization. v2.3 adds the innermost layer.
 
 ## Demo UI (DATA-UI)
 
-- [ ] **DATA-UI-01**: Demo shows Datasets within the Application view (extending v2.2 Resource Browser).
+- [x] **DATA-UI-01**: Demo shows Datasets within the Application view (extending v2.2 Resource Browser).
 - [x] **DATA-UI-02**: Access Resolution Explorer extended to Dataset level: person + dataset + datetime → ALLOW/DENY with full gate-chain trace (clearance, Application grant, dataset grant), reusing the row-rendering style of `resource-access-explorer.tsx`'s `ResourceResolutionTrace`.
 - [x] **DATA-UI-03**: Dataset view shows who has access at what level (reverse lookup: dataset → authorized persons), going through the same resolver as DATA-UI-02.
 - [x] **DATA-UI-04**: Admin-gated form for issuing DatasetAccessGrant, enforcing `canIssueDatasetGrant` (delegate/admin-org authority per DATA-DELEG-01) — live-UAT'd with a non-admin persona to confirm the gate holds (Pitfall enforcement-gap lesson from v2.2's IDOR).

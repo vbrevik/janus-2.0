@@ -51,7 +51,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 
 - [x] **Phase 13: Dataset Model & Access Resolver** - Dataset types (MAILBOX/ARCHIVE_ROLE/DOCUMENT_SITE, multi-Application-capable) with per-type level mechanisms (rank for MAILBOX/DOCUMENT_SITE, containment for ARCHIVE_ROLE), DatasetAccessGrant/Delegate, the standalone 3-gate `resolveDatasetAccess` resolver with an independent existence-`visible` gate, classification-override validation, and delegate-capped `canIssueDatasetGrant` (completed 2026-07-04)
 - [x] **Phase 14: Mock Dataset & WorldState** - Seed fixtures (mailboxes, archive-role grants, document sites, prerequisite-chain and denied-access scenarios, full deny-matrix), `WorldState` datasets sub-object, dataset-selectors joining to backend Application data (completed 2026-07-04)
-- [ ] **Phase 15: Demo UI & Access Explorer** - Datasets section in the Resource Browser, dataset-level Access Resolution Explorer with full gate-chain trace, reverse-lookup view, admin-gated issuing form
+- [x] **Phase 15: Demo UI & Access Explorer** - Datasets section in the Resource Browser, dataset-level Access Resolution Explorer with full gate-chain trace, reverse-lookup view, admin-gated issuing form (completed 2026-07-06)
 
 ---
 
@@ -119,7 +119,7 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 
 - [x] 15-01-PLAN.md — Store extension (ISSUE_DATASET_GRANT validFrom/validUntil) + ErrorBoundary + useIssueDatasetGrant hook (denial-safe)
 - [x] 15-02-PLAN.md — DatasetAccessExplorer (4-gate trace + admin-gated issuing form) + DatasetReverseLookup
-- [ ] 15-03-PLAN.md — DatasetsPanel + DemoRoot wiring + full regression sweep + live UAT checkpoint
+- [x] 15-03-PLAN.md — DatasetsPanel + DemoRoot wiring + full regression sweep + live UAT checkpoint
 
 ---
 
@@ -141,4 +141,4 @@ See `.planning/milestones/v2.2-ROADMAP.md` for full phase details. Audit: `.plan
 | 12. Demo UI, Loader & Tab Integration | v2.2 | 7/7 | Complete | 2026-07-03 |
 | 13. Dataset Model & Access Resolver | v2.3 | 2/2 | Complete    | 2026-07-04 |
 | 14. Mock Dataset & WorldState | v2.3 | 4/4 | Complete    | 2026-07-05 |
-| 15. Demo UI & Access Explorer | v2.3 | 2/3 | In Progress|  |
+| 15. Demo UI & Access Explorer | v2.3 | 3/3 | Complete   | 2026-07-06 |
