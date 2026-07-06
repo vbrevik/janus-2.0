@@ -68,3 +68,6 @@ src/routeTree.gen.ts
 
 # Local tool runtime state
 .omo/
+
+# GSD research query cache
+.planning/research/.cache/
